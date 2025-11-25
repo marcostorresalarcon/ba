@@ -29,6 +29,7 @@
     "@angular/forms": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
     "@angular/router": "^20.3.0",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/core": "^7.4.4",
     "@capacitor/ios": "^7.4.4",
     "@stripe/stripe-js": "^8.5.2",
@@ -36,6 +37,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
     "rxjs": "~7.8.0",
+    "sharp": "^0.34.5",
     "tslib": "^2.3.0"
   },
   "devDependencies": {
