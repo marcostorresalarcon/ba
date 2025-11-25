@@ -1,0 +1,17 @@
+<app-page-layout [breadcrumbs]="breadcrumbs">
+  <section class="mt-5 rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <div class="mb-4 flex items-center justify-between">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Overview</p>
+        <h2 class="mt-1 font-display text-2xl text-charcoal">My Projects</h2>
+      </div>
+    </div>
+
+    <app-project-list 
+      [projects]="projects()" 
+      [isLoading]="isLoading()"
+      [readonly]="true"
+    />
+  </section>
+</app-page-layout>
+

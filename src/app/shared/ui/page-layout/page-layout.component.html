@@ -1,0 +1,90 @@
+<section class="min-h-screen px-4 py-8 sm:px-8 lg:px-16" [ngClass]="background">
+  <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+    <header
+      class="flex flex-col gap-6 rounded-[3rem] bg-white/60 p-6 shadow-brand lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div class="flex flex-wrap items-center gap-6">
+        <img width="150" src="logo.png" alt="BA Kitchen & Bath Design" />
+
+        @if (navItems().length) {
+        <nav class="flex items-center gap-2">
+          @for (item of navItems(); track item.label) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="bg-pine text-white"
+            class="rounded-full px-4 py-2 text-sm font-medium text-slate transition-colors hover:bg-alabaster hover:text-charcoal"
+          >
+            {{ item.label }}
+          </a>
+          }
+        </nav>
+        }
+      </div>
+
+      <div class="relative z-50">
+        <button
+          type="button"
+          (click)="toggleUserMenu()"
+          class="flex cursor-pointer items-center gap-3 rounded-full bg-alabaster px-4 py-2 shadow-raised transition-transform hover:scale-105 active:scale-95"
+        >
+          <div class="text-right">
+            <p class="text-xs uppercase tracking-[0.35em] text-slate">Welcome</p>
+            <p class="text-sm font-semibold text-charcoal">{{ user()?.name ?? 'User' }}</p>
+            <p class="text-xs text-slate">
+              {{ selectedCompany()?.name ?? 'Select a company' }}
+            </p>
+          </div>
+          <div
+            class="flex h-11 w-11 items-center justify-center rounded-full bg-pine text-lg font-semibold text-white"
+          >
+            {{ user()?.name?.charAt(0) ?? 'U' }}
+          </div>
+        </button>
+
+        @if (isUserMenuOpen()) {
+        <div class="fixed inset-0 z-40" (click)="toggleUserMenu()"></div>
+        <div
+          class="absolute right-0 top-full z-50 mt-2 w-48 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+        >
+          <button
+            (click)="logout()"
+            class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-charcoal transition-colors hover:bg-alabaster"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5 text-slate"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 2.062-5M12 12h9.125"
+              />
+            </svg>
+            Sign out
+          </button>
+        </div>
+        }
+      </div>
+    </header>
+
+    @if (breadcrumbs.length) {
+    <nav class="flex items-center gap-2 text-sm text-slate">
+      @for (crumb of breadcrumbs; track crumb.label) { @if (hasRoute(crumb)) {
+      <a [routerLink]="crumb.route" class="text-charcoal underline-offset-4 hover:underline">
+        {{ crumb.label }}
+      </a>
+      } @else {
+      <span class="font-semibold text-charcoal">{{ crumb.label }}</span>
+      } @if (crumb !== breadcrumbs[breadcrumbs.length - 1]) {
+      <span>/</span>
+      } }
+    </nav>
+    }
+
+    <ng-content />
+  </div>
+</section>

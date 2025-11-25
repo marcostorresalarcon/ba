@@ -1,0 +1,36 @@
+<app-page-layout [breadcrumbs]="breadcrumbs()">
+  <div class="space-y-6">
+    @if (!showForm()) {
+      <div class="mb-8 flex items-center justify-end">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white shadow-raised transition hover:bg-pine-dark"
+          (click)="toggleForm()"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          New Project
+        </button>
+      </div>
+    }
+
+    @if (showForm()) {
+      <app-project-form
+        [isSubmitting]="isSubmitting()"
+        [project]="selectedProject()"
+        (submitProject)="handleSubmit($event)"
+        (cancelForm)="toggleForm()"
+      />
+    }
+
+    <app-project-list
+      [projects]="projects()"
+      [isLoading]="isLoading()"
+      [isDeleting]="isDeleting()"
+      (editProject)="editProject($event)"
+      (deleteProject)="deleteProject($event)"
+    />
+  </div>
+</app-page-layout>
+

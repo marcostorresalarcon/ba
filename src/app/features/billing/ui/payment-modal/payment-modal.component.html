@@ -1,0 +1,53 @@
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative" (click)="$event.stopPropagation()">
+  <button (click)="cancel()" class="absolute top-4 right-4 text-slate hover:text-charcoal">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  </button>
+
+  <div class="mb-6">
+    <h3 class="text-xl font-bold text-charcoal">Secure Payment</h3>
+    <p class="text-sm text-slate mt-1">You are paying for: <span class="font-medium text-pine">{{ installmentName }}</span></p>
+  </div>
+
+  <div class="mb-8 flex justify-center">
+    <div class="text-center">
+      <span class="text-4xl font-display text-pine">${{ amount | number:'1.2-2' }}</span>
+      <span class="text-sm text-slate block uppercase tracking-wider mt-1">Total to Pay</span>
+    </div>
+  </div>
+
+  <div class="mb-6">
+    <label class="block text-xs font-bold uppercase text-slate mb-2">Card Details</label>
+    <div #cardElement class="p-4 border border-fog/60 rounded-xl bg-fog/5"></div>
+    @if (cardError()) {
+      <p class="text-red-500 text-sm mt-2">{{ cardError() }}</p>
+    }
+  </div>
+
+  <button 
+    (click)="pay()" 
+    [disabled]="isProcessing() || !!cardError()"
+    class="w-full rounded-full bg-pine py-3 font-bold text-white shadow-raised transition hover:bg-pine/90 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+  >
+    @if (isProcessing()) {
+      <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Processing...
+    } @else {
+      Pay ${{ amount | number:'1.2-2' }}
+    }
+  </button>
+
+  <div class="mt-4 text-center">
+    <p class="text-xs text-slate">
+      <svg class="inline w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      Payments are secure and encrypted.
+    </p>
+  </div>
+</div>
+

@@ -1,0 +1,53 @@
+<button
+  type="button"
+  class="group relative flex w-full items-center justify-between gap-4 rounded-brand border-2 border-clay/50 bg-charcoal/95 px-6 py-5 text-left text-alabaster shadow-brand transition duration-300 ease-cursor-fluid hover:-translate-y-1 hover:bg-charcoal focus-visible:ring-4 focus-visible:ring-pine focus-visible:ring-offset-4 focus-visible:ring-offset-sand"
+  [class.bg-alabaster]="isSelected"
+  [class.text-charcoal]="isSelected"
+  (click)="handleClick()"
+>
+  <span class="flex items-center gap-4">
+    @if (logoUrl) {
+      <span
+        class="flex h-16 w-16 items-center justify-center rounded-full border border-clay/50 bg-charcoal/95 p-2 transition duration-300 group-hover:scale-105"
+        [class.bg-alabaster]="isSelected"
+      >
+        <img
+          [src]="logoUrl"
+          [alt]="company.name + ' logo'"
+          class="h-full w-full rounded-full object-contain"
+          loading="lazy"
+        />
+      </span>
+    } @else {
+      <span
+        class="flex h-16 w-16 items-center justify-center rounded-full border border-clay/50 bg-sand/60 font-display text-lg uppercase text-charcoal transition duration-300 group-hover:scale-105"
+        [class.bg-charcoal]="isSelected"
+        [class.text-alabaster]="isSelected"
+      >
+        {{ buildInitials(company.name) }}
+      </span>
+    }
+
+    <span class="space-y-1">
+      <span class="text-xs uppercase tracking-[0.35em] text-clay">Company</span>
+      <span class="block text-lg font-semibold">{{ company.name }}</span>
+      @if (company.description) {
+        <span class="block text-sm text-slate">{{ company.description }}</span>
+      }
+    </span>
+  </span>
+
+  <span
+    class="text-xs uppercase tracking-[0.4em] text-fog transition-colors duration-300 group-hover:text-pine"
+    [class.text-pine]="isSelected"
+  >
+    Select
+  </span>
+
+  <span
+    class="pointer-events-none absolute inset-1 rounded-brand border border-pine opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+    [class.opacity-100]="isSelected"
+  ></span>
+</button>
+
+

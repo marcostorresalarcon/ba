@@ -1,0 +1,56 @@
+<section class="relative space-y-2">
+  <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Customer Search</p>
+
+  <div
+    class="relative rounded-[2.5rem] border border-fog/60 bg-white/95 px-5 py-3 shadow-brand transition focus-within:ring-2 focus-within:ring-pine focus-within:ring-offset-2 focus-within:ring-offset-sand"
+  >
+    <input
+      [value]="query"
+      type="search"
+      placeholder="Search customer"
+      class="w-full rounded-[2rem] border-0 bg-transparent pr-10 text-base text-charcoal placeholder:text-slate focus:border-0 focus:outline-none focus:ring-0"
+      (focus)="focusState(true)"
+      (blur)="focusState(false)"
+      (input)="handleInput($event)"
+      autocomplete="off"
+    />
+
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke-width="1.5"
+      stroke="currentColor"
+      class="pointer-events-none absolute right-5 top-1/2 h-5 w-5 -translate-y-1/2 text-charcoal"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+      />
+    </svg>
+  </div>
+
+  @if (isFocused() && suggestions.length > 0) {
+    <ul
+      class="absolute left-0 right-0 z-20 mt-2 rounded-2xl border border-fog bg-white/95 text-left text-sm text-charcoal shadow-raised backdrop-blur"
+    >
+      @for (suggestion of suggestions; track suggestion) {
+        <li>
+          <button
+            type="button"
+            class="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-sand/40"
+            (mousedown)="$event.preventDefault()"
+            (click)="selectSuggestion(suggestion)"
+          >
+            {{ suggestion }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+

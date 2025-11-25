@@ -1,0 +1,2151 @@
+<div class="space-y-6">
+  <!-- Kitchen Information -->
+  <section class="rounded-[1.8rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <header class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-clay">Overview</p>
+        <h3 class="font-display text-2xl text-charcoal">Kitchen Information</h3>
+      </div>
+      <span class="rounded-full bg-fog/50 px-4 py-1 text-xs font-semibold text-charcoal">
+        {{ getSelectedKitchenTypeLabel() }}
+      </span>
+    </header>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <label class="flex flex-col gap-2 text-sm font-semibold text-charcoal">
+        Kitchen Square Footage (SF)
+        <div class="relative">
+          <input
+            type="number"
+            formControlName="kitchenSquareFootage"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+          <span
+            class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine"
+            >SF</span
+          >
+        </div>
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-semibold text-charcoal">
+        Kitchen Length (INCH)
+        <div class="relative">
+          <input
+            type="number"
+            formControlName="kitchenLength"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+          <span
+            class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine"
+            >IN</span
+          >
+        </div>
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-semibold text-charcoal">
+        Kitchen Width (INCH)
+        <div class="relative">
+          <input
+            type="number"
+            formControlName="kitchenWidth"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+          <span
+            class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine"
+            >IN</span
+          >
+        </div>
+      </label>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div class="space-y-3 rounded-2xl border border-fog/40 bg-fog/20 p-4">
+        <p class="text-sm font-semibold text-charcoal">Ceiling Height</p>
+        <div class="flex flex-wrap gap-4">
+          @for (option of ceilingHeightOptions; track option.value) {
+            <div class="flex items-center gap-2">
+              <input
+                type="radio"
+                [id]="'cellingHeight-' + option.value"
+                name="cellingHeight"
+                [value]="option.value"
+                [checked]="form.get('cellingHeight')?.value === option.value"
+                (change)="handleHeightSelection('cellingHeight', option.value)"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              <label [for]="'cellingHeight-' + option.value" class="text-sm text-charcoal font-medium">
+                {{ option.label }}
+              </label>
+            </div>
+          }
+        </div>
+        @if (isCustomHeightSelected('cellingHeight')) {
+          <div class="flex items-center gap-3">
+            <input
+              type="number"
+              formControlName="cellingHeightCustom"
+              [min]="0"
+              [step]="0.1"
+              placeholder="INCH"
+              class="w-28 rounded-2xl border border-fog/60 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="text-xs font-semibold uppercase text-slate">Custom height</span>
+          </div>
+        }
+      </div>
+
+      <div class="space-y-3 rounded-2xl border border-fog/40 bg-fog/20 p-4">
+        <p class="text-sm font-semibold text-charcoal">Wall Cabinet Height</p>
+        <div class="flex flex-wrap gap-4">
+          @for (option of wallCabinetHeightOptions; track option.value) {
+            <div class="flex items-center gap-2">
+              <input
+                type="radio"
+                [id]="'wallCabinetHeight-' + option.value"
+                name="wallCabinetHeight"
+                [value]="option.value"
+                [checked]="form.get('wallCabinetHeight')?.value === option.value"
+                (change)="handleHeightSelection('wallCabinetHeight', option.value)"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              <label [for]="'wallCabinetHeight-' + option.value" class="text-sm text-charcoal font-medium">
+                {{ option.label }}
+              </label>
+            </div>
+          }
+        </div>
+        @if (isCustomHeightSelected('wallCabinetHeight')) {
+          <div class="flex items-center gap-3">
+            <input
+              type="number"
+              formControlName="wallCabinetHeightCustom"
+              [min]="0"
+              [step]="0.1"
+              placeholder="INCH"
+              class="w-28 rounded-2xl border border-fog/60 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="text-xs font-semibold uppercase text-slate">Custom height</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div class="space-y-3 rounded-2xl border border-fog/40 bg-fog/20 p-4">
+        <p class="text-sm font-semibold text-charcoal">Stackers</p>
+        <div class="flex flex-wrap gap-4">
+          @for (option of stackerOptions; track option.value) {
+            <div class="flex items-center gap-2">
+              <input
+                type="radio"
+                [id]="'stackers-' + option.value"
+                name="stackers"
+                [value]="option.value"
+                [checked]="form.get('stackers')?.value === option.value"
+                (change)="handleHeightSelection('stackers', option.value)"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              <label [for]="'stackers-' + option.value" class="text-sm text-charcoal font-medium">
+                {{ option.label }}
+              </label>
+            </div>
+          }
+        </div>
+        @if (isCustomHeightSelected('stackers')) {
+          <div class="flex items-center gap-3">
+            <input
+              type="number"
+              formControlName="stackersCustom"
+              [min]="0"
+              [step]="0.1"
+              placeholder="INCH"
+              class="w-28 rounded-2xl border border-fog/60 bg-white px-3 py-2 text-sm text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="text-xs font-semibold uppercase text-slate">Custom stacker</span>
+          </div>
+        }
+      </div>
+
+      <div class="space-y-3 rounded-2xl border border-fog/40 bg-fog/20 p-4">
+        <p class="text-sm font-semibold text-charcoal">Cabinets to ceiling</p>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="isCabinetsToCelling"
+              [checked]="form.get('isCabinetsToCelling')?.value === true"
+              (change)="handleBooleanRadioChange('isCabinetsToCelling', true)"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            Yes
+          </label>
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="isCabinetsToCelling"
+              [checked]="form.get('isCabinetsToCelling')?.value === false"
+              (change)="handleBooleanRadioChange('isCabinetsToCelling', false)"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            No
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Location Kitchen -->
+  <section class="rounded-[1.8rem] border border-fog/60 bg-fog/10 p-6">
+    <div class="mb-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-clay">Site context</p>
+      <h3 class="font-display text-xl text-charcoal">Location Kitchen</h3>
+    </div>
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+      @for (location of locationKitchenOptions; track location.value) {
+        <button
+          type="button"
+          class="rounded-2xl border px-4 py-3 text-sm font-semibold transition"
+          [class.bg-pine]="isLocationSelected(location.value)"
+          [class.text-white]="isLocationSelected(location.value)"
+          [class.border-pine]="isLocationSelected(location.value)"
+          [class.bg-white]="!isLocationSelected(location.value)"
+          [class.text-charcoal]="!isLocationSelected(location.value)"
+          (click)="selectLocationKitchen(location.value)"
+        >
+          {{ location.label }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Subfloor -->
+  <section class="rounded-[1.8rem] border border-fog/60 bg-fog/10 p-6">
+    <div class="mb-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-clay">Structure</p>
+      <h3 class="font-display text-xl text-charcoal">Subfloor</h3>
+    </div>
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+      @for (subfloor of subFloorOptions; track subfloor.value) {
+        <button
+          type="button"
+          class="rounded-2xl border px-4 py-3 text-sm font-semibold transition"
+          [class.bg-pine]="isSubfloorSelected(subfloor.value)"
+          [class.text-white]="isSubfloorSelected(subfloor.value)"
+          [class.border-pine]="isSubfloorSelected(subfloor.value)"
+          [class.bg-white]="!isSubfloorSelected(subfloor.value)"
+          [class.text-charcoal]="!isSubfloorSelected(subfloor.value)"
+          (click)="selectSubFloor(subfloor.value)"
+        >
+          {{ subfloor.label }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Demolition Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Demolition</h3>
+    <div class="space-y-4">
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Eliminate Drywall
+        <select
+          formControlName="eliminateDrywall"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
+        >
+          <option [value]="null">Select option</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="dumpsterOnSite"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Dumpster on Site</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Wall Demo Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Wall Demo</h3>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Remove Non-Load Wall (LF)
+        <input
+          type="number"
+          formControlName="removeNonLoadWall"
+          [min]="0"
+          [step]="0.1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Remove LVL Wall (LF)
+        <input
+          type="number"
+          formControlName="removeLVLWall"
+          [min]="0"
+          [step]="0.1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Remove Metal Wall (LF)
+        <input
+          type="number"
+          formControlName="removeMetalWall"
+          [min]="0"
+          [step]="0.1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+    </div>
+    <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="recessedBeam"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Recessed Beam</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="supportBasement"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Support Basement</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="supportSlab"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Support Slab</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="engineeringReport"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Engineering Report</span>
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Beam Wrap Cedar (LF)
+        <input
+          type="number"
+          formControlName="beamWrapCedar"
+          [min]="0"
+          [step]="0.1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="demoElectricWiring"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Demo Electric Wiring</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Framing Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Framing</h3>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        <span>Frame New Wall</span>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="frameNewWall"
+              value="yes"
+              [checked]="form.get('frameNewWall')?.value === 'yes'"
+              (change)="setControlValue('frameNewWall', 'yes')"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            Yes
+          </label>
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="frameNewWall"
+              value="no"
+              [checked]="form.get('frameNewWall')?.value === 'no'"
+              (change)="setControlValue('frameNewWall', 'no')"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            No
+          </label>
+        </div>
+      </div>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Build New Wall (LF)
+        <input
+          type="number"
+          formControlName="buildNewWall"
+          [min]="0"
+          [step]="0.1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          [class.bg-fog/30]="form.get('frameNewWall')?.value !== 'yes'"
+        />
+      </label>
+      <div class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        <span>Relocate Wall</span>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="relocateWall"
+              value="yes"
+              [checked]="form.get('relocateWall')?.value === 'yes'"
+              (change)="setControlValue('relocateWall', 'yes')"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            Yes
+          </label>
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="relocateWall"
+              value="no"
+              [checked]="form.get('relocateWall')?.value === 'no'"
+              (change)="setControlValue('relocateWall', 'no')"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            No
+          </label>
+        </div>
+      </div>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Relocate Wall Quantity
+        <input
+          type="number"
+          formControlName="relocateWallQuantity"
+          [min]="0"
+          [step]="1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          [class.bg-fog/30]="form.get('relocateWall')?.value !== 'yes'"
+        />
+      </label>
+    </div>
+  </div>
+
+  <!-- Electrical Section -->
+  <div id="electrical" class="rounded-2xl border border-fog/60 bg-fog/10 p-6 space-y-6">
+    <div class="mb-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-clay">Power & Lighting</p>
+      <h3 class="font-display text-xl text-charcoal">Electrical</h3>
+    </div>
+
+    <!-- Plug Molds (Conditional per kitchen size) -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      @if (selectedKitchenType === 'small') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="plugMoldSmall"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Under cabinet plug molds - Small Kitchen (4)</span>
+        </label>
+      }
+      @if (selectedKitchenType === 'medium') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="plugMoldMedium"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Under cabinet plug molds - Medium Kitchen (6-8)</span>
+        </label>
+      }
+      @if (selectedKitchenType === 'large') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="plugMoldLarge"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Under cabinet plug molds - Large Kitchen (10-12)</span>
+        </label>
+      }
+    </div>
+
+    <!-- LED Lighting (Conditional per kitchen size) -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      @if (selectedKitchenType === 'small') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="ledLightingSmall"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">LED under cabinet lighting (10 LF) - Small</span>
+        </label>
+      }
+      @if (selectedKitchenType === 'medium') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="ledLightingMedium"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">LED under cabinet lighting (15 LF) - Medium</span>
+        </label>
+      }
+      @if (selectedKitchenType === 'large') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="ledLightingLarge"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">LED under cabinet lighting (25 LF) - Large</span>
+        </label>
+      }
+    </div>
+
+    <!-- Puck Lights (Conditional per kitchen size) -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      @if (selectedKitchenType === 'small') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="puckLightsSmall"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Puck lights in glass cabinets (4) - Small</span>
+        </label>
+      }
+      @if (selectedKitchenType === 'medium') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="puckLightsMedium"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Puck lights in glass cabinets (6) - Medium</span>
+        </label>
+      }
+      @if (selectedKitchenType === 'large') {
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="puckLightsLarge"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Puck lights in glass cabinets (10) - Large</span>
+        </label>
+      }
+    </div>
+
+    <!-- Can Light Size & Quantity -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <p class="text-sm font-semibold text-charcoal">Install can light</p>
+      <div class="flex gap-4 items-center">
+        <label class="flex items-center gap-2 text-sm text-charcoal">
+          <input
+            type="radio"
+            name="canLightSize"
+            value="4"
+            formControlName="canLightSize"
+            class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+          />
+          4"
+        </label>
+        <label class="flex items-center gap-2 text-sm text-charcoal">
+          <input
+            type="radio"
+            name="canLightSize"
+            value="6"
+            formControlName="canLightSize"
+            class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+          />
+          6"
+        </label>
+      </div>
+      @if (getControlValue('canLightSize')) {
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          After selection: Install can light
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="canLightQuantity"
+              [min]="0"
+              [step]="1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+          </div>
+        </label>
+      }
+    </div>
+
+    <!-- Pendant Lights & Other Basic -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Install pendant lights
+        <div class="relative">
+          <input
+            type="number"
+            formControlName="pendantLights"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+          <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+        </div>
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Add breaker
+        <div class="relative">
+          <input
+            type="number"
+            formControlName="addBreaker"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+          <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+        </div>
+      </label>
+    </div>
+
+    <!-- Relocate Power (220v) -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Relocate Power (220v)</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Range location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateRange220"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Cooktop location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateCooktop220"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Double oven location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateDoubleOven220"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Relocate Power (120v) -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Relocate Power (120v)</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Range location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateRange120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Cooktop location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateCooktop120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Fridge location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateFridge120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Hood insert location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateHoodInsert120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Microwave location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateMicrowave120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Island location
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateIsland120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Run Power (220v) -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Run Power (220v)</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Range
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerRange220"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Cooktop
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerCooktop220"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Double oven
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerDoubleOven220"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Run Power (120v) -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Run Power (120v)</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Range
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerRange120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Cooktop
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerCooktop120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Hood insert
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerHoodInsert120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New Microwave
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerMicrowave120"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Run Power (110v) -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Run Power (110v)</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          New island
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runPowerIsland110"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Adding outlets (existing power)
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="addingOutletsExisting"
+              [min]="0"
+              [step]="1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Adding outlets (run power)
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="addingOutletsRunPower"
+              [min]="0"
+              [step]="1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Switches & Controls -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Switches & Controls</h4>
+      
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Install air switch -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="installAirSwitch"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Install air switch</span>
+        </label>
+
+        <!-- Keep switch on wall -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="keepSwitchOnWall"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-1 focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Keep switch on wall</span>
+        </label>
+      </div>
+
+      <!-- Reuse/Add Switches with Quantity -->
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- Reuse switch -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Reuse switch</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="reuseSwitch"
+                value="yes"
+                formControlName="reuseSwitch"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="reuseSwitch"
+                value=""
+                formControlName="reuseSwitch"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('reuseSwitch') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="reuseSwitchQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+
+        <!-- Add new switch -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Add new switch</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="addNewSwitch"
+                value="yes"
+                formControlName="addNewSwitch"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="addNewSwitch"
+                value=""
+                formControlName="addNewSwitch"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('addNewSwitch') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="addNewSwitchQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+
+        <!-- Add new dimmer -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Add new dimmer</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="addNewDimmer"
+                value="yes"
+                formControlName="addNewDimmer"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="addNewDimmer"
+                value=""
+                formControlName="addNewDimmer"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('addNewDimmer') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="addNewDimmerQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Panels -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Panels & Upgrades</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="addSubpanel50"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Add subpanel 50 AMP</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="addSubpanel100"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Add subpanel 100 AMP</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="relocateSwitchesOutlets"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Relocate switches/outlets from wall removal</span>
+        </label>
+      </div>
+
+      <!-- Upgrade Panel Options -->
+      <div class="flex flex-col gap-2">
+        <span class="text-sm font-medium text-charcoal">Upgrade panel</span>
+        <div class="flex gap-4 flex-wrap">
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="upgradePanel"
+              value="noDisconnect"
+              formControlName="upgradePanel"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            No disconnect inspection
+          </label>
+          <label class="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="radio"
+              name="upgradePanel"
+              value="withDisconnect"
+              formControlName="upgradePanel"
+              class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+            />
+            With disconnect no inspection
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dishwasher & Disposal Wiring -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Appliance Wiring</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Dishwasher wiring -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Dishwasher wiring</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="dishwasherWiring"
+                value="yes"
+                formControlName="dishwasherWiring"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="dishwasherWiring"
+                value=""
+                formControlName="dishwasherWiring"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('dishwasherWiring') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="dishwasherWiringQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+            </div>
+          }
+        </div>
+
+        <!-- Disposal wiring -->
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="disposalWiring"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Disposal wiring</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plumbing Section -->
+  <div id="plumbing" class="rounded-2xl border border-fog/60 bg-fog/10 p-6 space-y-6">
+    <div class="mb-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-clay">Water & Gas</p>
+      <h3 class="font-display text-xl text-charcoal">Plumbing</h3>
+    </div>
+
+    <!-- Main Plumbing Controls -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="runNewDrainSupply"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Run new drain and supply lines</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="reworkSinkPlumbing"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Rework sink plumbing</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="installNewFridgeWaterBox"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Install new fridge water box</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="relocateDishwasher"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Relocate dishwasher</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="runWaterlinePotFiller"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Run waterline and install new pot filler</span>
+      </label>
+    </div>
+
+    <!-- Relocate Plumbing Lines -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Relocate Plumbing Lines</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Relocate sink plumbing
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateSinkPlumbing"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Relocate fridge water line
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateFridgeWaterLine"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Water Lines -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Water Lines</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Install new water line dishwasher
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="installNewWaterLineDishwasher"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Gas Lines -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Gas Lines</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Run new gas line (Range, oven, dryer)
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="runNewGasLine"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Relocate gas line (Range, oven, dryer)
+          <div class="relative">
+            <input
+              type="number"
+              formControlName="relocateGasLine"
+              [min]="0"
+              [step]="0.1"
+              placeholder="##"
+              class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            />
+            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Installation Services -->
+    <div class="space-y-3 rounded-2xl border border-fog/40 bg-white/50 p-4">
+      <h4 class="text-sm font-bold text-charcoal">Installation Services</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- Install faucet -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Install faucet</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="installFaucet"
+                value="yes"
+                formControlName="installFaucet"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="installFaucet"
+                value=""
+                formControlName="installFaucet"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('installFaucet') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="installFaucetQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+
+        <!-- Concrete cut/patch -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Concrete cut / patch</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="concreteCutPatch"
+                value="yes"
+                formControlName="concreteCutPatch"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="concreteCutPatch"
+                value=""
+                formControlName="concreteCutPatch"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('concreteCutPatch') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="concreteCutPatchQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">LF</span>
+            </div>
+          }
+        </div>
+
+        <!-- Install Insulation R13 -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Install new Insulation R13</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="installNewInsulationR13"
+                value="yes"
+                formControlName="installNewInsulationR13"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="installNewInsulationR13"
+                value=""
+                formControlName="installNewInsulationR13"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('installNewInsulationR13') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="installNewInsulationR13Quantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">SF</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Windows Section -->
+  <div id="windows" class="rounded-2xl border border-fog/60 bg-fog/10 p-6 space-y-6">
+    <div class="mb-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-clay">Openings</p>
+      <h3 class="font-display text-xl text-charcoal">Windows</h3>
+    </div>
+
+    <!-- New Windows -->
+    <div class="space-y-4">
+      <h4 class="text-sm font-bold text-charcoal">New Windows</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- Double Hung -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">New window Double-hung</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="newWindowDoubleHung"
+                value="yes"
+                formControlName="newWindowDoubleHung"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="newWindowDoubleHung"
+                value=""
+                formControlName="newWindowDoubleHung"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('newWindowDoubleHung') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="newWindowDoubleHungQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+
+        <!-- Picture Window -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">New window Picture window</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="newWindowPictureWindow"
+                value="yes"
+                formControlName="newWindowPictureWindow"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="newWindowPictureWindow"
+                value=""
+                formControlName="newWindowPictureWindow"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('newWindowPictureWindow') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="newWindowPictureWindowQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+
+        <!-- Casement -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">New window casement</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="newWindowCasement"
+                value="yes"
+                formControlName="newWindowCasement"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="newWindowCasement"
+                value=""
+                formControlName="newWindowCasement"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('newWindowCasement') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="newWindowCasementQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Window Services -->
+    <div class="space-y-4">
+      <h4 class="text-sm font-bold text-charcoal">Window Services</h4>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Window removal -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Window removal</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="windowRemoval"
+                value="yes"
+                formControlName="windowRemoval"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="windowRemoval"
+                value=""
+                formControlName="windowRemoval"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('windowRemoval') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="windowRemovalQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+
+        <!-- Relocate window -->
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-medium text-charcoal">Relocate window</span>
+          <div class="flex gap-4 items-center mb-2">
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="relocateWindow"
+                value="yes"
+                formControlName="relocateWindow"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              Yes
+            </label>
+            <label class="flex items-center gap-2 text-sm text-charcoal">
+              <input
+                type="radio"
+                name="relocateWindow"
+                value=""
+                formControlName="relocateWindow"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              No
+            </label>
+          </div>
+          @if (getControlValue('relocateWindow') === 'yes') {
+            <div class="relative">
+              <input
+                type="number"
+                formControlName="relocateWindowQuantity"
+                [min]="0"
+                [step]="1"
+                placeholder="##"
+                class="peer w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 pr-16 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              />
+              <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs font-bold uppercase tracking-wide text-slate/70 peer-focus:text-pine">EA</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cabinets Section (conditional based on selectedKitchenType) -->
+  @if (selectedKitchenType === 'basic') {
+    <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+      <h3 class="mb-4 text-lg font-semibold text-charcoal">Basic Cabinets</h3>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          36" Upper Cabinets Quantity
+          <input
+            type="number"
+            formControlName="basic36UpperCabinetsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          42" Upper Cabinets Quantity
+          <input
+            type="number"
+            formControlName="basic42UpperCabinetsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Base Cabinet Quantity
+          <input
+            type="number"
+            formControlName="basicBaseCabinetQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+      </div>
+    </div>
+  }
+
+  @if (selectedKitchenType === 'premium') {
+    <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+      <h3 class="mb-4 text-lg font-semibold text-charcoal">Premium Cabinets</h3>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          30" Upper Cabinet Quantity
+          <input
+            type="number"
+            formControlName="premium30UpperCabinetQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          36" Upper Cabinets Quantity
+          <input
+            type="number"
+            formControlName="premium36UpperCabinetsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          42" Upper Cabinets Quantity
+          <input
+            type="number"
+            formControlName="premium42UpperCabinetsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+      </div>
+    </div>
+  }
+
+  @if (selectedKitchenType === 'luxury') {
+    <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+      <h3 class="mb-4 text-lg font-semibold text-charcoal">Luxury Cabinets</h3>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          30" Upper Cabinet Quantity
+          <input
+            type="number"
+            formControlName="luxury30UpperCabinetQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          36" Upper Cabinets Quantity
+          <input
+            type="number"
+            formControlName="luxury36UpperCabinetsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          42" Upper Cabinets Quantity
+          <input
+            type="number"
+            formControlName="luxury42UpperCabinetsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        </label>
+      </div>
+    </div>
+  }
+
+  <!-- Shelving Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Shelving</h3>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Glass Shelves Half
+        <input
+          type="number"
+          formControlName="glassShelvesHalf"
+          [min]="0"
+          [step]="1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Floating Shelves Match
+        <input
+          type="number"
+          formControlName="floatingShelvesMatch"
+          [min]="0"
+          [step]="1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Floating Shelves Custom
+        <input
+          type="number"
+          formControlName="floatingShelvesCustom"
+          [min]="0"
+          [step]="1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+    </div>
+  </div>
+
+  <!-- Wood Hood Vent Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Wood Hood Vent</h3>
+    <div class="flex gap-4">
+      @for (size of ['30', '36', '42', '48']; track size) {
+        <button
+          type="button"
+          class="rounded-2xl px-4 py-2 font-medium transition"
+          [class.bg-pine]="form.get('woodHoodVentSize')?.value === size"
+          [class.text-white]="form.get('woodHoodVentSize')?.value === size"
+          [class.bg-fog/20]="form.get('woodHoodVentSize')?.value !== size"
+          [class.text-charcoal]="form.get('woodHoodVentSize')?.value !== size"
+          (click)="selectWoodHoodVentSize(size)"
+        >
+          {{ size }}"
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Countertops Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Countertops</h3>
+    <div class="space-y-4">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="plaster"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Plaster</span>
+      </label>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="countertopsQuartz"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Quartz</span>
+        </label>
+        @if (form.get('countertopsQuartz')?.value) {
+          <input
+            type="number"
+            formControlName="countertopsQuartzQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="Quantity"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="countertopsQuartzite"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Quartzite</span>
+        </label>
+        @if (form.get('countertopsQuartzite')?.value) {
+          <input
+            type="number"
+            formControlName="countertopsQuartziteQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="Quantity"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="countertopsGranite"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Granite</span>
+        </label>
+        @if (form.get('countertopsGranite')?.value) {
+          <input
+            type="number"
+            formControlName="countertopsGraniteQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="Quantity"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="countertopsMarble"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Marble</span>
+        </label>
+        @if (form.get('countertopsMarble')?.value) {
+          <input
+            type="number"
+            formControlName="countertopsMarbleQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="Quantity"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sink Selection Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Sink Selection</h3>
+    <div class="flex gap-4">
+      @for (sink of ['Undermount', 'Farmhouse', 'Drop-in']; track sink) {
+        <button
+          type="button"
+          class="rounded-2xl px-4 py-2 font-medium transition"
+          [class.bg-pine]="isSinkSelected(sink)"
+          [class.text-white]="isSinkSelected(sink)"
+          [class.bg-fog/20]="!isSinkSelected(sink)"
+          [class.text-charcoal]="!isSinkSelected(sink)"
+          (click)="selectSink(sink)"
+        >
+          {{ sink }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Backsplash Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Backsplash</h3>
+    <div class="space-y-4">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="backsplashPrep"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Backsplash Prep</span>
+      </label>
+      <div class="flex items-center gap-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            formControlName="backsplashTile"
+            class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+          />
+          <span class="text-sm text-charcoal">Backsplash Tile</span>
+        </label>
+        @if (form.get('backsplashTile')?.value) {
+          <input
+            type="number"
+            formControlName="backsplashTileQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="Quantity"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Drywall Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Drywall</h3>
+    <div class="space-y-3">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="drywallSmoothCeilings"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Smooth Ceilings</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="drywallRepairsCeilingWalls"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Repairs Ceiling/Walls</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Appliances Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Appliances</h3>
+    <div class="space-y-3">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="applianceCooktop"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Cooktop</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          formControlName="applianceDishwasher"
+          class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+        />
+        <span class="text-sm text-charcoal">Dishwasher</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Trim Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Trim</h3>
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        formControlName="trimQuarterRound"
+        class="h-4 w-4 rounded border-fog/60 text-pine focus:ring-pine"
+      />
+      <span class="text-sm text-charcoal">Quarter Round</span>
+    </label>
+  </div>
+
+  <!-- Painting Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Painting</h3>
+    <div class="space-y-4">
+      <div class="flex items-center gap-4">
+        <label class="text-sm font-semibold text-charcoal">Prime Ceiling/Walls</label>
+        <div class="flex gap-4">
+          @for (option of ['yes', 'no']; track option) {
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="paintPrimeCeilingWalls"
+                [value]="option"
+                [checked]="form.get('paintPrimeCeilingWalls')?.value === option"
+                (change)="setControlValue('paintPrimeCeilingWalls', option)"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              <span class="text-sm text-charcoal">{{ option === 'yes' ? 'Yes' : 'No' }}</span>
+            </label>
+          }
+        </div>
+        @if (form.get('paintPrimeCeilingWalls')?.value === 'yes') {
+          <input
+            type="number"
+            formControlName="paintPrimeCeilingWallsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+      <div class="flex items-center gap-4">
+        <label class="text-sm font-semibold text-charcoal">Paint Ceiling/Walls</label>
+        <div class="flex gap-4">
+          @for (option of ['yes', 'no']; track option) {
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="paintCeilingWalls"
+                [value]="option"
+                [checked]="form.get('paintCeilingWalls')?.value === option"
+                (change)="setControlValue('paintCeilingWalls', option)"
+                class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
+              />
+              <span class="text-sm text-charcoal">{{ option === 'yes' ? 'Yes' : 'No' }}</span>
+            </label>
+          }
+        </div>
+        @if (form.get('paintCeilingWalls')?.value === 'yes') {
+          <input
+            type="number"
+            formControlName="paintCeilingWallsQuantity"
+            [min]="0"
+            [step]="1"
+            placeholder="##"
+            class="w-24 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+        }
+      </div>
+    </div>
+  </div>
+</div>
+

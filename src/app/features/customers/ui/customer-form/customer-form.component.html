@@ -1,0 +1,141 @@
+<section class="space-y-6 rounded-3xl border border-fog/50 bg-white/90 p-6 shadow-brand">
+  <header class="flex items-center justify-between">
+    <div>
+      <p class="text-xs uppercase tracking-[0.35em] text-clay">Homeowner</p>
+      <h2 class="font-display text-2xl text-charcoal">
+        {{ customer ? 'Edit customer' : 'Create customer' }}
+      </h2>
+    </div>
+    @if (customer) {
+      <button
+        type="button"
+        class="text-sm text-slate underline-offset-4 hover:underline"
+        (click)="cancelEdit.emit()"
+      >
+        Cancel
+      </button>
+    }
+  </header>
+
+  <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="grid gap-4 md:grid-cols-2">
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        Name*
+        <input
+          formControlName="name"
+          type="text"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="Juan"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        Last Name*
+        <input
+          formControlName="lastName"
+          type="text"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="Rodríguez"
+        />
+      </label>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-3">
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        Phone
+        <input
+          formControlName="phone"
+          type="tel"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="987654321"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        Date
+        <input
+          formControlName="date"
+          type="date"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        Email
+        <input
+          formControlName="email"
+          type="email"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="juan@example.com"
+        />
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+      Address
+      <input
+        formControlName="address"
+        type="text"
+        class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+        placeholder="456 Oak Avenue, Suite 12"
+      />
+    </label>
+
+    <div class="grid gap-4 md:grid-cols-3">
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        City
+        <input
+          formControlName="city"
+          type="text"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="Miami"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        Zip Code
+        <input
+          formControlName="zipCode"
+          type="text"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="33130"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+        State
+        <input
+          formControlName="state"
+          type="text"
+          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          placeholder="Florida"
+        />
+      </label>
+    </div>
+
+    <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+      Lead Source
+      <input
+        formControlName="leadSource"
+        type="text"
+        class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+        placeholder="Referral from a friend"
+      />
+    </label>
+
+    <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
+      Description
+      <textarea
+        formControlName="description"
+        rows="3"
+        class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+        placeholder="Add context or project notes"
+      ></textarea>
+    </label>
+
+    <button
+      type="submit"
+      class="w-full rounded-2xl bg-pine py-3 text-lg font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:opacity-60"
+      [disabled]="isSubmitting"
+    >
+      {{ customer ? 'Update' : 'Create' }}
+    </button>
+  </form>
+</section>
+
+

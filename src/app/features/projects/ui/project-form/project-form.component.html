@@ -1,0 +1,80 @@
+<section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">
+        {{ project ? 'Edit Project' : 'New Project' }}
+      </p>
+      <h2 class="mt-1 font-display text-2xl text-charcoal">
+        {{ project ? 'Update Project' : 'Create Project' }}
+      </h2>
+    </div>
+    <button
+      type="button"
+      class="flex h-8 w-8 items-center justify-center rounded-full text-slate transition hover:bg-fog/40 hover:text-charcoal"
+      (click)="onCancel()"
+      aria-label="Close form"
+    >
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()">
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Project Type
+      <select
+        formControlName="projectType"
+        class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
+      >
+        @for (type of projectTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+    </label>
+    @if (controlInvalid('projectType')) {
+      <p class="text-xs text-red-600">Please select a project type.</p>
+    }
+
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Project Name
+      <input
+        type="text"
+        formControlName="name"
+        placeholder="e.g., Kitchen Remodel - John Doe"
+        class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+      />
+    </label>
+    @if (controlInvalid('name')) {
+      <p class="text-xs text-red-600">Project name must be at least 3 characters.</p>
+    }
+
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Description
+      <textarea
+        formControlName="description"
+        rows="4"
+        placeholder="Optional project description..."
+        class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+      ></textarea>
+    </label>
+
+    <div class="flex gap-3 pt-2">
+      <button
+        type="submit"
+        class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+        [disabled]="isSubmitting || form.invalid"
+      >
+        {{ isSubmitting ? (project ? 'Updating...' : 'Creating...') : (project ? 'Update Project' : 'Create Project') }}
+      </button>
+      <button
+        type="button"
+        class="rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-sand/40"
+        (click)="onCancel()"
+      >
+        Cancel
+      </button>
+    </div>
+  </form>
+</section>
+

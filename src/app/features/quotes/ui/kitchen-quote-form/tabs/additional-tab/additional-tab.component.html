@@ -1,0 +1,159 @@
+<div class="space-y-6">
+  <!-- Voice Recording Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Voice Recording Notes</h3>
+    <div class="flex flex-col gap-4">
+      <button
+        type="button"
+        class="rounded-2xl px-6 py-4 font-bold text-white transition-all shadow-raised"
+        [class.bg-pine]="!isRecording()"
+        [class.bg-red-600]="isRecording()"
+        (click)="toggleVoiceRecording()"
+      >
+        @if (!isRecording()) {
+          Start Recording
+        } @else {
+          Stop Recording
+        }
+      </button>
+      @if (hasRecording()) {
+        <div class="rounded-2xl border border-fog/60 bg-white p-4">
+          <p class="text-sm text-charcoal">Recording available</p>
+          <!-- TODO: Add playback controls -->
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Media Upload Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Media Upload</h3>
+    <div class="space-y-4">
+      <input
+        type="file"
+        multiple
+        accept="image/*,video/*"
+        (change)="onMediaFileSelected($event)"
+        class="block w-full text-sm text-charcoal file:mr-4 file:rounded-2xl file:border-0 file:bg-pine file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-pine-dark"
+      />
+      @if (mediaFiles().length > 0) {
+        <div class="space-y-2">
+          @for (file of mediaFiles(); track $index) {
+            <div class="flex items-center justify-between rounded-2xl border border-fog/60 bg-white p-3">
+              <span class="text-sm text-charcoal">{{ file.name }}</span>
+              <button
+                type="button"
+                class="text-red-600 hover:text-red-800"
+                (click)="removeMediaFile($index)"
+              >
+                Remove
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Drawing Tool Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Drawing Tool</h3>
+    <div class="space-y-4">
+      <button
+        type="button"
+        class="rounded-2xl bg-pine px-6 py-3 font-semibold text-white transition hover:bg-pine-dark"
+        (click)="toggleDrawingTool()"
+      >
+        Open Drawing Tool
+      </button>
+      @if (drawings().length > 0) {
+        <div class="space-y-2">
+          @for (drawing of drawings(); track $index) {
+            <div class="flex items-center justify-between rounded-2xl border border-fog/60 bg-white p-3">
+              <span class="text-sm text-charcoal">Drawing {{ $index + 1 }}</span>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="text-pine hover:text-pine-dark"
+                  (click)="viewDrawing($index)"
+                >
+                  View
+                </button>
+                <button
+                  type="button"
+                  class="text-red-600 hover:text-red-800"
+                  (click)="removeDrawing($index)"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Final Step Section -->
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Final Step</h3>
+    <div class="space-y-4">
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Time Frame (days)
+        <input
+          type="number"
+          formControlName="timeFrame"
+          [min]="0"
+          [step]="1"
+          placeholder="##"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Customer Budget
+        <input
+          type="number"
+          formControlName="customerBudget"
+          [min]="0"
+          [step]="0.01"
+          placeholder="$0.00"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Rough Quote
+        <input
+          type="number"
+          formControlName="roughQuote"
+          [min]="0"
+          [step]="0.01"
+          placeholder="$0.00"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Notes
+        <textarea
+          formControlName="notes"
+          rows="4"
+          placeholder="Additional notes..."
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        ></textarea>
+      </label>
+      <button
+        type="button"
+        class="w-full rounded-2xl bg-pine px-6 py-4 font-bold text-white transition hover:bg-pine-dark shadow-raised"
+        (click)="calculateEstimate()"
+      >
+        Calculate Estimate
+      </button>
+      @if (estimateResult()) {
+        <div class="rounded-xl border-2 border-pine bg-pine/10 p-6 text-center">
+          <p class="text-sm font-medium text-charcoal mb-2">Estimated Total</p>
+          <p class="text-4xl font-bold text-pine">${{ estimateResult() }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+

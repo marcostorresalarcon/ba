@@ -1,0 +1,55 @@
+<section class="space-y-4 rounded-[2.5rem] border border-fog/50 bg-white/90 p-6 shadow-brand mt-8">
+  <header class="flex flex-col gap-1 text-left">
+    <p class="text-xs uppercase tracking-[0.35em] text-clay">Directory</p>
+    <h2 class="font-display text-2xl text-charcoal">Customers</h2>
+  </header>
+
+  @if (customers.length === 0) {
+  <p class="rounded-2xl border border-dashed border-fog px-4 py-6 text-center text-slate">
+    No customers yet. Create the first one using the form.
+  </p>
+  } @else {
+  <ul class="divide-y divide-fog/40">
+    @for (customer of customers; track trackById($index, customer)) {
+    <li
+      class="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between"
+      [class.opacity-60]="isBusy && activeCustomerId === customer._id"
+    >
+      <div>
+        <p class="text-lg font-semibold text-charcoal">
+          {{ customer.name }} {{ customer.lastName }}
+        </p>
+        <p class="text-sm text-slate">{{ customer.email || 'No email' }}</p>
+        <p class="text-xs uppercase tracking-[0.25em] text-slate">
+          {{ customer.city || 'City N/A' }} · {{ customer.state || 'State N/A' }}
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a
+          [routerLink]="['/customers', customer._id, 'projects']"
+          class="rounded-full border border-pine/30 bg-pine px-4 py-2 text-sm font-semibold text-white transition hover:bg-pine-dark"
+        >
+          View Projects
+        </a>
+        <button
+          type="button"
+          class="rounded-full border border-charcoal/40 px-4 py-2 text-sm font-semibold text-charcoal transition hover:bg-charcoal hover:text-alabaster"
+          (click)="edit(customer)"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          class="rounded-full border border-pine/30 bg-pine px-4 py-2 text-sm font-semibold text-white transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:opacity-40"
+          [disabled]="isBusy"
+          (click)="remove(customer)"
+        >
+          Delete
+        </button>
+      </div>
+    </li>
+    }
+  </ul>
+  }
+</section>

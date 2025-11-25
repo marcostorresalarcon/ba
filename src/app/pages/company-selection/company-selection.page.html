@@ -1,0 +1,64 @@
+<app-page-layout [breadcrumbs]="breadcrumbs" background="bg-sand">
+  <div
+    class="relative isolate overflow-hidden rounded-[3rem] bg-sand px-4 py-10 text-center shadow-brand sm:px-8 lg:px-12"
+  >
+    <div class="pointer-events-none absolute inset-0 bg-login-hero opacity-70"></div>
+    <div
+      class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-alabaster/70 via-sand/30 to-transparent"
+    ></div>
+
+    <div class="relative z-10 flex flex-col items-center gap-6">
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        @for (badge of badges; track badge.id) {
+        <span
+          class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em]"
+          [class]="badge.color + ' ' + badge.accent"
+        >
+          <span class="h-2 w-2 rounded-full bg-alabaster/80"></span>
+          {{ badge.label }}
+        </span>
+        }
+      </div>
+
+      <h1 class="font-display text-3xl text-charcoal sm:text-4xl">Choose the company</h1>
+      <p class="max-w-2xl text-base text-slate">
+        Pick a BA company to continue with your projects.
+      </p>
+
+      <div class="w-full max-w-3xl space-y-6">
+        @if (isLoading()) {
+        <div class="space-y-4">
+          @for (_ of [1, 2, 3]; track $index) {
+          <div class="h-20 rounded-brand bg-white/60 shadow-brand"></div>
+          }
+        </div>
+        } @else { @if (!companies().length) {
+        <div
+          class="space-y-4 rounded-brand border border-fog bg-white/80 px-6 py-5 text-sm text-charcoal shadow-raised"
+        >
+          <p class="font-semibold">No companies available.</p>
+          <p class="text-slate">Refresh the list to try again.</p>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-full bg-pine px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white transition hover:bg-pine-dark"
+            (click)="reloadCompanies()"
+          >
+            Reload
+          </button>
+        </div>
+        } @else {
+        <div class="space-y-5">
+          @for (company of companies(); track companyTrackBy($index, company)) {
+          <app-company-card
+            [company]="company"
+            [isSelected]="selectedCompany()?._id === company._id"
+            [logoUrl]="companyLogo(company)"
+            (selectCompany)="handleSelection($event)"
+          />
+          }
+        </div>
+        } }
+      </div>
+    </div>
+  </div>
+</app-page-layout>

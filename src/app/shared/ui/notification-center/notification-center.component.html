@@ -1,0 +1,56 @@
+<section
+  class="pointer-events-none fixed inset-x-0 top-4 z-[9999] flex justify-center px-4 sm:justify-end sm:px-6 lg:px-10"
+  aria-live="assertive"
+>
+  <div class="flex w-full max-w-sm flex-col gap-3">
+    @for (toast of toasts(); track toast.id) {
+      <article
+        class="pointer-events-auto flex gap-3 rounded-2xl border px-4 py-3 text-sm shadow-raised transition"
+        [class.bg-white]="toast.variant === 'info'"
+        [class.bg-pine/95]="toast.variant === 'success'"
+        [class.bg-rose-50]="toast.variant === 'error'"
+        [class.text-charcoal]="toast.variant === 'info'"
+        [class.text-white]="toast.variant === 'success'"
+        [class.text-rose-900]="toast.variant === 'error'"
+      >
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-xl border"
+          [class.border-pine/50]="toast.variant === 'success'"
+          [class.border-fog/60]="toast.variant === 'info'"
+          [class.border-rose-200]="toast.variant === 'error'"
+          [class.bg-pine]="toast.variant === 'success'"
+          [class.bg-white/90]="toast.variant === 'info'"
+          [class.bg-white]="toast.variant === 'error'"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke-width="1.5"
+            [attr.stroke]="toast.variant === 'success' ? '#FFFFFF' : toast.variant === 'error' ? '#B91C1C' : '#332F28'"
+            class="h-5 w-5"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="iconPath(toast.variant)" />
+          </svg>
+        </div>
+
+        <div class="flex-1">
+          <p class="text-sm font-semibold">{{ toast.title }}</p>
+          @if (toast.message) {
+            <p class="text-xs opacity-90">{{ toast.message }}</p>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="text-xs uppercase tracking-[0.2em] text-current/70 transition hover:text-current"
+          (click)="dismiss(toast.id)"
+        >
+          Close
+        </button>
+      </article>
+    }
+  </div>
+</section>
+
+

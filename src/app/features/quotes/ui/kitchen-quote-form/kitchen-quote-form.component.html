@@ -1,0 +1,615 @@
+<section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+  <!-- Header with Back Button and Project Information -->
+  <div class="mb-6">
+    <div class="mb-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-slate transition hover:bg-fog/40 hover:text-charcoal"
+          (click)="goBack()"
+          aria-label="Back"
+        >
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Create Estimate</p>
+          <h2 class="mt-1 font-display text-2xl text-charcoal">Kitchen Information</h2>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-semibold text-clay">Experience:</label>
+          <span class="text-lg font-medium text-charcoal">{{ getCurrentExperience() }}</span>
+        </div>
+        <!-- Cost Counter Toggle -->
+        <button
+          type="button"
+          class="flex items-center gap-2 rounded-full border border-pine/40 bg-pine/10 px-4 py-2 text-sm font-semibold text-pine transition hover:bg-pine/20 hover:border-pine/60"
+          (click)="toggleCostCounter()"
+          aria-label="Toggle cost counter"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Cost</span>
+        </button>
+        <!-- Cost Display -->
+        @if (showCostCounter()) {
+          <div class="flex items-center gap-2 rounded-full bg-pine px-4 py-2 shadow-raised">
+            <span class="text-xs font-semibold uppercase tracking-wide text-white/80">Total</span>
+            <span class="text-lg font-bold text-white">${{ totalCost() | number:'1.2-2' }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Project Data Information (Read-only) -->
+    <div class="rounded-2xl border border-fog/60 bg-fog/10 p-4">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-clay">Client</span>
+          <span class="text-sm font-medium text-charcoal">{{ form.controls.customer.controls.name.value || '—' }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-clay">Project Name</span>
+          <span class="text-sm font-medium text-charcoal">{{ form.controls.projectName.value || '—' }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-clay">Status</span>
+          <span class="text-sm font-medium text-charcoal">{{ form.controls.status.value || '—' }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-clay">Category</span>
+          <span class="text-sm font-medium text-charcoal">Kitchen</span>
+        </div>
+      </div>
+      <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-clay">Source</span>
+          <span class="text-sm font-medium text-charcoal">{{ form.controls.source.value || '—' }}</span>
+        </div>
+        <div class="flex flex-col gap-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-clay">Address</span>
+          <span class="text-sm font-medium text-charcoal">{{ form.controls.address.value || '—' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="mb-6 flex gap-2 border-b border-fog/40">
+    <button
+      type="button"
+      class="px-6 py-3 text-sm font-semibold transition-all relative"
+      [class.text-pine]="activeTab() === 'kitchen-details'"
+      [class.text-slate]="activeTab() !== 'kitchen-details'"
+      (click)="setActiveTab('kitchen-details')"
+    >
+      Kitchen Information
+      @if (activeTab() === 'kitchen-details') {
+      <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-pine"></span>
+      }
+    </button>
+    <button
+      type="button"
+      class="px-6 py-3 text-sm font-semibold transition-all relative"
+      [class.text-pine]="activeTab() === 'materials'"
+      [class.text-slate]="activeTab() !== 'materials'"
+      (click)="setActiveTab('materials')"
+    >
+      Materials
+      @if (activeTab() === 'materials') {
+      <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-pine"></span>
+      }
+    </button>
+  </div>
+
+  <!-- Kitchen Size Selection Buttons (solo en pestaña de detalles) -->
+  @if (activeTab() === 'kitchen-details') {
+    <div class="mb-6 flex gap-4">
+      @for (option of getKitchenSizeOptions(); track option.size) {
+        @let isSelected = kitchenSize() === option.size;
+        <button
+          type="button"
+          class="flex-1 rounded-2xl px-6 py-4 font-bold transition-all"
+          [class.bg-pine]="isSelected"
+          [class.text-white]="isSelected"
+          [class.shadow-raised]="isSelected"
+          [class.bg-fog/20]="!isSelected"
+          [class.text-charcoal]="!isSelected"
+          (click)="handleKitchenSizeChange(option.size)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+  }
+
+  <form class="space-y-6" [formGroup]="form" (ngSubmit)="submit()">
+    <!-- Tab Content: Kitchen Details -->
+    @if (activeTab() === 'kitchen-details') {
+      <!-- Dynamic Form Fields by Category -->
+      @if (inputsByCategory(); as groupedCategories) {
+      @for (categoryGroup of groupedCategories; track categoryGroup.id) {
+        <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+          <h3 class="mb-4 text-lg font-bold text-charcoal">{{ categoryGroup.title }}</h3>
+          
+          @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) {
+              @if (subcategoryGroup.id !== 'default') {
+                <h4 class="mb-3 text-sm font-semibold uppercase text-clay">{{ subcategoryGroup.title }}</h4>
+              }
+              
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                @for (input of subcategoryGroup.inputs; track input.name) {
+                  <app-dynamic-form-field
+                    [input]="input"
+                    [form]="form"
+                    [kitchenSize]="kitchenSize()"
+                  />
+                }
+              </div>
+          }
+
+          <!-- File Upload Section for Countertops -->
+          @if (categoryGroup.id === 'countertops') {
+            <div class="mt-6 border-t border-fog/40 pt-6">
+              <h4 class="mb-4 text-sm font-semibold uppercase text-clay">Countertops Files</h4>
+              <div class="space-y-4">
+                <!-- File Input -->
+                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20">
+                  <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span class="text-sm font-medium text-charcoal">Select files</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    capture="environment"
+                    class="hidden"
+                    (change)="onCountertopsFilesSelected($event)"
+                  />
+                </label>
+
+                <!-- Uploading Files (Miniaturas con loader) -->
+                @if (uploadingCountertopsFiles().size > 0) {
+                  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    @for (fileData of uploadingCountertopsFiles().values(); track $index) {
+                      <div class="relative overflow-hidden rounded-xl border border-fog/60 bg-white">
+                        <!-- Thumbnail -->
+                        @if (fileData.preview) {
+                          <img
+                            [src]="fileData.preview"
+                            [alt]="fileData.file.name"
+                            class="h-32 w-full object-cover"
+                          />
+                        } @else {
+                          <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                            <svg class="h-8 w-8 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                        }
+                        
+                        <!-- Loader Overlay -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-charcoal/60">
+                          <!-- Spinner -->
+                          <svg class="mb-2 h-8 w-8 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <!-- Progress -->
+                          <span class="text-xs font-semibold text-white">{{ fileData.progress }}%</span>
+                        </div>
+                        
+                        <!-- File Name -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                          <p class="truncate text-xs text-white">{{ fileData.file.name }}</p>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Uploaded Files List (Grid de miniaturas) -->
+                @if (form.controls.countertopsFiles.value && form.controls.countertopsFiles.value.length > 0) {
+                  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    @for (fileUrl of form.controls.countertopsFiles.value; track fileUrl; let i = $index) {
+                      <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-white">
+                        <!-- Thumbnail o Preview -->
+                        @if (isImageUrl(fileUrl)) {
+                          <img
+                            [src]="fileUrl"
+                            [alt]="fileUrl.split('/').pop()"
+                            class="h-32 w-full object-cover"
+                          />
+                        } @else if (isVideoUrl(fileUrl)) {
+                          <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                            <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        } @else {
+                          <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                            <svg class="h-8 w-8 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                        }
+                        
+                        <!-- Overlay con botón eliminar -->
+                        <div class="absolute inset-0 flex items-center justify-center bg-charcoal/0 transition group-hover:bg-charcoal/60">
+                          <button
+                            type="button"
+                            class="rounded-full bg-white/90 p-2 text-clay opacity-0 transition hover:bg-white hover:text-charcoal group-hover:opacity-100"
+                            (click)="removeCountertopsFile(i)"
+                            aria-label="Eliminar archivo"
+                          >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        <!-- File Name -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                          <a [href]="fileUrl" target="_blank" class="block truncate text-xs text-white hover:underline">
+                            {{ fileUrl.split('/').pop() }}
+                          </a>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- File Upload Section for Backsplash -->
+          @if (categoryGroup.id === 'backsplash') {
+            <div class="mt-6 border-t border-fog/40 pt-6">
+              <h4 class="mb-4 text-sm font-semibold uppercase text-clay">Backsplash Files</h4>
+              <div class="space-y-4">
+                <!-- File Input -->
+                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20">
+                  <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span class="text-sm font-medium text-charcoal">Seleccionar archivos</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    capture="environment"
+                    class="hidden"
+                    (change)="onBacksplashFilesSelected($event)"
+                  />
+                </label>
+
+                <!-- Uploading Files (Miniaturas con loader) -->
+                @if (uploadingBacksplashFiles().size > 0) {
+                  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    @for (fileData of uploadingBacksplashFiles().values(); track $index) {
+                      <div class="relative overflow-hidden rounded-xl border border-fog/60 bg-white">
+                        <!-- Thumbnail -->
+                        @if (fileData.preview) {
+                          <img
+                            [src]="fileData.preview"
+                            [alt]="fileData.file.name"
+                            class="h-32 w-full object-cover"
+                          />
+                        } @else {
+                          <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                            <svg class="h-8 w-8 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                        }
+                        
+                        <!-- Loader Overlay -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center bg-charcoal/60">
+                          <!-- Spinner -->
+                          <svg class="mb-2 h-8 w-8 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <!-- Progress -->
+                          <span class="text-xs font-semibold text-white">{{ fileData.progress }}%</span>
+                        </div>
+                        
+                        <!-- File Name -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                          <p class="truncate text-xs text-white">{{ fileData.file.name }}</p>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Uploaded Files List (Grid de miniaturas) -->
+                @if (form.controls.backsplashFiles.value && form.controls.backsplashFiles.value.length > 0) {
+                  <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    @for (fileUrl of form.controls.backsplashFiles.value; track fileUrl; let i = $index) {
+                      <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-white">
+                        <!-- Thumbnail o Preview -->
+                        @if (isImageUrl(fileUrl)) {
+                          <img
+                            [src]="fileUrl"
+                            [alt]="fileUrl.split('/').pop()"
+                            class="h-32 w-full object-cover"
+                          />
+                        } @else if (isVideoUrl(fileUrl)) {
+                          <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                            <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        } @else {
+                          <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                            <svg class="h-8 w-8 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                        }
+                        
+                        <!-- Overlay con botón eliminar -->
+                        <div class="absolute inset-0 flex items-center justify-center bg-charcoal/0 transition group-hover:bg-charcoal/60">
+                          <button
+                            type="button"
+                            class="rounded-full bg-white/90 p-2 text-clay opacity-0 transition hover:bg-white hover:text-charcoal group-hover:opacity-100"
+                            (click)="removeBacksplashFile(i)"
+                            aria-label="Eliminar archivo"
+                          >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        <!-- File Name -->
+                        <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                          <a [href]="fileUrl" target="_blank" class="block truncate text-xs text-white hover:underline">
+                            {{ fileUrl.split('/').pop() }}
+                          </a>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+      }
+
+      <!-- Voice Recording Notes Section -->
+      <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+        <h3 class="mb-4 text-lg font-bold text-charcoal">Voice Recording Notes</h3>
+        
+        <div class="flex flex-col gap-6">
+          <!-- Record Button -->
+          <div class="flex items-center gap-4">
+          <button
+            type="button"
+            class="group relative flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95"
+            [class.bg-red-500]="isRecording()"
+            [class.bg-pine]="!isRecording()"
+            (click)="toggleRecording()"
+            [disabled]="isUploadingAudio() || isProcessingAudio()"
+          >
+            <!-- Icono Micrófono -->
+            <svg
+              class="h-8 w-8 text-white transition-transform"
+              [class.scale-110]="isRecording()"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              @if (isRecording()) {
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              } @else {
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              }
+            </svg>
+            
+            <!-- Pulse animation when recording -->
+            @if (isRecording()) {
+              <span class="absolute -inset-1 animate-ping rounded-full bg-red-500 opacity-75"></span>
+            }
+          </button>
+          
+          <div class="flex flex-col">
+            <span class="font-semibold text-charcoal">
+              @if (isRecording()) {
+                Recording...
+              } @else if (isUploadingAudio()) {
+                Uploading...
+              } @else if (isProcessingAudio()) {
+                Processing...
+              } @else {
+                Tap to record
+              }
+            </span>
+            <span class="text-xs text-slate">
+              @if (isRecording()) {
+                Tap again to stop
+              } @else {
+                Record voice notes for this estimate
+              }
+            </span>
+          </div>
+        </div>
+
+          <!-- Audio Player & Summary -->
+          @if (form.controls.audioNotes.value; as audioNote) {
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <div class="mb-4 flex items-center justify-between">
+              <h4 class="text-sm font-semibold text-charcoal">Recorded Note</h4>
+              <button
+                type="button"
+                class="rounded-full p-2 text-red-500 hover:bg-red-50"
+                (click)="deleteAudioNote()"
+                title="Delete recording"
+              >
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Audio Player -->
+            <audio controls class="w-full mb-4" [src]="audioNote.url"></audio>
+
+            <!-- Summary & Transcription -->
+            @if (audioNote.summary || audioNote.transcription) {
+              <div class="space-y-3">
+                @if (audioNote.summary) {
+                  <div>
+                    <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-pine">Summary</h5>
+                    <p class="text-sm text-charcoal">{{ audioNote.summary }}</p>
+                  </div>
+                }
+                
+                @if (audioNote.transcription) {
+                  <div>
+                    <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-clay">Transcription</h5>
+                    <p class="text-xs text-slate italic">{{ audioNote.transcription }}</p>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+        </div>
+      </div>
+
+      <!-- Notes & Sketch Section -->
+      <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+        <h3 class="mb-4 text-lg font-bold text-charcoal">Write or add your notes here</h3>
+        
+        <div class="space-y-6">
+          <!-- Text Notes -->
+          <div>
+            <label class="mb-2 block text-sm font-medium text-charcoal">Additional Notes</label>
+          <textarea
+            formControlName="notes"
+            rows="4"
+            class="w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            placeholder="Add any other details about the project..."
+          ></textarea>
+        </div>
+
+          <!-- Sketch Area -->
+          <div>
+            <div class="flex items-center justify-between mb-4">
+            <label class="text-sm font-medium text-charcoal">Sketch / Drawing</label>
+            @if (!form.controls.sketchFile.value) {
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-semibold text-white shadow-raised transition hover:bg-pine-dark"
+                (click)="showDrawingCanvas.set(true)"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                Add Sketch
+              </button>
+            }
+          </div>
+
+            <!-- Sketch Preview -->
+            @if (form.controls.sketchFile.value; as sketchUrl) {
+            <div class="relative overflow-hidden rounded-xl border border-fog/60 bg-white group">
+              <img 
+                [src]="sketchUrl" 
+                alt="Project Sketch" 
+                class="w-full h-64 object-contain bg-white cursor-pointer"
+                (click)="window.open(sketchUrl, '_blank')"
+              >
+              
+              <!-- Actions Overlay -->
+              <div class="absolute inset-0 flex items-center justify-center gap-3 bg-charcoal/0 transition group-hover:bg-charcoal/40 pointer-events-none group-hover:pointer-events-auto">
+                <button
+                  type="button"
+                  class="rounded-full bg-white p-2 text-charcoal opacity-0 shadow-lg transition hover:text-pine group-hover:opacity-100"
+                  (click)="window.open(sketchUrl, '_blank')"
+                  title="View full size"
+                >
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full bg-white p-2 text-charcoal opacity-0 shadow-lg transition hover:text-red-500 group-hover:opacity-100"
+                  (click)="deleteSketch()"
+                  title="Delete sketch"
+                >
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          }
+
+            @if (isUploadingSketch()) {
+              <div class="mt-4 flex items-center gap-2 text-sm text-pine">
+              <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+                Saving sketch...
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Tab Content: Materials -->
+    <!-- Renderizar siempre pero ocultar cuando no está activo para mantener ViewChild -->
+    <div [class.hidden]="activeTab() !== 'materials'">
+      <app-materials-tab />
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3 border-t border-fog/40 pt-6">
+      <button
+        type="submit"
+        class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+        [disabled]="isSubmitting || form.invalid"
+      >
+        Create Estimate
+      </button>
+      <button
+        type="button"
+        class="rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-fog/20"
+        (click)="saveAsDraft()"
+        [disabled]="isSubmitting"
+      >
+        Save as Draft
+      </button>
+      <button
+        type="button"
+        class="rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-fog/20"
+        (click)="cancelForm()"
+        [disabled]="isSubmitting"
+      >
+        Cancel
+      </button>
+    </div>
+  </form>
+  
+  @if (showDrawingCanvas()) {
+    <app-drawing-canvas
+      (save)="onSketchSaved($event)"
+      (cancel)="showDrawingCanvas.set(false)"
+    />
+  }
+</section>

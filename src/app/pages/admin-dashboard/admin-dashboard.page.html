@@ -1,0 +1,209 @@
+<app-page-layout [breadcrumbs]="breadcrumbs">
+  <section class="space-y-8">
+    <div class="flex items-center justify-between">
+      <h2 class="font-display text-2xl text-charcoal">Dashboard</h2>
+      @if (isLoading()) {
+      <span class="text-sm text-slate animate-pulse">Loading data...</span>
+      }
+    </div>
+
+    <!-- KPI Cards Section -->
+    @if (kpis(); as data) {
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <!-- Quotes Card -->
+      <div class="rounded-3xl bg-white p-6 shadow-brand">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate">Quotes</p>
+        <p class="mt-2 text-4xl font-display text-charcoal">{{ data.quotes.total }}</p>
+        <div class="mt-4 flex flex-col gap-2 text-sm text-slate">
+          <div class="flex justify-between">
+            <span>Approved</span>
+            <span class="font-medium text-green-600">{{ data.quotes.approved }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Pending</span>
+            <span class="font-medium text-orange-500">{{ data.quotes.byStatus['sent'] || 0 }}</span>
+          </div>
+          <div class="mt-2 border-t border-fog pt-2">
+            <span class="text-xs">Conv. Rate: {{ data.quotes.conversionRate }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projects Card -->
+      <div class="rounded-3xl bg-white p-6 shadow-brand">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate">Projects</p>
+        <p class="mt-2 text-4xl font-display text-charcoal">{{ data.projects.total }}</p>
+        <div class="mt-4 flex flex-col gap-2 text-sm text-slate">
+          <div class="flex justify-between">
+            <span>In Progress</span>
+            <span class="font-medium text-pine">{{ data.projects.byStatus['in_progress'] || 0 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Completed</span>
+            <span class="font-medium text-charcoal">{{ data.projects.byStatus['completed'] || 0 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoices Card -->
+      @if (invoiceKpis(); as invData) {
+      <div class="rounded-3xl bg-white p-6 shadow-brand">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate">Invoices</p>
+        <p class="mt-2 text-4xl font-display text-charcoal">{{ invData.total }}</p>
+        <div class="mt-4 flex flex-col gap-2 text-sm text-slate">
+          <div class="flex justify-between">
+            <span>Paid</span>
+            <span class="font-medium text-green-600">{{ invData.byStatus['paid'] || 0 }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Sent</span>
+            <span class="font-medium text-blue-500">{{ invData.byStatus['sent'] || 0 }}</span>
+          </div>
+           <div class="mt-2 border-t border-fog pt-2">
+            <span class="text-xs">Pending: {{ invData.financials.pending | currency }}</span>
+          </div>
+        </div>
+      </div>
+      }
+
+      <!-- Revenue Card -->
+      <div class="rounded-3xl bg-white p-6 shadow-brand">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate">Revenue</p>
+        <p class="mt-2 text-3xl font-display text-charcoal">
+          {{ data.payments.totalRevenue | currency }}
+        </p>
+        <div class="mt-4 flex flex-col gap-2 text-sm text-slate">
+          <div class="flex justify-between">
+            <span>Payments</span>
+            <span class="font-medium">{{ data.payments.total }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Pending</span>
+            <span class="font-medium text-orange-500">{{ data.payments.byStatus?.['pending'] || 0 }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Quick Access / Recent Activity Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Recent Customers -->
+        <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-display text-xl text-charcoal">Recent Customers</h3>
+                <button (click)="setActiveTab('customers')" class="text-pine text-sm font-bold hover:underline">View All</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <tbody class="divide-y divide-fog/40">
+                        @for (customer of recentCustomers(); track customer._id) {
+                            <tr class="hover:bg-fog/5 transition">
+                                <td class="py-3 font-medium text-charcoal">{{ customer.name }} {{ customer.lastName }}</td>
+                                <td class="py-3 text-slate text-sm text-right">{{ customer.email }}</td>
+                            </tr>
+                        } @empty {
+                             <tr><td colspan="2" class="py-6 text-center text-slate">No recent customers.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Projects -->
+        <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-display text-xl text-charcoal">Recent Projects</h3>
+                <button (click)="setActiveTab('projects')" class="text-pine text-sm font-bold hover:underline">View All</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <tbody class="divide-y divide-fog/40">
+                        @for (project of recentProjects(); track project._id) {
+                            <tr class="hover:bg-fog/5 transition">
+                                <td class="py-3 font-medium text-charcoal">{{ project.name }}</td>
+                                <td class="py-3 text-right">
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold uppercase" 
+                                    [class.bg-yellow-100]="project.status === 'pending'" 
+                                    [class.text-yellow-800]="project.status === 'pending'"
+                                    [class.bg-blue-100]="project.status === 'in_progress'" 
+                                    [class.text-blue-800]="project.status === 'in_progress'"
+                                    [class.bg-green-100]="project.status === 'completed'" 
+                                    [class.text-green-800]="project.status === 'completed'">
+                                    {{ project.status.replace('_', ' ') }}
+                                    </span>
+                                </td>
+                            </tr>
+                        } @empty {
+                             <tr><td colspan="2" class="py-6 text-center text-slate">No recent projects.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+         <!-- Recent Invoices -->
+         <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-display text-xl text-charcoal">Recent Invoices</h3>
+                <button (click)="setActiveTab('invoices')" class="text-pine text-sm font-bold hover:underline">View All</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <tbody class="divide-y divide-fog/40">
+                        @for (invoice of recentInvoices(); track invoice._id) {
+                            <tr class="hover:bg-fog/5 transition">
+                                <td class="py-3 font-medium text-charcoal">#{{ invoice.number }}</td>
+                                <td class="py-3 text-charcoal font-bold text-right">${{ invoice.totalAmount | number:'1.2-2' }}</td>
+                                <td class="py-3 text-right">
+                                     <span class="px-2 py-1 rounded-full text-xs font-bold uppercase" 
+                                        [class.bg-green-100]="invoice.status === 'paid'"
+                                        [class.text-green-800]="invoice.status === 'paid'"
+                                        [class.bg-yellow-100]="invoice.status === 'sent'"
+                                        [class.text-yellow-800]="invoice.status === 'sent'">
+                                        {{ invoice.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        } @empty {
+                             <tr><td colspan="3" class="py-6 text-center text-slate">No recent invoices.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Estimates -->
+        <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-display text-xl text-charcoal">Recent Estimates</h3>
+                <button (click)="setActiveTab('quotes')" class="text-pine text-sm font-bold hover:underline">View All</button>
+            </div>
+            <div class="overflow-x-auto">
+                 <table class="w-full text-left">
+                    <tbody class="divide-y divide-fog/40">
+                        @for (quote of recentQuotes(); track quote._id) {
+                            <tr class="hover:bg-fog/5 transition">
+                                <td class="py-3 font-medium text-charcoal capitalize">{{ quote.category }} (v{{ quote.versionNumber }})</td>
+                                <td class="py-3 text-charcoal font-bold text-right">${{ quote.totalPrice | number:'1.2-2' }}</td>
+                                <td class="py-3 text-right">
+                                     <span class="px-2 py-1 rounded-full text-xs font-bold uppercase" 
+                                        [class.bg-slate/20]="quote.status === 'draft'"
+                                        [class.bg-blue-500/20]="quote.status === 'sent'"
+                                        [class.bg-pine/20]="quote.status === 'approved'">
+                                        {{ quote.status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        } @empty {
+                             <tr><td colspan="3" class="py-6 text-center text-slate">No recent estimates.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+  </section>
+</app-page-layout>
+

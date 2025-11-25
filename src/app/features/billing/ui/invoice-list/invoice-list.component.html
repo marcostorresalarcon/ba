@@ -1,0 +1,43 @@
+<app-page-layout [breadcrumbs]="breadcrumbs">
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="font-display text-3xl text-charcoal">My Invoices</h1>
+  </div>
+
+  @if (isLoading()) {
+    <div class="space-y-4">
+      <div class="h-20 rounded-xl bg-fog/20 animate-pulse"></div>
+      <div class="h-20 rounded-xl bg-fog/20 animate-pulse"></div>
+      <div class="h-20 rounded-xl bg-fog/20 animate-pulse"></div>
+    </div>
+  } @else if (invoices().length > 0) {
+    <div class="space-y-4">
+      @for (inv of invoices(); track inv._id) {
+        <a [routerLink]="['/invoices', inv._id]" class="block bg-white rounded-xl border border-fog/60 p-6 shadow-sm hover:shadow-md transition hover:border-pine/50">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="font-bold text-charcoal text-lg">Invoice #{{ inv.number }}</p>
+              <p class="text-sm text-slate">{{ inv.issueDate | date }}</p>
+            </div>
+            <div class="flex items-center gap-6">
+              <div class="text-right">
+                <p class="text-xs font-bold uppercase text-clay">Total</p>
+                <p class="font-display text-xl text-charcoal">${{ inv.totalAmount | number:'1.2-2' }}</p>
+              </div>
+              <span class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="getStatusColor(inv.status)">
+                {{ inv.status }}
+              </span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+        </a>
+      }
+    </div>
+  } @else {
+    <div class="text-center py-12 bg-white rounded-2xl border border-fog/60">
+      <p class="text-slate text-lg">No invoices found.</p>
+    </div>
+  }
+</app-page-layout>
+

@@ -1,0 +1,42 @@
+<app-page-layout [breadcrumbs]="breadcrumbs()">
+  @if (isLoadingProject()) {
+  <div class="space-y-4">
+    <div class="h-32 rounded-2xl bg-fog/30"></div>
+    <div class="h-64 rounded-2xl bg-fog/30"></div>
+  </div>
+  } @else { @if (project()) {
+  <div class="space-y-6">
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+      <h1 class="font-display text-3xl text-charcoal">{{ project()?.name }}</h1>
+      @if (project()?.description) {
+      <p class="mt-2 text-slate">{{ project()?.description }}</p>
+      }
+      <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate">
+        <span class="rounded-full bg-pine/10 px-3 py-1 font-medium text-pine">
+          {{ project()?.status?.replace('_', ' ') }}
+        </span>
+        @if (project()?.projectType) {
+        <span class="rounded-full bg-sand/40 px-3 py-1 font-medium text-charcoal">
+          {{ formatProjectType(project()?.projectType) }}
+        </span>
+        } @if (project()?.startDate) {
+        <span>Started: {{ formatDate(project()?.startDate ?? '') }}</span>
+        } @if (project()?.expectedEndDate) {
+        <span>Expected: {{ formatDate(project()?.expectedEndDate ?? '') }}</span>
+        }
+      </div>
+    </section>
+
+    <app-quote-list
+      [quotes]="quotes()"
+      [isLoading]="isLoadingQuotes()"
+      [projectType]="project()?.projectType ?? null"
+      [readonly]="isReadOnly()"
+      (createQuote)="toggleQuoteForm()"
+      (editQuote)="handleEditQuote($event)"
+      (deleteQuote)="handleDeleteQuote($event)"
+      (viewInvoices)="handleViewInvoices($event)"
+    />
+  </div>
+  } }
+</app-page-layout>

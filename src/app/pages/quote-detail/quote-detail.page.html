@@ -1,0 +1,504 @@
+<app-page-layout [breadcrumbs]="breadcrumbs()">
+  @if (isLoading()) {
+  <div class="space-y-6 animate-pulse">
+    <div class="h-32 rounded-[2.5rem] bg-fog/30"></div>
+    <div class="h-96 rounded-[2.5rem] bg-fog/30"></div>
+  </div>
+  } @else if (quote(); as quote) {
+  <div class="space-y-6">
+    <!-- Header Section -->
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-8 shadow-brand">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <span
+              class="rounded-full bg-sand/70 px-3 py-1 text-xs font-semibold text-charcoal/80 uppercase tracking-wider"
+            >
+              {{ quote.category }}
+            </span>
+            <span
+              class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider"
+              [ngClass]="getStatusColor(quote.status)"
+            >
+              {{ quote.status.replace('_', ' ') }}
+            </span>
+          </div>
+          <h1 class="font-display text-3xl md:text-4xl text-charcoal">
+            Estimate <span class="text-pine">v{{ quote.versionNumber }}</span>
+          </h1>
+          <p class="text-slate mt-1 flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            {{ formatDate(quote.createdAt) }}
+          </p>
+        </div>
+
+        <div class="flex flex-col items-start md:items-end gap-4 w-full md:w-auto">
+          <div class="flex flex-col items-start md:items-end w-full md:w-auto">
+            <p class="text-xs font-semibold uppercase tracking-widest text-clay mb-1">Total Cost</p>
+            <p class="font-display text-4xl text-charcoal">
+              ${{
+                (quote.totalPrice || 0).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })
+              }}
+            </p>
+          </div>
+          <button
+            type="button"
+            (click)="downloadPdf()"
+            class="flex items-center justify-center gap-2 rounded-full bg-pine px-6 py-3 text-sm font-semibold text-white shadow-raised transition hover:bg-pine/90 hover:shadow-lg active:scale-95 whitespace-nowrap w-full md:w-auto"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+              />
+            </svg>
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Customer & Project Info -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <section class="rounded-[2rem] border border-fog/60 bg-white p-6 shadow-sm">
+        <h3
+          class="text-sm font-bold uppercase tracking-widest text-clay mb-4 border-b border-fog/40 pb-2"
+        >
+          Customer Information
+        </h3>
+        <div class="space-y-3">
+          @if (customer; as cust) {
+          <div>
+            <span class="text-xs text-slate block">Name</span>
+            <span class="font-medium text-charcoal">{{ cust.name }}</span>
+          </div>
+          @if (cust.email) {
+          <div>
+            <span class="text-xs text-slate block">Email</span>
+            <a [href]="'mailto:' + cust.email" class="font-medium text-pine hover:underline">{{
+              cust.email
+            }}</a>
+          </div>
+          } @if (cust.phone) {
+          <div>
+            <span class="text-xs text-slate block">Phone</span>
+            <a
+              [href]="'tel:' + cust.phone"
+              class="font-medium text-charcoal hover:text-pine transition"
+              >{{ cust.phone }}</a
+            >
+          </div>
+          } } @else {
+          <p class="text-sm text-slate italic">No customer information available.</p>
+          }
+        </div>
+      </section>
+
+      <section class="rounded-[2rem] border border-fog/60 bg-white p-6 shadow-sm">
+        <h3
+          class="text-sm font-bold uppercase tracking-widest text-clay mb-4 border-b border-fog/40 pb-2"
+        >
+          Project Details
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <span class="text-xs text-slate block">Experience Level</span>
+            <span class="font-medium text-charcoal capitalize">{{ quote.experience }}</span>
+          </div>
+          @if (quote.notes) {
+          <div>
+            <span class="text-xs text-slate block">Notes</span>
+            <p class="font-medium text-charcoal text-sm italic">{{ quote.notes }}</p>
+          </div>
+          } @if (quote.kitchenInformation && quote.kitchenInformation['type']) {
+          <div>
+            <span class="text-xs text-slate block">Kitchen Size</span>
+            <span class="font-medium text-charcoal capitalize">{{
+              quote.kitchenInformation['type']
+            }}</span>
+          </div>
+          }
+        </div>
+      </section>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="mb-6 flex gap-2 rounded-[2rem] border border-fog/40 bg-white p-1 shadow-sm">
+      <button
+        type="button"
+        class="flex-1 rounded-[1.75rem] px-6 py-3 text-sm font-semibold transition-all relative"
+        [class.text-pine]="activeTab() === 'kitchen-details'"
+        [class.text-slate]="activeTab() !== 'kitchen-details'"
+        [class.bg-white]="activeTab() === 'kitchen-details'"
+        [class.bg-fog/10]="activeTab() !== 'kitchen-details'"
+        (click)="setActiveTab('kitchen-details')"
+      >
+        <span>Kitchen Information</span>
+        @if (activeTab() === 'kitchen-details') {
+        <span class="absolute inset-x-6 bottom-1 h-0.5 rounded-full bg-pine"></span>
+        }
+      </button>
+      <button
+        type="button"
+        class="flex-1 rounded-[1.75rem] px-6 py-3 text-sm font-semibold transition-all relative"
+        [class.text-pine]="activeTab() === 'materials'"
+        [class.text-slate]="activeTab() !== 'materials'"
+        [class.bg-white]="activeTab() === 'materials'"
+        [class.bg-fog/10]="activeTab() !== 'materials'"
+        (click)="setActiveTab('materials')"
+      >
+        <span>Materials</span>
+        @if (activeTab() === 'materials') {
+        <span class="absolute inset-x-6 bottom-1 h-0.5 rounded-full bg-pine"></span>
+        }
+      </button>
+      <button
+        type="button"
+        class="flex-1 rounded-[1.75rem] px-6 py-3 text-sm font-semibold transition-all relative"
+        [class.text-pine]="activeTab() === 'invoices'"
+        [class.text-slate]="activeTab() !== 'invoices'"
+        [class.bg-white]="activeTab() === 'invoices'"
+        [class.bg-fog/10]="activeTab() !== 'invoices'"
+        (click)="setActiveTab('invoices')"
+      >
+        <span>Invoices</span>
+        @if (activeTab() === 'invoices') {
+        <span class="absolute inset-x-6 bottom-1 h-0.5 rounded-full bg-pine"></span>
+        }
+      </button>
+    </div>
+
+    <!-- Tab Content: Kitchen Details -->
+    @if (activeTab() === 'kitchen-details') {
+    <!-- Kitchen Specific Information -->
+    @if (quote.kitchenInformation) { @for (categoryGroup of groupedInputs(); track categoryGroup.id)
+    { @if (hasCategoryData(categoryGroup, quote)) {
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+      <h2 class="font-display text-2xl text-charcoal mb-6">{{ categoryGroup.title }}</h2>
+
+      @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) { @if
+      (subcategoryGroup.id !== 'default') {
+      <h4
+        class="mb-4 text-sm font-bold uppercase tracking-widest text-clay border-b border-fog/40 pb-2 mt-6 first:mt-0"
+      >
+        {{ subcategoryGroup.title }}
+      </h4>
+      }
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        @for (input of subcategoryGroup.inputs; track input.name) { @if (shouldShowInput(input,
+        quote)) {
+        <div class="bg-fog/10 rounded-xl p-4 border border-fog/40">
+          <span class="text-xs font-bold uppercase tracking-wide text-clay block mb-1">{{
+            input.label
+          }}</span>
+          <span class="text-lg font-medium text-charcoal">
+            @let value = getInputValue(input, quote); @if (value === true) { Yes } @else if (value
+            === false) { No } @else {
+            {{ value }}
+            @if (input.unit) {
+            <span class="text-sm text-slate ml-1">{{ input.unit }}</span>
+            } }
+          </span>
+        </div>
+        } }
+      </div>
+      }
+    </section>
+    } }
+
+    <!-- Media Files -->
+    @let countertopsFiles = quote.kitchenInformation['countertopsFiles']; @let backsplashFiles =
+    quote.kitchenInformation['backsplashFiles']; @if ((countertopsFiles &&
+    $any(countertopsFiles).length > 0) || (backsplashFiles && $any(backsplashFiles).length > 0)) {
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+      <h2 class="font-display text-2xl text-charcoal mb-6">Media & Files</h2>
+
+      @if (countertopsFiles && $any(countertopsFiles).length > 0) {
+      <div class="mb-8">
+        <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">
+          Countertops Files
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          @for (file of $any(countertopsFiles); track file) {
+          <a
+            [href]="file"
+            target="_blank"
+            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50"
+          >
+            @if (isImageUrl(file)) {
+            <img
+              [src]="file"
+              class="h-32 w-full object-cover transition group-hover:scale-105"
+              alt="Countertop file"
+            />
+            } @else {
+            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <span class="text-xs font-bold">VIEW FILE</span>
+            </div>
+            }
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
+          </a>
+          }
+        </div>
+      </div>
+      } @if (backsplashFiles && $any(backsplashFiles).length > 0) {
+      <div>
+        <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">Backsplash Files</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          @for (file of $any(backsplashFiles); track file) {
+          <a
+            [href]="file"
+            target="_blank"
+            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50"
+          >
+            @if (isImageUrl(file)) {
+            <img
+              [src]="file"
+              class="h-32 w-full object-cover transition group-hover:scale-105"
+              alt="Backsplash file"
+            />
+            } @else {
+            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <span class="text-xs font-bold">VIEW FILE</span>
+            </div>
+            }
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
+          </a>
+          }
+        </div>
+      </div>
+      }
+    </section>
+    }
+
+    <!-- Audio Notes -->
+    @let audioNotes = quote.kitchenInformation['audioNotes']; @if (audioNotes) {
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+      <h2 class="font-display text-2xl text-charcoal mb-6">Voice Notes</h2>
+
+      <div class="bg-fog/10 rounded-2xl p-6 border border-fog/40">
+        @if ($any(audioNotes).url) {
+        <audio controls class="w-full mb-4" [src]="$any(audioNotes).url"></audio>
+        } @if ($any(audioNotes).summary) {
+        <div class="mb-4">
+          <h4 class="text-xs font-bold uppercase tracking-wide text-pine mb-2">Summary</h4>
+          <p class="text-charcoal leading-relaxed">{{ $any(audioNotes).summary }}</p>
+        </div>
+        } @if ($any(audioNotes).transcription) {
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wide text-clay mb-2">Transcription</h4>
+          <p class="text-sm text-slate italic leading-relaxed">
+            {{ $any(audioNotes).transcription }}
+          </p>
+        </div>
+        }
+      </div>
+    </section>
+    } }
+    }
+
+    <!-- Tab Content: Materials -->
+    @if (activeTab() === 'materials') {
+      @if (hasMaterials()) {
+      <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+        <h2 class="font-display text-2xl text-charcoal mb-6">Materials List</h2>
+
+        <div class="space-y-6">
+          <!-- File (Image/PDF) -->
+          @if (getMaterialsFile(); as fileUrl) {
+          <div>
+            <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">Materials File</h3>
+            <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5">
+              @if (isImageUrl(fileUrl)) {
+              <a [href]="fileUrl" target="_blank" class="block">
+                <img
+                  [src]="fileUrl"
+                  alt="Materials list"
+                  class="h-64 w-full object-contain bg-white transition group-hover:opacity-90"
+                />
+              </a>
+              } @else if (isPdfUrl(fileUrl)) {
+              <a
+                [href]="fileUrl"
+                target="_blank"
+                class="flex h-64 w-full items-center justify-center bg-fog/20 transition hover:bg-fog/30"
+              >
+                <div class="text-center">
+                  <svg
+                    class="mx-auto h-16 w-16 text-clay"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <p class="mt-2 text-sm font-medium text-charcoal">PDF Document</p>
+                  <p class="mt-1 text-xs text-slate">Click to view</p>
+                </div>
+              </a>
+              } @else {
+              <a
+                [href]="fileUrl"
+                target="_blank"
+                class="flex h-64 w-full items-center justify-center bg-fog/20 transition hover:bg-fog/30"
+              >
+                <div class="text-center">
+                  <svg
+                    class="mx-auto h-16 w-16 text-clay"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <p class="mt-2 text-sm font-medium text-charcoal">View File</p>
+                </div>
+              </a>
+              }
+              <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                <a
+                  [href]="fileUrl"
+                  target="_blank"
+                  class="block truncate text-xs text-white hover:underline"
+                >
+                  {{ fileUrl.split('/').pop() }}
+                </a>
+              </div>
+            </div>
+          </div>
+          }
+
+          <!-- Items (Manual Materials) -->
+          @if (getMaterialsItems().length > 0) {
+          <div>
+            <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">
+              Materials Items
+            </h3>
+            <div class="overflow-hidden rounded-xl border border-fog/60">
+              <table class="w-full">
+                <thead class="bg-fog/20 border-b border-fog/40">
+                  <tr>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-clay"
+                    >
+                      Quantity
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-clay"
+                    >
+                      Description
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-fog/40">
+                  @for (item of getMaterialsItems(); track $index) {
+                  <tr class="transition hover:bg-fog/10">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="text-lg font-semibold text-charcoal">{{ item.quantity }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                      <span class="text-base text-charcoal">{{ item.description }}</span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          }
+        </div>
+      </section>
+      }
+      @else {
+      <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+        <div class="text-center py-12">
+          <p class="text-slate text-lg">No materials information available.</p>
+        </div>
+      </section>
+      }
+    }
+
+    <!-- Tab Content: Invoices -->
+    @if (activeTab() === 'invoices') {
+      <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="font-display text-2xl text-charcoal">Invoices</h2>
+          <!-- Solo mostrar si hay un quote activo y no está en modo solo lectura (lógica simplificada por ahora) -->
+           @if (!isCustomer()) {
+          <button (click)="createInvoice()" class="flex items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-bold text-white shadow-raised transition hover:bg-pine/90">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create Invoice
+          </button>
+           }
+        </div>
+
+        @if (invoices().length > 0) {
+          <div class="space-y-4">
+            @for (inv of invoices(); track inv._id) {
+              <div (click)="viewInvoice(inv._id)" class="flex items-center justify-between p-6 rounded-2xl border border-fog/60 bg-white hover:border-pine/50 hover:shadow-md transition cursor-pointer group">
+                <div>
+                  <p class="font-bold text-charcoal group-hover:text-pine transition">Invoice #{{ inv.number }}</p>
+                  <p class="text-sm text-slate">{{ inv.issueDate | date }}</p>
+                </div>
+                <div class="flex items-center gap-6">
+                  <div class="text-right">
+                    <p class="text-xs font-bold uppercase text-clay">Total</p>
+                    <p class="font-display text-xl text-charcoal">${{ inv.totalAmount | number:'1.2-2' }}</p>
+                  </div>
+                  <span class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="getInvoiceStatusColor(inv.status)">
+                    {{ inv.status }}
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate group-hover:text-pine transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="text-center py-12 bg-fog/5 rounded-2xl border border-dashed border-fog/60">
+            <p class="text-slate text-lg">No invoices generated yet.</p>
+            <p class="text-sm text-slate mt-2">Create the first invoice to start billing.</p>
+          </div>
+        }
+      </section>
+    }
+  </div>
+  } @else {
+  <div class="rounded-[2.5rem] border border-fog/40 bg-white p-8 text-center text-slate">
+    Estimate not found.
+  </div>
+  }
+</app-page-layout>

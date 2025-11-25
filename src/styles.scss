@@ -1,1 +1,33 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply min-h-screen bg-sand text-charcoal font-sans antialiased;
+  background-color: #ead1ba;
+}
+
+::selection {
+  background-color: rgba(58, 115, 68, 0.25);
+  color: #332f28;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  @apply outline-none transition duration-200 ease-in-out;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  @apply ring-2 ring-offset-2 ring-pine ring-offset-sand;
+}

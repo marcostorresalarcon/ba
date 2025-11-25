@@ -1,0 +1,88 @@
+<div class="space-y-4">
+  <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
+    <h3 class="mb-4 text-lg font-semibold text-charcoal">Project Data</h3>
+    <div class="space-y-4">
+      <div class="flex items-end gap-3">
+        <label class="flex flex-1 flex-col gap-2 text-sm font-medium text-charcoal">
+          Client
+          <input
+            type="text"
+            [formControl]="form.controls.customer.controls.name"
+            readonly
+            class="rounded-2xl border border-fog/60 bg-fog/20 px-4 py-3 text-base text-charcoal"
+          />
+        </label>
+        <button
+          type="button"
+          class="rounded-2xl bg-pine px-4 py-3 text-sm font-semibold text-white transition hover:bg-pine-dark"
+          (click)="onCreateClient()"
+        >
+          Create Client
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Project Name
+          <input
+            type="text"
+            formControlName="projectName"
+            placeholder="Enter project name"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+          />
+          @if (controlInvalid('projectName')) {
+          <p class="text-xs text-red-600">Project name is required.</p>
+          }
+        </label>
+
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Status
+          <select
+            formControlName="status"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
+          >
+            @for (status of statusOptions; track status) {
+            <option [value]="status">{{ status }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Category
+          <input
+            type="text"
+            formControlName="category"
+            readonly
+            value="kitchen"
+            class="rounded-2xl border border-fog/60 bg-fog/20 px-4 py-3 text-base text-charcoal"
+          />
+        </label>
+
+        <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+          Source
+          <select
+            formControlName="source"
+            class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
+          >
+            <option [value]="null">Select source</option>
+            @for (source of sourceOptions; track source) {
+            <option [value]="source">{{ source }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+        Address
+        <input
+          type="text"
+          formControlName="address"
+          placeholder="Enter address"
+          class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+      </label>
+    </div>
+  </div>
+</div>

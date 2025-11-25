@@ -1,0 +1,82 @@
+<app-page-layout [breadcrumbs]="breadcrumbs()">
+  <div class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+    <h2 class="mb-6 font-display text-2xl text-charcoal">Create Invoice Plan</h2>
+
+    @if (quote(); as quoteData) {
+      <div class="mb-8 rounded-2xl bg-fog/10 p-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="text-sm font-bold uppercase tracking-widest text-clay">Project</p>
+            <!-- project()?.name takes precedence, fallback to projectId string only if not populated -->
+            <p class="text-lg font-medium text-charcoal">{{ project()?.name || (quoteData.projectId | json) }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-bold uppercase tracking-widest text-clay">Total Amount</p>
+            <p class="font-display text-3xl text-pine">${{ totalAmount() | number:'1.2-2' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+        <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold text-charcoal">Payment Installments</h3>
+            <button type="button" (click)="addInstallment()" class="text-sm font-bold text-pine hover:underline">
+              + Add Installment
+            </button>
+          </div>
+
+          <div formArrayName="paymentPlan" class="space-y-3">
+            @for (group of paymentPlanArray.controls; track $index) {
+              <div [formGroupName]="$index" class="flex gap-4 items-start p-4 rounded-xl border border-fog/40 bg-white">
+                <div class="flex-1">
+                  <label class="block text-xs font-bold uppercase text-slate mb-1">Description</label>
+                  <input type="text" formControlName="name" class="w-full rounded-lg border-fog/40 bg-fog/5 px-4 py-2 text-charcoal focus:border-pine focus:ring-pine" placeholder="e.g. Initial Deposit">
+                </div>
+                <div class="w-32">
+                  <label class="block text-xs font-bold uppercase text-slate mb-1">Percentage %</label>
+                  <input type="number" formControlName="percentage" class="w-full rounded-lg border-fog/40 bg-fog/5 px-4 py-2 text-charcoal focus:border-pine focus:ring-pine">
+                </div>
+                <div class="w-40 pt-6">
+                  <p class="text-right font-medium text-charcoal">
+                    ${{ calculateAmount($any(group).get('percentage')?.value || 0) | number:'1.2-2' }}
+                  </p>
+                </div>
+                <button type="button" (click)="removeInstallment($index)" class="pt-6 text-red-500 hover:text-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            }
+          </div>
+
+          <div class="flex justify-end items-center gap-4 pt-4 border-t border-fog/40">
+            <div class="text-right">
+              <span class="text-sm font-bold uppercase text-slate mr-2">Total Percentage:</span>
+              <span class="text-lg font-bold" [class.text-pine]="totalPercentage() === 100" [class.text-red-500]="totalPercentage() !== 100">
+                {{ totalPercentage() }}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-4">
+          <button type="button" (click)="cancel()" class="rounded-full border border-slate/30 px-6 py-3 font-bold text-slate transition hover:bg-slate/5">
+            Cancel
+          </button>
+          <button type="submit" [disabled]="form.invalid || totalPercentage() !== 100" 
+            class="rounded-full bg-pine px-8 py-3 font-bold text-white shadow-raised transition hover:bg-pine/90 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            Generate Invoice
+          </button>
+        </div>
+      </form>
+    } @else {
+      <div class="animate-pulse space-y-4">
+        <div class="h-20 rounded-xl bg-fog/20"></div>
+        <div class="h-64 rounded-xl bg-fog/20"></div>
+      </div>
+    }
+  </div>
+</app-page-layout>
+
