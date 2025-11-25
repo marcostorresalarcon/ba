@@ -240,10 +240,9 @@
         </h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           @for (file of $any(countertopsFiles); track file) {
-          <a
-            [href]="file"
-            target="_blank"
-            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50"
+          <div
+            (click)="openMediaPreview($any(file), $event)"
+            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
           >
             @if (isImageUrl(file)) {
             <img
@@ -251,13 +250,35 @@
               class="h-32 w-full object-cover transition group-hover:scale-105"
               alt="Countertop file"
             />
+            } @else if (isVideoUrl(file)) {
+            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
             } @else {
             <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
               <span class="text-xs font-bold">VIEW FILE</span>
             </div>
             }
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
-          </a>
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button
+                type="button"
+                class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
+                (click)="openMediaPreview($any(file), $event)"
+                title="Preview"
+                aria-label="Preview file"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
+            </div>
+          </div>
           }
         </div>
       </div>
@@ -266,10 +287,9 @@
         <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">Backsplash Files</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           @for (file of $any(backsplashFiles); track file) {
-          <a
-            [href]="file"
-            target="_blank"
-            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50"
+          <div
+            (click)="openMediaPreview($any(file), $event)"
+            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
           >
             @if (isImageUrl(file)) {
             <img
@@ -277,13 +297,35 @@
               class="h-32 w-full object-cover transition group-hover:scale-105"
               alt="Backsplash file"
             />
+            } @else if (isVideoUrl(file)) {
+            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
             } @else {
             <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
               <span class="text-xs font-bold">VIEW FILE</span>
             </div>
             }
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
-          </a>
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button
+                type="button"
+                class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
+                (click)="openMediaPreview($any(file), $event)"
+                title="Preview"
+                aria-label="Preview file"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
+            </div>
+          </div>
           }
         </div>
       </div>
@@ -314,6 +356,146 @@
         }
       </div>
     </section>
+    }
+
+    <!-- Sketch Files (Dibujos) -->
+    @let sketchFiles = quote.kitchenInformation['sketchFiles']; @let sketchFile = quote.kitchenInformation['sketchFile'];
+    @if ((sketchFiles && $any(sketchFiles).length > 0) || sketchFile) {
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+      <h2 class="font-display text-2xl text-charcoal mb-6">Sketches & Drawings</h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Compatibilidad con sketchFile antiguo (único) -->
+        @if (sketchFile && (!sketchFiles || $any(sketchFiles).length === 0)) {
+          <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
+               (click)="openMediaPreview($any(sketchFile), $event)">
+            <img
+              [src]="sketchFile"
+              alt="Project Sketch"
+              class="h-64 w-full object-contain bg-white transition group-hover:opacity-90"
+            />
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button
+                type="button"
+                class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
+                (click)="openMediaPreview($any(sketchFile), $event)"
+                title="Preview"
+                aria-label="Preview file"
+              >
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+              <span class="block truncate text-xs text-white">Sketch</span>
+            </div>
+          </div>
+        }
+        
+        <!-- Múltiples dibujos (sketchFiles) -->
+        @if (sketchFiles && $any(sketchFiles).length > 0) {
+          @for (file of $any(sketchFiles); track file; let i = $index) {
+            <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
+                 (click)="openMediaPreview($any(file), $event)">
+              <img
+                [src]="file"
+                [alt]="'Sketch ' + (i + 1)"
+                class="h-64 w-full object-contain bg-white transition group-hover:opacity-90"
+              />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+                <button
+                  type="button"
+                  class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
+                  (click)="openMediaPreview($any(file), $event)"
+                  title="Preview"
+                  aria-label="Preview sketch"
+                >
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              </div>
+              <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                <span class="block truncate text-xs text-white">Sketch {{ i + 1 }}</span>
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Additional Comments & Media -->
+    @let additionalComments = quote.kitchenInformation['additionalComments'];
+    @if (additionalComments && ($any(additionalComments).comment || ($any(additionalComments).mediaFiles && $any(additionalComments).mediaFiles.length > 0))) {
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
+      <h2 class="font-display text-2xl text-charcoal mb-6">Additional Comments & Media</h2>
+
+      <div class="bg-fog/10 rounded-2xl p-6 border border-fog/40 space-y-6">
+        <!-- Comment -->
+        @if ($any(additionalComments).comment) {
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wide text-pine mb-2">Comments</h4>
+            <p class="text-charcoal leading-relaxed whitespace-pre-wrap">{{ $any(additionalComments).comment }}</p>
+          </div>
+        }
+
+        <!-- Media Files -->
+        @if ($any(additionalComments).mediaFiles && $any(additionalComments).mediaFiles.length > 0) {
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wide text-clay mb-4">Photos & Videos</h4>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              @for (file of $any(additionalComments).mediaFiles; track file) {
+                <div
+                  (click)="openMediaPreview($any(file), $event)"
+                  class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
+                >
+                  @if (isImageUrl(file)) {
+                    <img
+                      [src]="file"
+                      class="h-32 w-full object-cover transition group-hover:scale-105"
+                      [alt]="file.split('/').pop()"
+                    />
+                  } @else if (isVideoUrl(file)) {
+                    <div class="h-32 w-full flex items-center justify-center bg-fog/20 text-charcoal">
+                      <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  } @else {
+                    <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+                      <span class="text-xs font-bold">VIEW FILE</span>
+                    </div>
+                  }
+                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+                    <button
+                      type="button"
+                      class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
+                      (click)="openMediaPreview($any(file), $event)"
+                      title="Preview"
+                      aria-label="Preview file"
+                    >
+                      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+                    <span class="block truncate text-xs text-white">
+                      {{ file.split('/').pop() }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
     } }
     }
 
@@ -328,15 +510,31 @@
           @if (getMaterialsFile(); as fileUrl) {
           <div>
             <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">Materials File</h3>
-            <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5">
+            <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5"
+                 [class.cursor-pointer]="isImageUrl(fileUrl)"
+                 (click)="isImageUrl(fileUrl) && openMediaPreview(fileUrl, $event)">
               @if (isImageUrl(fileUrl)) {
-              <a [href]="fileUrl" target="_blank" class="block">
+              <div class="block">
                 <img
                   [src]="fileUrl"
                   alt="Materials list"
                   class="h-64 w-full object-contain bg-white transition group-hover:opacity-90"
                 />
-              </a>
+                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+                  <button
+                    type="button"
+                    class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
+                    (click)="openMediaPreview(fileUrl, $event); $event.stopPropagation()"
+                    title="Preview"
+                    aria-label="Preview materials file"
+                  >
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
               } @else if (isPdfUrl(fileUrl)) {
               <a
                 [href]="fileUrl"
@@ -500,5 +698,13 @@
   <div class="rounded-[2.5rem] border border-fog/40 bg-white p-8 text-center text-slate">
     Estimate not found.
   </div>
+    }
+
+  @if (previewMediaUrl(); as url) {
+    <app-media-preview-modal
+      [url]="url"
+      [alt]="url.split('/').pop() || 'Media preview'"
+      (close)="closeMediaPreview()"
+    />
   }
-</app-page-layout>
+  </app-page-layout>

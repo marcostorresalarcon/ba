@@ -5,10 +5,8 @@ import {
     inject,
     signal,
     computed,
-    effect,
     DestroyRef,
-    type OnInit,
-    type OnDestroy
+    type OnInit
 } from '@angular/core';
 import type { FormArray, FormControl, FormGroup } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -17,7 +15,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { S3UploadService } from '../../../../../../core/services/upload/s3-upload.service';
 import { NotificationService } from '../../../../../../core/services/notification/notification.service';
-import type { MaterialItem, Materials } from '../../../../../../core/models/quote.model';
+import type { Materials } from '../../../../../../core/models/quote.model';
 
 type MaterialsInputMode = 'file' | 'manual';
 
@@ -31,7 +29,7 @@ type MaterialsInputMode = 'file' | 'manual';
     templateUrl: './materials-tab.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MaterialsTabComponent implements OnInit, OnDestroy {
+export class MaterialsTabComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly s3UploadService = inject(S3UploadService);
     private readonly notificationService = inject(NotificationService);
@@ -92,9 +90,6 @@ export class MaterialsTabComponent implements OnInit, OnDestroy {
             });
     }
 
-    ngOnDestroy(): void {
-        // Cleanup si es necesario
-    }
 
     /**
      * Establece el callback para actualizar el formulario padre

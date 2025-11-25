@@ -12,8 +12,7 @@ import {
   DestroyRef,
   effect,
   type OnInit,
-  type AfterViewInit,
-  type OnDestroy
+  type AfterViewInit
 } from '@angular/core';
 import type { FormControl, FormGroup } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';

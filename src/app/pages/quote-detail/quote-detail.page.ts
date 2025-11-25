@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth/auth.service';
 import { QuoteService } from '../../core/services/quote/quote.service';
 import { InvoiceService } from '../../core/services/invoice/invoice.service';
 import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { MediaPreviewModalComponent } from '../../shared/ui/media-preview-modal/media-preview-modal.component';
 import type { Quote, QuoteCustomer, Materials, MaterialItem } from '../../core/models/quote.model';
 import type { Invoice } from '../../core/models/invoice.model';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
@@ -17,7 +18,7 @@ import { PdfService } from '../../core/services/pdf/pdf.service';
 @Component({
   selector: 'app-quote-detail-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent],
+  imports: [CommonModule, PageLayoutComponent, MediaPreviewModalComponent],
   templateUrl: './quote-detail.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -36,6 +37,7 @@ export class QuoteDetailPage {
   protected readonly quote = signal<Quote | null>(null);
   protected readonly invoices = signal<Invoice[]>([]);
   protected readonly activeTab = signal<string>('kitchen-details');
+  protected readonly previewMediaUrl = signal<string | null>(null);
 
   protected readonly isCustomer = computed(() => this.authService.user()?.role === 'customer');
 
@@ -149,7 +151,7 @@ export class QuoteDetailPage {
 
   protected getKitchenInfoKeys(info: Record<string, unknown>): string[] {
     return Object.keys(info).filter(key => 
-      !['countertopsFiles', 'backsplashFiles', 'audioNotes', 'type'].includes(key)
+      !['countertopsFiles', 'backsplashFiles', 'audioNotes', 'sketchFiles', 'sketchFile', 'additionalComments', 'type'].includes(key)
     );
   }
 
@@ -274,5 +276,23 @@ export class QuoteDetailPage {
       console.error('Error generating PDF:', error);
       this.notificationService.error('PDF Generation Failed', 'Could not generate the PDF. Please try again.');
     }
+  }
+
+  /**
+   * Abre el modal de previsualización de media
+   */
+  protected openMediaPreview(url: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.previewMediaUrl.set(url);
+  }
+
+  /**
+   * Cierra el modal de previsualización
+   */
+  protected closeMediaPreview(): void {
+    this.previewMediaUrl.set(null);
   }
 }

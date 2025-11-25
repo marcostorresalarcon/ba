@@ -32,8 +32,14 @@ export interface KitchenQuoteFormValue {
     summary?: string;
   } | null;
   
-  // Archivo de dibujo
-  sketchFile?: string | null;
+  // Archivos de dibujo (múltiples)
+  sketchFiles?: string[] | null;
+  
+  // Sección de comentarios adicionales con fotos/videos
+  additionalComments?: {
+    comment?: string | null;
+    mediaFiles?: string[] | null;
+  } | null;
   
   // Materiales (objeto con file e items)
   materials?: Materials | null;
@@ -67,7 +73,11 @@ type KitchenQuoteFormControls = {
     transcription?: string;
     summary?: string;
   } | null>;
-  sketchFile: FormControl<string | null>;
+  sketchFiles: FormControl<string[] | null>;
+  additionalComments: FormGroup<{
+    comment: FormControl<string | null>;
+    mediaFiles: FormControl<string[] | null>;
+  }>;
   materials: FormControl<Materials | null>;
 } & Record<string, FormControl<unknown> | FormGroup<Record<string, FormControl<unknown>>>>;
 

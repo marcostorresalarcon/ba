@@ -11,7 +11,7 @@ import {
 import type { FormControl} from '@angular/forms';
 import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { KitchenQuoteFormGroup, KitchenQuoteFormValue } from '../../kitchen-quote-form.types';
+import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
 
 @Component({
   selector: 'app-kitchen-details-tab',

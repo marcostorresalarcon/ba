@@ -1,0 +1,66 @@
+@if (isOpen()) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/80 backdrop-blur-sm transition-opacity"
+    (click)="closeModal()"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="media-preview-title"
+  >
+    <div
+      class="relative mx-4 w-full max-w-7xl max-h-[90vh] bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+      (click)="stopPropagation($event)"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-fog/40 bg-fog/5">
+        <h3 id="media-preview-title" class="text-lg font-bold text-charcoal">Media Preview</h3>
+        <button
+          type="button"
+          (click)="closeModal()"
+          class="flex h-10 w-10 items-center justify-center rounded-full text-slate transition hover:bg-fog/40 hover:text-charcoal"
+          aria-label="Close preview"
+        >
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="flex items-center justify-center p-6 bg-fog/5 min-h-[400px] max-h-[calc(90vh-120px)] overflow-auto">
+        @if (getMediaType() === 'image') {
+          <img
+            [src]="url"
+            [alt]="alt"
+            class="max-w-full max-h-[calc(90vh-200px)] object-contain rounded-xl shadow-lg"
+          />
+        } @else if (getMediaType() === 'video') {
+          <video
+            [src]="url"
+            controls
+            class="max-w-full max-h-[calc(90vh-200px)] rounded-xl shadow-lg"
+          >
+            Your browser does not support the video tag.
+          </video>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 border-t border-fog/40 bg-fog/5">
+        <div class="flex items-center justify-between">
+          <a
+            [href]="url"
+            target="_blank"
+            class="flex items-center gap-2 text-sm font-medium text-pine hover:text-pine-dark transition"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Open in new tab
+          </a>
+          <span class="text-xs text-slate truncate max-w-md">{{ url.split('/').pop() }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+

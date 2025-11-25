@@ -12,8 +12,7 @@ import {
   DestroyRef,
   effect,
   type OnInit,
-  type AfterViewInit,
-  type OnDestroy
+  type AfterViewInit
 } from '@angular/core';
 import type { FormControl, FormGroup} from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -32,9 +31,11 @@ import { KitchenInputsService, type KitchenInput } from '../../../../core/servic
 import { S3UploadService } from '../../../../core/services/upload/s3-upload.service';
 import { AudioRecorderService } from '../../../../core/services/audio/audio-recorder.service';
 import { AudioService } from '../../../../core/services/audio/audio.service';
+import { IosMediaService } from '../../../../core/services/ios/ios-media.service';
 import { DynamicFormFieldComponent } from './dynamic-form-field/dynamic-form-field.component';
 import { DrawingCanvasComponent } from '../../../../shared/ui/drawing-canvas/drawing-canvas.component';
 import { MaterialsTabComponent } from './tabs/materials-tab/materials-tab.component';
+import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
 import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quote-form.types';
 
 @Component({
@@ -45,12 +46,13 @@ import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quo
     ReactiveFormsModule,
     DynamicFormFieldComponent,
     DrawingCanvasComponent,
-    MaterialsTabComponent
+    MaterialsTabComponent,
+    MediaPreviewModalComponent
   ],
   templateUrl: './kitchen-quote-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestroy {
+export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly quoteService = inject(QuoteService);
@@ -61,6 +63,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
   private readonly s3UploadService = inject(S3UploadService);
   private readonly audioRecorderService = inject(AudioRecorderService);
   private readonly audioService = inject(AudioService);
+  private readonly iosMediaService = inject(IosMediaService);
   private readonly destroyRef = inject(DestroyRef);
 
   @Input({ required: true }) project!: Project;
@@ -93,6 +96,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
   // Estado de dibujo
   protected readonly showDrawingCanvas = signal(false);
   protected readonly isUploadingSketch = signal(false);
+  protected readonly uploadingAdditionalMedia = signal<Map<string, { file: File; preview: string; progress: number }>>(new Map());
+  
+  // Estado de previsualización de media
+  protected readonly previewMediaUrl = signal<string | null>(null);
   
   // Quote original para obtener versionNumber
   private originalQuote: Quote | null = null;
@@ -145,7 +152,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
     countertopsFiles: [null as string[] | null],
     backsplashFiles: [null as string[] | null],
     audioNotes: [null as { url: string; transcription?: string; summary?: string } | null],
-    sketchFile: [null as string | null],
+    sketchFiles: [null as string[] | null],
+    additionalComments: this.fb.group({
+      comment: [null as string | null],
+      mediaFiles: [null as string[] | null]
+    }) as FormGroup<{
+      comment: FormControl<string | null>;
+      mediaFiles: FormControl<string[] | null>;
+    }>,
     materials: [null as Materials | null]
   }) as unknown as KitchenQuoteFormGroup;
 
@@ -217,9 +231,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
     }, 0);
   }
   
-  ngOnDestroy(): void {
-    // Cleanup si es necesario
-  }
   
   /**
    * Configura la sincronización de materiales con el formulario
@@ -309,9 +320,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
           const countertopsFiles = quote.kitchenInformation['countertopsFiles'] as string[] | undefined;
           const backsplashFiles = quote.kitchenInformation['backsplashFiles'] as string[] | undefined;
           const audioNotes = quote.kitchenInformation['audioNotes'] as { url: string; transcription?: string; summary?: string } | undefined;
+          const sketchFiles = quote.kitchenInformation['sketchFiles'] as string[] | undefined;
+          // Compatibilidad con sketchFile antiguo
           const sketchFile = quote.kitchenInformation['sketchFile'] as string | undefined;
+          const additionalComments = quote.kitchenInformation['additionalComments'] as { comment?: string | null; mediaFiles?: string[] | null } | undefined;
 
-          this.form.patchValue(quote.kitchenInformation as Partial<KitchenQuoteFormValue>, { emitEvent: false });
+          // patchValue con tipo más flexible para campos dinámicos
+          const kitchenInfo = quote.kitchenInformation as Record<string, unknown>;
+          Object.keys(kitchenInfo).forEach(key => {
+            const control = this.form.get(key);
+            if (control) {
+              control.setValue(kitchenInfo[key], { emitEvent: false });
+            }
+          });
           
           // Establecer campos de archivos si existen
           if (countertopsFiles) {
@@ -323,8 +344,21 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
           if (audioNotes) {
             this.form.controls.audioNotes.setValue(audioNotes, { emitEvent: false });
           }
-          if (sketchFile) {
-            this.form.controls.sketchFile.setValue(sketchFile, { emitEvent: false });
+          // Priorizar sketchFiles, pero mantener compatibilidad con sketchFile
+          if (sketchFiles && sketchFiles.length > 0) {
+            this.form.controls.sketchFiles.setValue(sketchFiles, { emitEvent: false });
+          } else if (sketchFile) {
+            // Migrar sketchFile antiguo a sketchFiles
+            this.form.controls.sketchFiles.setValue([sketchFile], { emitEvent: false });
+          }
+          if (additionalComments) {
+            this.form.controls.additionalComments.patchValue(additionalComments, { emitEvent: false });
+          } else {
+            // Inicializar con valores por defecto si no existe
+            this.form.controls.additionalComments.patchValue({
+              comment: null,
+              mediaFiles: null
+            }, { emitEvent: false });
           }
         }
         
@@ -569,8 +603,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
       kitchenInfo['audioNotes'] = formValue['audioNotes'];
     }
     
-    if (formValue['sketchFile']) {
-      kitchenInfo['sketchFile'] = formValue['sketchFile'];
+    if (formValue['sketchFiles'] && formValue['sketchFiles']?.length > 0) {
+      kitchenInfo['sketchFiles'] = formValue['sketchFiles'];
+    }
+    
+    if (formValue['additionalComments']) {
+      kitchenInfo['additionalComments'] = formValue['additionalComments'];
     }
 
     // Obtener todos los nombres de campos válidos desde inputs.json
@@ -708,8 +746,11 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
       // Subir archivos uno por uno para mostrar progreso individual
       for (const [fileId, fileData] of uploadingMap.entries()) {
         try {
+          // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
+          const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          
           const url = await this.s3UploadService.uploadFile(
-            fileData.file,
+            processedFile,
             (progress) => {
               // Actualizar progreso de este archivo específico
               const updatedMap = new Map(this.uploadingCountertopsFiles());
@@ -790,8 +831,11 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
       // Subir archivos uno por uno para mostrar progreso individual
       for (const [fileId, fileData] of uploadingMap.entries()) {
         try {
+          // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
+          const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          
           const url = await this.s3UploadService.uploadFile(
-            fileData.file,
+            processedFile,
             (progress) => {
               // Actualizar progreso de este archivo específico
               const updatedMap = new Map(this.uploadingBacksplashFiles());
@@ -955,7 +999,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   /**
-   * Maneja el guardado del dibujo
+   * Maneja el guardado del dibujo (múltiples dibujos)
    */
   protected async onSketchSaved(dataUrl: string): Promise<void> {
     this.showDrawingCanvas.set(false);
@@ -965,11 +1009,18 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
       // Convert base64 to File
       const response = await fetch(dataUrl);
       const blob = await response.blob();
-      const file = new File([blob], `sketch-${Date.now()}.png`, { type: 'image/png' });
+      let file = new File([blob], `sketch-${Date.now()}.png`, { type: 'image/png' });
+
+      // Procesar para iOS si es necesario
+      file = await this.iosMediaService.processMediaFile(file);
 
       // Upload to S3
       const url = await this.s3UploadService.uploadFile(file);
-      this.form.controls.sketchFile.setValue(url);
+      
+      // Agregar a la lista de dibujos (múltiples)
+      const currentSketches = this.form.controls.sketchFiles.value ?? [];
+      this.form.controls.sketchFiles.setValue([...currentSketches, url]);
+      
       this.notificationService.success('Success', 'Sketch saved successfully');
     } catch (error) {
       console.error('Error saving sketch:', error);
@@ -979,7 +1030,131 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit, OnDestr
     }
   }
 
-  protected deleteSketch(): void {
-    this.form.controls.sketchFile.setValue(null);
+  protected deleteSketch(index: number): void {
+    const currentSketches = this.form.controls.sketchFiles.value ?? [];
+    const updatedSketches = currentSketches.filter((_, i) => i !== index);
+    this.form.controls.sketchFiles.setValue(updatedSketches.length > 0 ? updatedSketches : null);
+  }
+
+  /**
+   * Maneja la subida de archivos para comentarios adicionales
+   */
+  protected async onAdditionalMediaSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    const currentComments = this.form.controls.additionalComments.value;
+    const currentFiles = currentComments?.mediaFiles ?? [];
+    const uploadingMap = new Map<string, { file: File; preview: string; progress: number }>();
+
+    // Crear previews y agregar a la lista de carga
+    for (const file of fileArray) {
+      const fileId = `${Date.now()}-${Math.random()}-${file.name}`;
+      const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+      uploadingMap.set(fileId, { file, preview, progress: 0 });
+    }
+
+    this.uploadingAdditionalMedia.set(uploadingMap);
+
+    try {
+      const uploadedUrls: string[] = [];
+      
+      // Subir archivos uno por uno para mostrar progreso individual
+      for (const [fileId, fileData] of uploadingMap.entries()) {
+        try {
+          // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
+          const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          
+          const url = await this.s3UploadService.uploadFile(
+            processedFile,
+            (progress) => {
+              // Actualizar progreso de este archivo específico
+              const updatedMap = new Map(this.uploadingAdditionalMedia());
+              const existing = updatedMap.get(fileId);
+              if (existing) {
+                updatedMap.set(fileId, { ...existing, progress: progress.percentage });
+                this.uploadingAdditionalMedia.set(updatedMap);
+              }
+            }
+          );
+          uploadedUrls.push(url);
+          
+          // Limpiar preview URL si es imagen
+          if (fileData.preview) {
+            URL.revokeObjectURL(fileData.preview);
+          }
+          
+          // Remover de la lista de carga
+          const updatedMap = new Map(this.uploadingAdditionalMedia());
+          updatedMap.delete(fileId);
+          this.uploadingAdditionalMedia.set(updatedMap);
+        } catch (error) {
+          console.error('Error uploading file:', fileData.file.name, error);
+          // Remover de la lista de carga incluso si falla
+          const updatedMap = new Map(this.uploadingAdditionalMedia());
+          updatedMap.delete(fileId);
+          this.uploadingAdditionalMedia.set(updatedMap);
+          if (fileData.preview) {
+            URL.revokeObjectURL(fileData.preview);
+          }
+        }
+      }
+
+      // Actualizar formulario con las URLs subidas
+      const updatedFiles = [...currentFiles, ...uploadedUrls];
+      const currentComment = currentComments?.comment ?? null;
+      this.form.controls.additionalComments.setValue({
+        comment: currentComment,
+        mediaFiles: updatedFiles
+      });
+      
+      // Limpiar el input para permitir seleccionar los mismos archivos de nuevo
+      input.value = '';
+    } catch (error) {
+      console.error('Error uploading additional media files:', error);
+      this.notificationService.error('Error', 'No se pudieron subir los archivos');
+      
+      // Limpiar todos los previews en caso de error
+      for (const fileData of uploadingMap.values()) {
+        if (fileData.preview) {
+          URL.revokeObjectURL(fileData.preview);
+        }
+      }
+      this.uploadingAdditionalMedia.set(new Map());
+    }
+  }
+
+  /**
+   * Elimina un archivo de comentarios adicionales
+   */
+  protected removeAdditionalMediaFile(index: number): void {
+    const currentComments = this.form.controls.additionalComments.value;
+    const currentFiles = currentComments?.mediaFiles ?? [];
+    const updatedFiles = currentFiles.filter((_, i) => i !== index);
+    const currentComment = currentComments?.comment ?? null;
+    this.form.controls.additionalComments.setValue({
+      comment: currentComment,
+      mediaFiles: updatedFiles.length > 0 ? updatedFiles : null
+    });
+  }
+
+  /**
+   * Abre el modal de previsualización de media
+   */
+  protected openMediaPreview(url: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.previewMediaUrl.set(url);
+  }
+
+  /**
+   * Cierra el modal de previsualización
+   */
+  protected closeMediaPreview(): void {
+    this.previewMediaUrl.set(null);
   }
 }
