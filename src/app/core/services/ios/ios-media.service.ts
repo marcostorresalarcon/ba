@@ -19,11 +19,15 @@ export class IosMediaService {
    * Evita problemas de memoria y cierres de app
    */
   async compressImage(file: File, maxWidth = 1920, maxHeight = 1920, quality = 0.85): Promise<File> {
+    alert(`[DEBUG] compressImage - isIOS: ${this.isIOS}, isNative: ${this.isNative}, file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+    
     // Si no es iOS o no es nativo, retornar el archivo original
     if (!this.isIOS || !this.isNative) {
+      alert('[DEBUG] Not iOS native, returning original file');
       return file;
     }
 
+    alert('[DEBUG] iOS - Starting image compression...');
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
@@ -31,6 +35,7 @@ export class IosMediaService {
         const img = new Image();
         
         img.onload = () => {
+          alert(`[DEBUG] Image loaded - Original dimensions: ${img.width}x${img.height}`);
           // Calcular nuevas dimensiones manteniendo aspect ratio
           let width = img.width;
           let height = img.height;
@@ -39,6 +44,9 @@ export class IosMediaService {
             const ratio = Math.min(maxWidth / width, maxHeight / height);
             width = width * ratio;
             height = height * ratio;
+            alert(`[DEBUG] Resizing image to: ${width}x${height}`);
+          } else {
+            alert('[DEBUG] Image dimensions within limits, no resizing needed');
           }
           
           // Crear canvas para redimensionar
@@ -48,27 +56,33 @@ export class IosMediaService {
           const ctx = canvas.getContext('2d');
           
           if (!ctx) {
+            alert('[DEBUG] ERROR: Could not get canvas context');
             reject(new Error('Could not get canvas context'));
             return;
           }
           
           // Dibujar imagen redimensionada
+          alert('[DEBUG] Drawing image to canvas...');
           ctx.drawImage(img, 0, 0, width, height);
           
           // Convertir a blob y luego a File
+          alert(`[DEBUG] Converting canvas to blob with quality: ${quality}...`);
           canvas.toBlob(
             (blob) => {
               if (!blob) {
+                alert('[DEBUG] ERROR: Could not compress image - blob is null');
                 reject(new Error('Could not compress image'));
                 return;
               }
               
+              alert(`[DEBUG] Blob created - size: ${blob.size} bytes, type: ${blob.type}`);
               const compressedFile = new File(
                 [blob],
                 file.name,
                 { type: file.type || 'image/jpeg' }
               );
               
+              alert(`[DEBUG] Compressed file created - name: ${compressedFile.name}, size: ${compressedFile.size}, type: ${compressedFile.type}`);
               resolve(compressedFile);
             },
             file.type || 'image/jpeg',
@@ -76,7 +90,8 @@ export class IosMediaService {
           );
         };
         
-        img.onerror = () => {
+        img.onerror = (error) => {
+          alert(`[DEBUG] ERROR loading image: ${error}`);
           reject(new Error('Could not load image'));
         };
         
@@ -159,14 +174,22 @@ export class IosMediaService {
    * Aplica compresión/conversión automáticamente para iOS
    */
   async processMediaFile(file: File): Promise<File> {
+    alert(`[DEBUG] processMediaFile - file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+    
     if (file.type.startsWith('image/')) {
-      return this.compressImage(file);
+      alert('[DEBUG] Processing as image...');
+      const processed = await this.compressImage(file);
+      alert(`[DEBUG] Image processed - final size: ${processed.size}`);
+      return processed;
     } else if (file.type.startsWith('audio/')) {
+      alert('[DEBUG] Processing as audio...');
       return this.convertAudioFormat(file);
     } else if (file.type.startsWith('video/')) {
+      alert('[DEBUG] Processing as video...');
       return this.validateVideoFile(file);
     }
     
+    alert('[DEBUG] File type not recognized, returning original');
     return file;
   }
 }

@@ -926,7 +926,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const files = await this.mediaPickerService.pickMultipleMedia(10);
       if (files.length === 0) return;
 
-      this.processCountertopsFiles(files);
+      void this.processCountertopsFiles(files);
     } catch (error) {
       console.error('Error selecting countertops files:', error);
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
@@ -937,11 +937,13 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Procesa los archivos seleccionados para countertops
    */
   private async processCountertopsFiles(fileArray: File[]): Promise<void> {
+    alert(`[DEBUG] processCountertopsFiles - Files count: ${fileArray.length}`);
     const currentFiles = this.form.controls.countertopsFiles.value ?? [];
     const uploadingMap = new Map<string, { file: File; preview: string; progress: number }>();
 
     // Crear previews y agregar a la lista de carga
     for (const file of fileArray) {
+      alert(`[DEBUG] Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
       const fileId = `${Date.now()}-${Math.random()}-${file.name}`;
       const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
       uploadingMap.set(fileId, { file, preview, progress: 0 });
@@ -955,9 +957,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       // Subir archivos uno por uno para mostrar progreso individual
       for (const [fileId, fileData] of uploadingMap.entries()) {
         try {
+          alert(`[DEBUG] Processing media file for iOS: ${fileData.file.name}`);
           // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
           const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          alert(`[DEBUG] File processed - name: ${processedFile.name}, size: ${processedFile.size}, type: ${processedFile.type}`);
 
+          alert(`[DEBUG] Uploading file to S3: ${processedFile.name}`);
           const url = await this.s3UploadService.uploadFile(
             processedFile,
             (progress) => {
@@ -970,6 +975,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
               }
             }
           );
+          alert(`[DEBUG] File uploaded successfully - URL: ${url}`);
           uploadedUrls.push(url);
 
           // Limpiar preview URL si es imagen
@@ -994,11 +1000,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       }
 
       // Actualizar formulario con las URLs subidas
+      alert(`[DEBUG] All files uploaded - Total URLs: ${uploadedUrls.length}`);
       const updatedFiles = [...currentFiles, ...uploadedUrls];
       this.form.controls.countertopsFiles.setValue(updatedFiles);
+      alert('[DEBUG] Form updated with countertops files');
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      alert(`[DEBUG] ERROR uploading countertops files: ${errorMsg}`);
       console.error('Error uploading countertops files:', error);
-      this.notificationService.error('Error', 'No se pudieron subir los archivos de countertops');
+      this.notificationService.error('Error', `No se pudieron subir los archivos de countertops: ${errorMsg}`);
 
       // Limpiar todos los previews en caso de error
       for (const fileData of uploadingMap.values()) {
@@ -1029,7 +1039,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const files = await this.mediaPickerService.pickMultipleMedia(10);
       if (files.length === 0) return;
 
-      this.processBacksplashFiles(files);
+      void this.processBacksplashFiles(files);
     } catch (error) {
       console.error('Error selecting backsplash files:', error);
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
@@ -1165,30 +1175,43 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   private async stopRecording(): Promise<void> {
+    alert('[DEBUG] stopRecording - Called');
     try {
+      alert('[DEBUG] Calling audioRecorderService.stopRecording()...');
       const audioFile = await this.audioRecorderService.stopRecording();
+      alert(`[DEBUG] Audio file received - name: ${audioFile.name}, size: ${audioFile.size}, type: ${audioFile.type}`);
+      alert('[DEBUG] Processing audio file...');
       await this.processAudioFile(audioFile);
+      alert('[DEBUG] Audio file processed successfully');
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      alert(`[DEBUG] ERROR stopping recording: ${errorMsg}`);
       console.error('Error stopping recording:', error);
-      this.notificationService.error('Error', 'Error stopping recording');
+      this.notificationService.error('Error', `Error stopping recording: ${errorMsg}`);
     }
   }
 
   private async processAudioFile(file: File): Promise<void> {
+    alert(`[DEBUG] processAudioFile - Starting - file: ${file.name}, size: ${file.size}, type: ${file.type}`);
     this.isUploadingAudio.set(true);
     this.isProcessingAudio.set(true);
 
     try {
       // 1. Subir a S3
+      alert('[DEBUG] Uploading audio file to S3...');
       const url = await this.s3UploadService.uploadFile(file);
+      alert(`[DEBUG] Audio uploaded to S3 - URL: ${url}`);
       this.isUploadingAudio.set(false);
 
       // 2. Procesar con API de audio
+      alert('[DEBUG] Processing audio with API...');
       this.notificationService.info('Processing', 'Generating audio summary...');
 
       this.audioService.summarizeAudio(file).subscribe({
         next: (response) => {
+          alert(`[DEBUG] Audio API response - success: ${response.success}`);
           if (response.success) {
+            alert('[DEBUG] Setting audio notes with transcription and summary');
             this.form.controls.audioNotes.setValue({
               url,
               transcription: response.data.transcription,
@@ -1196,13 +1219,17 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             });
             this.notificationService.success('Success', 'Audio processed successfully');
           } else {
+            alert('[DEBUG] API response not successful, saving only URL');
             // Si falla el resumen, guardamos solo la URL
             this.form.controls.audioNotes.setValue({ url });
             this.notificationService.info('Warning', 'Audio saved, but summary could not be generated');
           }
           this.isProcessingAudio.set(false);
+          alert('[DEBUG] Audio processing completed');
         },
         error: (error) => {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          alert(`[DEBUG] ERROR summarizing audio: ${errorMsg}`);
           console.error('Error summarizing audio:', error);
           // Si falla el resumen, guardamos solo la URL
           this.form.controls.audioNotes.setValue({ url });
@@ -1211,8 +1238,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         }
       });
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      alert(`[DEBUG] ERROR uploading audio: ${errorMsg}`);
       console.error('Error uploading audio:', error);
-      this.notificationService.error('Error', 'Could not upload audio file');
+      this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
       this.isUploadingAudio.set(false);
       this.isProcessingAudio.set(false);
     }
@@ -1305,7 +1334,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const files = await this.mediaPickerService.pickMultipleMedia(10);
       if (files.length === 0) return;
 
-      this.processAdditionalMediaFiles(files);
+      void this.processAdditionalMediaFiles(files);
     } catch (error) {
       console.error('Error selecting additional media files:', error);
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');

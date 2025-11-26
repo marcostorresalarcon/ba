@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 
@@ -20,27 +20,76 @@ export class PermissionsService {
    * @returns Promise<boolean> - true si se otorgó el permiso
    */
   async requestMicrophonePermission(): Promise<boolean> {
+    alert(`[DEBUG] requestMicrophonePermission - Platform: ${this.platform}, Native: ${this.isNative}`);
+    
     if (!this.isNative) {
       // En web, usar la API de permisos del navegador
       try {
+        alert('[DEBUG] Web platform - Requesting getUserMedia');
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        alert('[DEBUG] Web - Permission granted, stopping tracks');
         // Liberar el stream inmediatamente, solo queríamos verificar el permiso
         stream.getTracks().forEach(track => track.stop());
         return true;
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        alert(`[DEBUG] Web - Microphone permission denied: ${errorMsg}`);
         console.error('Microphone permission denied:', error);
         return false;
       }
     }
 
-    // En iOS y Android nativo, los permisos se solicitan automáticamente
-    // cuando se intenta acceder al micrófono
-    // Verificamos intentando acceder
+    // En Android, necesitamos manejar permisos de manera diferente
+    if (this.platform === 'android') {
+      try {
+        alert('[DEBUG] Android - Requesting microphone permission');
+        
+        // En Android, verificar primero si tenemos permisos usando la API de permisos
+        // Si no están disponibles, getUserMedia los solicitará automáticamente
+        // Pero necesitamos manejar el caso donde el permiso fue denegado previamente
+        
+        // Intentar acceder al micrófono - esto debería solicitar permisos si no están otorgados
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        
+        alert('[DEBUG] Android - getUserMedia successful, permission granted');
+        stream.getTracks().forEach(track => {
+          track.stop();
+          alert(`[DEBUG] Android - Track stopped: ${track.kind}, state: ${track.readyState}`);
+        });
+        return true;
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        const errorName = error instanceof Error ? error.name : 'Unknown';
+        alert(`[DEBUG] Android - Microphone permission error: ${errorName} - ${errorMsg}`);
+        console.error('Microphone permission denied:', error);
+        
+        // Si es NotAllowedError, el usuario denegó el permiso
+        // En Android, esto puede pasar si el permiso fue denegado previamente
+        if (errorName === 'NotAllowedError' || errorMsg.includes('Permission denied') || errorMsg.includes('NotAllowedError')) {
+          alert('[DEBUG] Android - Permission was denied. User needs to enable it in app settings.');
+          // En Android, si el permiso fue denegado, el usuario debe ir a configuración
+          // No podemos solicitar permisos nuevamente si fueron denegados permanentemente
+        }
+        return false;
+      }
+    }
+
+    // En iOS, los permisos se solicitan automáticamente
     try {
+      alert('[DEBUG] iOS - Requesting getUserMedia');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      alert('[DEBUG] iOS - Permission granted');
       stream.getTracks().forEach(track => track.stop());
       return true;
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      alert(`[DEBUG] iOS - Microphone permission denied: ${errorMsg}`);
       console.error('Microphone permission denied:', error);
       return false;
     }
