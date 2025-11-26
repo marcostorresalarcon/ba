@@ -14,7 +14,6 @@ import type { Quote } from '../../../../core/models/quote.model';
 export class QuoteListComponent {
   @Input({ required: true }) quotes: Quote[] = [];
   @Input({ required: true }) isLoading = false;
-  @Input({ required: false }) projectType: string | null = null;
   @Input() readonly = false;
   @Output() readonly createQuote = new EventEmitter<void>();
   @Output() readonly editQuote = new EventEmitter<Quote>();
@@ -41,22 +40,10 @@ export class QuoteListComponent {
     const labels: Record<string, string> = {
       kitchen: 'Kitchen',
       bathroom: 'Bathroom',
-      other: 'Other'
-    };
-    return labels[category] ?? category;
-  }
-
-  protected getProjectTypeLabel(): string {
-    if (!this.projectType) {
-      return 'General';
-    }
-    const map: Record<string, string> = {
-      kitchen: 'Kitchen',
-      bathroom: 'Bathroom',
       basement: 'Basement',
       'additional-work': 'Additional Work'
     };
-    return map[this.projectType] ?? this.projectType.replace('_', ' ');
+    return labels[category] ?? category;
   }
 
   protected formatDate(dateString: string): string {

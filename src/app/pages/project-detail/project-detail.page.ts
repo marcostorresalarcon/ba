@@ -78,54 +78,21 @@ export class ProjectDetailPage {
 
   protected toggleQuoteForm(): void {
     const projectId = this.projectId();
-    const project = this.project();
-
-    console.log('toggleQuoteForm called', { projectId, project, projectType: project?.projectType });
 
     if (!projectId) {
       this.notificationService.error('Error', 'Project ID is missing');
       return;
     }
 
-    if (!project) {
-      this.notificationService.error('Error', 'Project information is not available');
-      return;
-    }
-
-    const projectType = project.projectType?.toLowerCase().trim();
-    console.log('Project type:', projectType);
-
-    if (projectType === 'kitchen') {
-      // Navegar primero a la página de selección de experiencia
-      const url = `/projects/${projectId}/quotes/select-experience`;
-      console.log('Navigating to:', url);
-      void this.router.navigateByUrl(url);
-    } else if (projectType === 'additional-work') {
-      // Navegar directo al formulario de additional work (no necesita experiencia)
-      const url = `/projects/${projectId}/quotes/additional-work/create`;
-      console.log('Navigating to:', url);
-      void this.router.navigateByUrl(url);
-    } else {
-      // For other project types, show form or navigate accordingly
-      this.showQuoteForm.set(!this.showQuoteForm());
-      this.notificationService.info('Coming soon', `Estimate form for ${projectType ?? 'this project type'} is not yet available`);
-    }
+    // Navegar a la página de selección de categoría de estimado
+    // Esto permite al usuario elegir qué tipo de estimado crear (kitchen, bathroom, basement, additional-work)
+    const url = `/projects/${projectId}/quotes/select-category`;
+    void this.router.navigateByUrl(url);
   }
 
   protected formatDate(dateString: string): string {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  protected formatProjectType(projectType?: string): string {
-    if (!projectType) return '';
-    const typeMap: Record<string, string> = {
-      kitchen: 'Kitchen',
-      bathroom: 'Bathroom',
-      basement: 'Basement',
-      'additional-work': 'Additional Work'
-    };
-    return typeMap[projectType] ?? projectType.replace('_', ' ').replace('-', ' ');
   }
 
   private loadProject(id: string): void {
@@ -186,19 +153,32 @@ export class ProjectDetailPage {
     }
 
     const projectType = project.projectType?.toLowerCase().trim();
+    const category = quote.category;
+
+    // Mapeo de tipos de proyecto a categorías de quotes
+    const categoryMap: Record<string, string> = {
+      kitchen: 'kitchen',
+      bathroom: 'bathroom',
+      basement: 'basement',
+      'additional-work': 'additional-work'
+    };
+
+    // Usar la categoría del quote en lugar del projectType
+    if (!category || !categoryMap[category]) {
+      this.notificationService.error('Error', `Categoría de quote no válida: ${category ?? 'unknown'}`);
+      return;
+    }
 
     // Para nueva versión, ir directo al formulario con el experience del quote original
     // No pasar por la selección de experience
-    if (projectType === 'kitchen') {
+    if (category === 'kitchen') {
       // Obtener el experience del quote original
       const experience = quote.experience || 'basic';
       // Navegar directo al formulario con el quoteId y experience
       void this.router.navigateByUrl(`/projects/${projectId}/quotes/kitchen/create?experience=${experience}&quoteId=${quote._id}`);
-    } else if (projectType === 'additional-work') {
-      // Navegar directo al formulario de additional work con el quoteId
-      void this.router.navigateByUrl(`/projects/${projectId}/quotes/additional-work/create?quoteId=${quote._id}`);
     } else {
-      this.notificationService.info('Coming soon', `Edit form for ${projectType ?? 'this project type'} is not yet available`);
+      // Para additional-work, bathroom y basement, navegar directo al formulario con el quoteId
+      void this.router.navigateByUrl(`/projects/${projectId}/quotes/${category}/create?quoteId=${quote._id}`);
     }
   }
 

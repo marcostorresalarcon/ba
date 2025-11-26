@@ -1,14 +1,18 @@
 import { CommonModule } from '@angular/common';
 import type {
-  OnInit} from '@angular/core';
+  OnInit
+} from '@angular/core';
 import {
   ChangeDetectionStrategy,
   Component,
   Input,
   DestroyRef,
-  inject
+  inject,
+  ChangeDetectorRef,
+  computed,
+  signal
 } from '@angular/core';
-import type { FormControl} from '@angular/forms';
+import type { FormControl } from '@angular/forms';
 import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
@@ -23,29 +27,32 @@ import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
 })
 export class KitchenDetailsTabComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   @Input({ required: true }) form!: KitchenQuoteFormGroup;
   @Input({ required: true }) selectedKitchenType!: string;
 
+  // Ya no necesitamos estos signals porque formControlName maneja automáticamente la selección
+
   protected readonly ceilingHeightOptions = [
-    { label: '8 INCH', value: '8 INCH' },
-    { label: '9 INCH', value: '9 INCH' },
-    { label: '10 INCH', value: '10 INCH' },
+    { label: '8 FEET', value: '8' },
+    { label: '9 FEET', value: '9' },
+    { label: '10 FEET', value: '10' },
     { label: 'Custom', value: 'custom' }
   ];
 
   protected readonly wallCabinetHeightOptions = [
-    { label: '30 INCH', value: '30 INCH' },
-    { label: '36 INCH', value: '36 INCH' },
-    { label: '42 INCH', value: '42 INCH' },
+    { label: '30 INCH', value: '30' },
+    { label: '36 INCH', value: '36' },
+    { label: '42 INCH', value: '42' },
     { label: 'Custom', value: 'custom' }
   ];
 
   protected readonly stackerOptions = [
     { label: 'No stackers', value: 'none' },
-    { label: '12 INCH', value: '12 INCH' },
-    { label: '15 INCH', value: '15 INCH' },
-    { label: '18 INCH', value: '18 INCH' },
+    { label: '12 INCH', value: '12' },
+    { label: '15 INCH', value: '15' },
+    { label: '18 INCH', value: '18' },
     { label: 'Custom', value: 'custom' }
   ];
 
@@ -62,21 +69,21 @@ export class KitchenDetailsTabComponent implements OnInit {
     { value: 'crawspace', label: 'Crawspace' }
   ];
 
-  protected handleHeightSelection(field: 'cellingHeight' | 'wallCabinetHeight' | 'stackers', value: string): void {
-    const control = this.form.controls[field] as FormControl<string | null>;
-    control.setValue(value);
+  // Ya no necesitamos handleHeightSelection porque formControlName maneja automáticamente la selección
+  // Pero lo mantenemos para limpiar el valor custom cuando se selecciona una opción no-custom
+  protected handleHeightSelection(field: 'ceilingHeight' | 'wallCabinetHeight' | 'stackers', value: string): void {
     if (value !== 'custom') {
-      const customField = `${field}Custom` as 'cellingHeightCustom' | 'wallCabinetHeightCustom' | 'stackersCustom';
+      const customField = `${field}Custom` as 'ceilingHeightCustom' | 'wallCabinetHeightCustom' | 'stackersCustom';
       const customControl = this.form.controls[customField] as FormControl<number | null>;
       customControl.setValue(null);
     }
   }
 
-  protected isCustomHeightSelected(field: 'cellingHeight' | 'wallCabinetHeight' | 'stackers'): boolean {
+  protected isCustomHeightSelected(field: 'ceilingHeight' | 'wallCabinetHeight' | 'stackers'): boolean {
     return this.form.controls[field].value === 'custom';
   }
 
-  protected getCustomHeightValue(field: 'cellingHeight' | 'wallCabinetHeight' | 'stackers'): number | null {
+  protected getCustomHeightValue(field: 'ceilingHeight' | 'wallCabinetHeight' | 'stackers'): number | null {
     return this.form.controls[`${field}Custom` as keyof KitchenQuoteFormGroup['controls']].value as number | null;
   }
 
@@ -184,10 +191,13 @@ export class KitchenDetailsTabComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Los computed signals se actualizan automáticamente cuando cambian los valores del formulario
+    // No necesitamos suscripciones adicionales ya que los computed signals son reactivos
+
     // Configurar habilitación/deshabilitación de buildNewWall basado en frameNewWall
     const frameNewWallControl = this.form.controls['frameNewWall'] as FormControl<string | null>;
     frameNewWallControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed())
       .subscribe(value => {
         const buildNewWallControl = this.form.controls['buildNewWall'] as FormControl<unknown>;
         if (value === 'yes') {
@@ -200,7 +210,7 @@ export class KitchenDetailsTabComponent implements OnInit {
     // Configurar habilitación/deshabilitación de relocateWallQuantity basado en relocateWall
     const relocateWallControl = this.form.controls['relocateWall'] as FormControl<string | null>;
     relocateWallControl.valueChanges
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed())
       .subscribe(value => {
         const relocateWallQuantityControl = this.form.controls['relocateWallQuantity'] as FormControl<unknown>;
         if (value === 'yes') {

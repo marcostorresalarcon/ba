@@ -1,9 +1,10 @@
 import type { FormControl, FormGroup } from '@angular/forms';
-import type { Materials } from '../../../../core/models/quote.model';
+import type { Materials, QuoteCategory } from '../../../../core/models/quote.model';
 
 /**
- * Interface para los valores del formulario de Additional Work Quote
+ * Interface para los valores del formulario genérico de Quote
  * Los campos dinámicos se generan desde inputs_additional_work.json
+ * Soporta: additional-work, bathroom, basement
  */
 export interface AdditionalWorkQuoteFormValue {
   // Campos base del formulario
@@ -14,7 +15,7 @@ export interface AdditionalWorkQuoteFormValue {
   };
   projectName: string;
   status: string;
-  category: 'additional-work';
+  category: QuoteCategory; // Genérico para soportar todas las categorías
   source?: string | null;
   address?: string | null;
   notes?: string | null;
@@ -38,7 +39,7 @@ type AdditionalWorkQuoteFormControls = {
   }>;
   projectName: FormControl<string>;
   status: FormControl<string>;
-  category: FormControl<'additional-work'>;
+  category: FormControl<QuoteCategory>; // Genérico para soportar todas las categorías
   source: FormControl<string | null>;
   address: FormControl<string | null>;
   notes: FormControl<string | null>;

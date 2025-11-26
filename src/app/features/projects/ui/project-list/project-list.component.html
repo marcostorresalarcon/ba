@@ -37,9 +37,6 @@
                 >
                   {{ project.status.replace('_', ' ') }}
                 </span>
-                <span class="rounded-full bg-sand/70 px-3 py-1 text-xs font-semibold text-charcoal/80">
-                  {{ getTypeLabel(project.projectType) }}
-                </span>
               </div>
               @if (project.description) {
                 <p class="mt-1 text-sm text-slate line-clamp-1">{{ project.description }}</p>

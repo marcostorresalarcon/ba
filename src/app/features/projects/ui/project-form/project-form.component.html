@@ -22,21 +22,6 @@
 
   <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()">
     <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
-      Project Type
-      <select
-        formControlName="projectType"
-        class="rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
-      >
-        @for (type of projectTypes; track type.value) {
-          <option [value]="type.value">{{ type.label }}</option>
-        }
-      </select>
-    </label>
-    @if (controlInvalid('projectType')) {
-      <p class="text-xs text-red-600">Please select a project type.</p>
-    }
-
-    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
       Project Name
       <input
         type="text"

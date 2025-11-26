@@ -15,11 +15,7 @@
         <span class="rounded-full bg-pine/10 px-3 py-1 font-medium text-pine">
           {{ project()?.status?.replace('_', ' ') }}
         </span>
-        @if (project()?.projectType) {
-        <span class="rounded-full bg-sand/40 px-3 py-1 font-medium text-charcoal">
-          {{ formatProjectType(project()?.projectType) }}
-        </span>
-        } @if (project()?.startDate) {
+        @if (project()?.startDate) {
         <span>Started: {{ formatDate(project()?.startDate ?? '') }}</span>
         } @if (project()?.expectedEndDate) {
         <span>Expected: {{ formatDate(project()?.expectedEndDate ?? '') }}</span>
@@ -30,7 +26,6 @@
     <app-quote-list
       [quotes]="quotes()"
       [isLoading]="isLoadingQuotes()"
-      [projectType]="project()?.projectType ?? null"
       [readonly]="isReadOnly()"
       (createQuote)="toggleQuoteForm()"
       (editQuote)="handleEditQuote($event)"

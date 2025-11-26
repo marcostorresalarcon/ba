@@ -21,7 +21,14 @@ export interface Project {
   expectedEndDate?: string;
   actualEndDate?: string;
   budget?: number;
+  /** @deprecated Use approvedQuotesByCategory instead */
   approvedQuoteId?: string;
+  approvedQuotesByCategory?: {
+    kitchen?: string;
+    bathroom?: string;
+    basement?: string;
+    'additional-work'?: string;
+  };
   milestones?: ProjectMilestone[];
   photos?: string[];
   notes?: string;

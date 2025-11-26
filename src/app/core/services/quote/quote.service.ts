@@ -65,9 +65,14 @@ export class QuoteService {
     return this.http.delete<void>(endpoint);
   }
 
-  createQuoteVersion(id: string, payload: Partial<QuotePayload>): Observable<Quote> {
-    const endpoint = `${this.baseUrl}/quote/${id}/version`;
-    return this.http.post<Quote>(endpoint, payload);
-  }
+  /**
+   * @deprecated Este endpoint no existe en la API. Para crear una nueva versión,
+   * simplemente crea un nuevo quote con el mismo projectId y category usando createQuote().
+   * El backend calculará automáticamente el versionNumber.
+   */
+  // createQuoteVersion(id: string, payload: Partial<QuotePayload>): Observable<Quote> {
+  //   const endpoint = `${this.baseUrl}/quote/${id}/version`;
+  //   return this.http.post<Quote>(endpoint, payload);
+  // }
 }
 

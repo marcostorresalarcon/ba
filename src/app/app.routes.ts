@@ -51,6 +51,11 @@ export const routes: Routes = [
       import('./pages/project-detail/project-detail.page').then((m) => m.ProjectDetailPage)
   },
   {
+    path: 'projects/:projectId/quotes/select-category',
+    loadComponent: () =>
+      import('./pages/quote-select-category/quote-select-category.page').then((m) => m.QuoteSelectCategoryPage)
+  },
+  {
     path: 'projects/:projectId/quotes/select-experience',
     loadComponent: () =>
       import('./pages/quote-select-experience/quote-select-experience.page').then((m) => m.QuoteSelectExperiencePage)
@@ -64,6 +69,11 @@ export const routes: Routes = [
     path: 'projects/:projectId/quotes/additional-work/create',
     loadComponent: () =>
       import('./pages/quote-create-additional-work/quote-create-additional-work.page').then((m) => m.QuoteCreateAdditionalWorkPage)
+  },
+  {
+    path: 'projects/:projectId/quotes/:category/create',
+    loadComponent: () =>
+      import('./pages/quote-create-generic/quote-create-generic.page').then((m) => m.QuoteCreateGenericPage)
   },
   {
     path: 'quotes/:quoteId',

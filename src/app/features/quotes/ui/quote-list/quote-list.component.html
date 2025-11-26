@@ -2,12 +2,7 @@
   <div class="mb-4 flex items-center justify-between">
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Estimates</p>
-      <div class="mt-1 flex items-center gap-3">
-        <h2 class="font-display text-2xl text-charcoal">Project Estimates</h2>
-        <span class="rounded-full bg-sand/70 px-3 py-1 text-xs font-semibold text-charcoal/80">
-          {{ getProjectTypeLabel() }}
-        </span>
-      </div>
+      <h2 class="font-display text-2xl text-charcoal">Project Estimates</h2>
     </div>
     @if (!readonly) {
     <button
@@ -46,11 +41,6 @@
           <span class="rounded-full bg-pine/10 px-3 py-1 text-xs font-semibold text-pine">
             {{ getCategoryLabel(quote.category) }}
           </span>
-          @if (projectType) {
-          <span class="rounded-full bg-sand/40 px-3 py-1 text-xs font-medium text-charcoal">
-            {{ getProjectTypeLabel() }}
-          </span>
-          }
           <span
             class="rounded-full px-2.5 py-0.5 text-xs font-medium"
             [ngClass]="getStatusColor(quote.status)"

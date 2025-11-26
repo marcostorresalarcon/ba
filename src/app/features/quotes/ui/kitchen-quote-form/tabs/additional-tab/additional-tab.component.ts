@@ -9,6 +9,8 @@ import {
 import type { FormControl} from '@angular/forms';
 import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angular/forms';
 import { NotificationService } from '../../../../../../core/services/notification/notification.service';
+import { PermissionsService } from '../../../../../../core/services/permissions/permissions.service';
+import { MediaPickerService } from '../../../../../../core/services/media/media-picker.service';
 import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
 
 @Component({
@@ -21,6 +23,8 @@ import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
 })
 export class AdditionalTabComponent {
   private readonly notificationService = inject(NotificationService);
+  private readonly permissionsService = inject(PermissionsService);
+  private readonly mediaPickerService = inject(MediaPickerService);
 
   @Input({ required: true }) form!: KitchenQuoteFormGroup;
 
@@ -35,11 +39,26 @@ export class AdditionalTabComponent {
     this.isRecording.set(!this.isRecording());
   }
 
-  protected onMediaFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      const files = Array.from(input.files);
+  protected async onMediaFileSelected(): Promise<void> {
+    try {
+      // Verificar permisos antes de abrir el selector
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permisos requeridos',
+          'Se necesita acceso a la cámara y galería para seleccionar archivos. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+        );
+        return;
+      }
+
+      // Seleccionar medios usando el servicio nativo
+      const files = await this.mediaPickerService.pickMultipleMedia(10);
+      if (files.length > 0) {
       this.mediaFiles.set([...this.mediaFiles(), ...files]);
+      }
+    } catch (error) {
+      console.error('Error selecting media files:', error);
+      this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
     }
   }
 

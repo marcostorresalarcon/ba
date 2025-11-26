@@ -73,24 +73,23 @@
             <div class="flex items-center gap-2">
               <input
                 type="radio"
-                [id]="'cellingHeight-' + option.value"
-                name="cellingHeight"
+                [id]="'ceilingHeight-' + option.value"
+                name="ceilingHeight"
+                formControlName="ceilingHeight"
                 [value]="option.value"
-                [checked]="form.get('cellingHeight')?.value === option.value"
-                (change)="handleHeightSelection('cellingHeight', option.value)"
                 class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
               />
-              <label [for]="'cellingHeight-' + option.value" class="text-sm text-charcoal font-medium">
+              <label [for]="'ceilingHeight-' + option.value" class="text-sm text-charcoal font-medium">
                 {{ option.label }}
               </label>
             </div>
           }
         </div>
-        @if (isCustomHeightSelected('cellingHeight')) {
+        @if (isCustomHeightSelected('ceilingHeight')) {
           <div class="flex items-center gap-3">
             <input
               type="number"
-              formControlName="cellingHeightCustom"
+              formControlName="ceilingHeightCustom"
               [min]="0"
               [step]="0.1"
               placeholder="INCH"
@@ -110,8 +109,8 @@
                 type="radio"
                 [id]="'wallCabinetHeight-' + option.value"
                 name="wallCabinetHeight"
+                formControlName="wallCabinetHeight"
                 [value]="option.value"
-                [checked]="form.get('wallCabinetHeight')?.value === option.value"
                 (change)="handleHeightSelection('wallCabinetHeight', option.value)"
                 class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
               />
@@ -147,8 +146,8 @@
                 type="radio"
                 [id]="'stackers-' + option.value"
                 name="stackers"
+                formControlName="stackers"
                 [value]="option.value"
-                [checked]="form.get('stackers')?.value === option.value"
                 (change)="handleHeightSelection('stackers', option.value)"
                 class="h-4 w-4 border-fog/60 text-pine focus:ring-pine"
               />

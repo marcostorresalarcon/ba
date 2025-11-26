@@ -15,7 +15,7 @@
         </button>
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Create Estimate</p>
-          <h2 class="mt-1 font-display text-2xl text-charcoal">Additional Work Information</h2>
+          <h2 class="mt-1 font-display text-2xl text-charcoal">{{ getCategoryDisplayName(category) }} Information</h2>
         </div>
       </div>
       <div class="flex items-center gap-4">
@@ -83,7 +83,7 @@
       [class.text-slate]="activeTab() !== 'additional-work-details'"
       (click)="setActiveTab('additional-work-details')"
     >
-      Additional Work Information
+      {{ getCategoryDisplayName(category) }} Information
       @if (activeTab() === 'additional-work-details') {
       <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-pine"></span>
       }
@@ -103,16 +103,18 @@
   </div>
 
   <form class="space-y-6" [formGroup]="form" (ngSubmit)="submit()">
-    <!-- Tab Content: Additional Work Details -->
+    <!-- Tab Content: Category Details -->
     @if (activeTab() === 'additional-work-details') {
       <!-- Dynamic Form Fields by Category -->
       @if (inputsByCategory(); as groupedCategories) {
       @for (categoryGroup of groupedCategories; track categoryGroup.id) {
         <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
-          <h3 class="mb-4 text-lg font-bold text-charcoal">{{ categoryGroup.title }}</h3>
+          @if (shouldShowCategoryTitle(categoryGroup)) {
+            <h3 class="mb-4 text-lg font-bold text-charcoal">{{ categoryGroup.title }}</h3>
+          }
           
           @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) {
-              @if (subcategoryGroup.id !== 'default') {
+              @if (subcategoryGroup.id !== 'default' && shouldShowSubcategoryTitle(subcategoryGroup)) {
                 <h4 class="mb-3 text-sm font-semibold uppercase text-clay">{{ subcategoryGroup.title }}</h4>
               }
               

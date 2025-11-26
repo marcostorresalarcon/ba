@@ -45,5 +45,14 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Permisos de privacidad -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Esta aplicación necesita acceder al micrófono para grabar notas de voz y comentarios de audio.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Esta aplicación necesita acceder a la cámara para tomar fotos de proyectos y materiales.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Esta aplicación necesita acceder a tu galería de fotos para seleccionar imágenes y videos de proyectos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Esta aplicación necesita guardar imágenes en tu galería de fotos.</string>
 </dict>
 </plist>

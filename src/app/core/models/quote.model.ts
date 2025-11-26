@@ -48,8 +48,10 @@ export function isQuoteCustomer(customer: QuoteCustomer | string | undefined): c
 }
 
 // QuotePayload usa customerId (string) siempre para creación
+// versionNumber es opcional - si no se proporciona, el backend lo calcula automáticamente por projectId + category
 export type QuotePayload = Omit<Quote, '_id' | 'versionNumber' | 'parentQuoteId' | 'createdAt' | 'updatedAt' | 'customerId' | 'companyId'> & {
   customerId: string;
   companyId: string;
+  versionNumber?: number; // Opcional - el backend lo calcula automáticamente si no se proporciona
 };
 

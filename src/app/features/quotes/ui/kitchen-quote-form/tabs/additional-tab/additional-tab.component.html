@@ -29,13 +29,16 @@
   <div class="rounded-2xl border border-fog/60 bg-fog/10 p-6">
     <h3 class="mb-4 text-lg font-semibold text-charcoal">Media Upload</h3>
     <div class="space-y-4">
-      <input
-        type="file"
-        multiple
-        accept="image/*,video/*"
-        (change)="onMediaFileSelected($event)"
-        class="block w-full text-sm text-charcoal file:mr-4 file:rounded-2xl file:border-0 file:bg-pine file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-pine-dark"
-      />
+      <button
+        type="button"
+        (click)="onMediaFileSelected()"
+        class="w-full rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 text-sm font-semibold text-charcoal transition hover:border-pine/60 hover:bg-fog/20 flex items-center justify-center gap-2"
+      >
+        <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        Seleccionar fotos o videos
+      </button>
       @if (mediaFiles().length > 0) {
         <div class="space-y-2">
           @for (file of mediaFiles(); track $index) {

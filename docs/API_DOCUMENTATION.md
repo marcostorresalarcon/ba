@@ -422,6 +422,14 @@ Elimina un cliente del sistema.
 
 **Nota Importante**: Las cotizaciones (quotes/estimaciones) se crean **después** de crear un proyecto. Primero debe existir un proyecto, y luego se pueden crear múltiples estimaciones para ese proyecto.
 
+**Múltiples Quotes por Proyecto**: Un proyecto puede tener múltiples estimaciones de diferentes categorías (kitchen, bathroom, basement, additional-work). Cada categoría tiene su propio sistema de versiones independiente. Por ejemplo, un proyecto puede tener:
+- Quote Kitchen v1, v2, v3
+- Quote Bathroom v1, v2
+- Quote Basement v1
+- Quote Additional Work v1
+
+**Sistema de Versiones por Categoría**: El `versionNumber` se calcula automáticamente por `projectId + category`. Si no se proporciona, el sistema busca la última versión de esa categoría para ese proyecto y la incrementa en 1. Si es la primera cotización de esa categoría, se asigna versión 1.
+
 ### POST `/quote`
 
 Crea una nueva cotización/estimación para un proyecto existente (disponible para las categorías `kitchen`, `bathroom`, `basement` y `additional-work`).
@@ -438,7 +446,7 @@ Crea una nueva cotización/estimación para un proyecto existente (disponible pa
   "experience": "string (requerido)",
   "category": "kitchen | bathroom | basement | additional-work (requerido)",
   "userId": "string (requerido, MongoDB ObjectId)",
-  "versionNumber": "number (requerido)",
+  "versionNumber": "number (opcional, se calcula automáticamente si no se proporciona)",
   "totalPrice": "number (requerido)",
   "status": "draft | sent | approved | rejected | in_progress | completed (opcional, default: draft)",
   "notes": "string (opcional)",
@@ -524,6 +532,8 @@ El formulario de cocina se basa directamente en `docs/inputs.json`, por lo que t
 
 - El `projectId` debe existir en el sistema
 - El `companyId` de la cotización debe coincidir con el `companyId` del proyecto
+- Si no se proporciona `versionNumber`, se calcula automáticamente buscando la última versión de esa categoría para ese proyecto y sumando 1
+- Un proyecto puede tener múltiples quotes de diferentes categorías, cada una con su propio sistema de versiones
 
 **Respuesta exitosa** (201):
 
@@ -689,21 +699,26 @@ Obtiene una cotización específica por su ID, incluyendo la información comple
 ### GET `/quote/project/:projectId/versions`
 
 Obtiene todas las versiones registradas para un proyecto (útil para auditar el historial completo).  
-Se puede pasar un `versionNumber` opcional para filtrar una versión concreta.
+Se puede filtrar por `category` y/o `versionNumber` opcionales.
 
 **Autenticación**: No especificada
 
 **Parámetros**:
 
-- `projectId` (string, requerido)
-- `versionNumber` (number, opcional, query param)
+- `projectId` (string, requerido, path param)
+- `category` (string, opcional, query param): Filtrar por categoría (`kitchen`, `bathroom`, `basement`, `additional-work`)
+- `versionNumber` (number, opcional, query param): Filtrar por número de versión específico
 
 **Ejemplos**:
 
 ```
 GET /quote/project/507f1f77bcf86cd799439012/versions
-GET /quote/project/507f1f77bcf86cd799439012/versions?versionNumber=3
+GET /quote/project/507f1f77bcf86cd799439012/versions?category=kitchen
+GET /quote/project/507f1f77bcf86cd799439012/versions?category=kitchen&versionNumber=3
+GET /quote/project/507f1f77bcf86cd799439012/versions?versionNumber=1
 ```
+
+**Nota**: Si no se especifica `category`, se devuelven todas las versiones de todas las categorías del proyecto, ordenadas por categoría y número de versión.
 
 **Respuesta exitosa** (200):
 
@@ -730,7 +745,7 @@ GET /quote/project/507f1f77bcf86cd799439012/versions?versionNumber=3
 
 ### PATCH `/quote/:id`
 
-Actualiza una cotización existente (se usa para generar nuevas versiones incrementando `versionNumber` manualmente cuando sea necesario).
+Actualiza una cotización existente. Para crear una nueva versión, se recomienda crear un nuevo quote con el mismo `projectId` y `category`; el sistema calculará automáticamente el siguiente `versionNumber` para esa categoría.
 
 **Autenticación**: No especificada
 
@@ -799,7 +814,9 @@ Elimina una cotización del sistema.
 
 ## Proyectos
 
-**Nota Importante**: Los proyectos se crean **primero**, antes de las cotizaciones. Una vez creado el proyecto, se pueden crear múltiples estimaciones (quotes) para ese proyecto. Cuando se aprueba una estimación, se puede asociar al proyecto mediante `approvedQuoteId`.
+**Nota Importante**: Los proyectos se crean **primero**, antes de las cotizaciones. Una vez creado el proyecto, se pueden crear múltiples estimaciones (quotes) para ese proyecto de diferentes categorías (kitchen, bathroom, basement, additional-work).
+
+**Aprobación de Quotes**: Un proyecto puede tener múltiples quotes aprobados, uno por cada categoría. Se recomienda usar `approvedQuotesByCategory` para gestionar las aprobaciones por categoría. El campo `approvedQuoteId` se mantiene para backward compatibility pero está deprecated.
 
 ### POST `/project`
 
@@ -822,7 +839,13 @@ Crea un nuevo proyecto. **Este es el primer paso** en el flujo de trabajo.
   "expectedEndDate": "Date (opcional)",
   "actualEndDate": "Date (opcional)",
   "budget": "number (opcional)",
-  "approvedQuoteId": "string (opcional, MongoDB ObjectId)",
+  "approvedQuoteId": "string (opcional, deprecated - usar approvedQuotesByCategory)",
+  "approvedQuotesByCategory": {
+    "kitchen": "string (opcional, MongoDB ObjectId)",
+    "bathroom": "string (opcional, MongoDB ObjectId)",
+    "basement": "string (opcional, MongoDB ObjectId)",
+    "additional-work": "string (opcional, MongoDB ObjectId)"
+  },
   "milestones": [
     {
       "name": "string",
@@ -867,7 +890,21 @@ Crea un nuevo proyecto. **Este es el primer paso** en el flujo de trabajo.
 }
 ```
 
-**Nota**: El campo `approvedQuoteId` se puede establecer cuando se aprueba una estimación, asociando la cotización aprobada al proyecto.
+**Nota sobre Aprobación de Quotes**:
+- **`approvedQuotesByCategory`** (recomendado): Permite aprobar un quote por cada categoría. Un proyecto puede tener múltiples quotes aprobados simultáneamente (uno por categoría).
+- **`approvedQuoteId`** (deprecated): Se mantiene para backward compatibility. Si se usa, se recomienda migrar a `approvedQuotesByCategory`.
+
+**Ejemplo con approvedQuotesByCategory**:
+```json
+{
+  "name": "Remodelación Completa - Juan Pérez",
+  "projectType": "kitchen",
+  "approvedQuotesByCategory": {
+    "kitchen": "507f1f77bcf86cd799439020",
+    "bathroom": "507f1f77bcf86cd799439021"
+  }
+}
+```
 
 ---
 
@@ -1360,7 +1397,7 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 
 2. **Sistema de Compañías**: Todos los recursos principales (cotizaciones, proyectos, pagos) están asociados a una compañía. Use el parámetro `companyId` para filtrar datos por compañía.
 
-3. **Sistema de Versiones**: Cada cotización posee un `versionNumber`. Puedes actualizarla vía `PATCH /quote/:id` (incrementando manualmente el número) y consultar el historial con `GET /quote/project/:projectId/versions`.
+3. **Sistema de Versiones por Categoría**: Cada cotización posee un `versionNumber` que se calcula automáticamente por `projectId + category`. Si no se proporciona al crear un quote, el sistema busca la última versión de esa categoría para ese proyecto y la incrementa en 1. Puedes consultar el historial con `GET /quote/project/:projectId/versions` filtrando opcionalmente por `category`.
 
 4. **Validación**: Todos los endpoints utilizan `ValidationPipe` de NestJS que:
 
@@ -1373,7 +1410,7 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 
 7. **ObjectId de MongoDB**: Los IDs de MongoDB son strings que representan ObjectIds. Asegúrate de usar el formato correcto (24 caracteres hexadecimales).
 
-8. **Categorías de Cotizaciones**: Las cotizaciones pueden ser `kitchen`, `bathroom`, `basement` o `additional-work`. Cada tipo tiene campos dedicados (`kitchenInformation`, `bathroomInformation`, `basementInformation`, `additionalWorkInformation`) con nombres estandarizados.
+8. **Categorías de Cotizaciones**: Las cotizaciones pueden ser `kitchen`, `bathroom`, `basement` o `additional-work`. Cada tipo tiene campos dedicados (`kitchenInformation`, `bathroomInformation`, `basementInformation`, `additionalWorkInformation`) con nombres estandarizados. **Un proyecto puede tener múltiples quotes de diferentes categorías**, cada una con su propio sistema de versiones independiente.
 
 9. **Estados de Cotizaciones**: `draft`, `sent`, `approved`, `rejected`, `in_progress`, `completed`
 
@@ -1381,7 +1418,9 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 
 11. **Estados de Pagos**: `pending`, `completed`, `failed`, `refunded`
 
-12. **Relación Proyecto-Cotización**: Cada cotización debe tener un `projectId` válido. El sistema valida que el proyecto exista y que pertenezca a la misma compañía antes de crear la cotización.
+12. **Relación Proyecto-Cotización**: Cada cotización debe tener un `projectId` válido. El sistema valida que el proyecto exista y que pertenezca a la misma compañía antes de crear la cotización. Un proyecto puede tener múltiples quotes de diferentes categorías, y cada categoría mantiene su propio sistema de versiones.
+
+13. **Aprobación de Quotes**: Un proyecto puede tener múltiples quotes aprobados simultáneamente, uno por cada categoría. Use `approvedQuotesByCategory` para gestionar las aprobaciones. El campo `approvedQuoteId` está deprecated pero se mantiene para backward compatibility.
 
 13. **Lista de Materiales (`materials`)**: El campo `materials` es opcional y es un objeto que puede contener:
     - **`file` (string, opcional)**: URL de una imagen o PDF que contiene la lista de materiales
@@ -1412,6 +1451,7 @@ const projectResponse = await fetch('/project', {
 const project = await projectResponse.json()
 
 // 2. SEGUNDO PASO: Crear primera estimación para el proyecto
+// Nota: versionNumber es opcional, se calcula automáticamente si no se proporciona
 const quoteResponse = await fetch('/quote', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -1421,7 +1461,7 @@ const quoteResponse = await fetch('/quote', {
     projectId: project._id, // ✅ Asociar al proyecto creado
     category: 'kitchen',
     experience: '5 años',
-    versionNumber: 1,
+    // versionNumber: 1, // ✅ Opcional - se calcula automáticamente si no se proporciona
     totalPrice: 50000,
     userId: '507f1f77bcf86cd799439011',
     status: 'draft',
@@ -1471,17 +1511,48 @@ await fetch(`/quote/${quote._id}`, {
 // 4. Obtener todas las estimaciones del proyecto
 const projectQuotes = await fetch(`/quote/project/${project._id}`)
 
-// 5. Cuando se aprueba una estimación, asociarla al proyecto
+// 5. Crear otra estimación de diferente categoría para el mismo proyecto
+const bathroomQuoteResponse = await fetch('/quote', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    customerId: '507f1f77bcf86cd799439013',
+    companyId: '507f1f77bcf86cd799439011',
+    projectId: project._id,
+    category: 'bathroom', // ✅ Diferente categoría
+    experience: '5 años',
+    // versionNumber se calculará automáticamente como 1 (primera versión de bathroom)
+    totalPrice: 30000,
+    userId: '507f1f77bcf86cd799439011',
+    status: 'draft',
+  }),
+})
+
+// 6. Obtener versiones de una categoría específica
+const kitchenVersions = await fetch(
+  `/quote/project/${project._id}/versions?category=kitchen`
+)
+
+// 7. Cuando se aprueban estimaciones, asociarlas al proyecto usando approvedQuotesByCategory
 await fetch(`/quote/${quote._id}`, {
   method: 'PATCH',
   body: JSON.stringify({ status: 'approved' }),
 })
 
-// 6. Actualizar proyecto con la estimación aprobada
+const bathroomQuote = await bathroomQuoteResponse.json()
+await fetch(`/quote/${bathroomQuote._id}`, {
+  method: 'PATCH',
+  body: JSON.stringify({ status: 'approved' }),
+})
+
+// 8. Actualizar proyecto con las estimaciones aprobadas (recomendado: usar approvedQuotesByCategory)
 await fetch(`/project/${project._id}`, {
   method: 'PATCH',
   body: JSON.stringify({
-    approvedQuoteId: quote._id,
+    approvedQuotesByCategory: {
+      kitchen: quote._id,
+      bathroom: bathroomQuote._id,
+    },
     status: 'in_progress',
   }),
 })
@@ -1635,4 +1706,11 @@ Obtiene el historial de pagos de una factura específica.
 
 ---
 
-**Última actualización**: 23 de Noviembre de 2025
+**Última actualización**: 25 de Noviembre de 2025
+
+**Cambios recientes**:
+- `versionNumber` ahora es opcional en POST `/quote` - se calcula automáticamente por `projectId + category`
+- GET `/quote/project/:projectId/versions` ahora acepta `category` como query param para filtrar por categoría
+- POST `/project` y PATCH `/project` ahora soportan `approvedQuotesByCategory` para aprobar múltiples quotes por categoría
+- `approvedQuoteId` está deprecated pero se mantiene para backward compatibility
+- Un proyecto puede tener múltiples quotes de diferentes categorías, cada una con su propio sistema de versiones

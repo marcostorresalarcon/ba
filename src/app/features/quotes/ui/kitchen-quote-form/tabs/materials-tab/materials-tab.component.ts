@@ -15,6 +15,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { S3UploadService } from '../../../../../../core/services/upload/s3-upload.service';
 import { NotificationService } from '../../../../../../core/services/notification/notification.service';
+import { PermissionsService } from '../../../../../../core/services/permissions/permissions.service';
+import { MediaPickerService } from '../../../../../../core/services/media/media-picker.service';
 import type { Materials } from '../../../../../../core/models/quote.model';
 
 type MaterialsInputMode = 'file' | 'manual';
@@ -33,6 +35,8 @@ export class MaterialsTabComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly s3UploadService = inject(S3UploadService);
     private readonly notificationService = inject(NotificationService);
+    private readonly permissionsService = inject(PermissionsService);
+    private readonly mediaPickerService = inject(MediaPickerService);
     private readonly destroyRef = inject(DestroyRef);
 
     // Callback para actualizar el formulario padre
@@ -140,16 +144,29 @@ export class MaterialsTabComponent implements OnInit {
     /**
      * Maneja la selección de archivo
      */
-    protected async onFileSelected(event: Event): Promise<void> {
-        const input = event.target as HTMLInputElement;
-        const file = input.files?.[0];
-        if (!file) return;
+    protected async onFileSelected(): Promise<void> {
+        try {
+            // Verificar permisos antes de abrir el selector
+            const hasPermission = await this.permissionsService.requestMediaPermissions();
+            if (!hasPermission) {
+                this.notificationService.error(
+                    'Permisos requeridos',
+                    'Se necesita acceso a la cámara y galería para seleccionar archivos. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+                );
+                return;
+            }
+
+            // Seleccionar archivo usando el servicio nativo
+            // Nota: En nativo solo se puede seleccionar un archivo a la vez
+            const files = await this.mediaPickerService.pickMedia(false);
+            if (files.length === 0) return;
+
+            const file = files[0];
 
         // Validar tipo de archivo (imagen o PDF)
         const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
         if (!validTypes.includes(file.type)) {
             this.notificationService.error('Error', 'Solo se permiten archivos de imagen o PDF');
-            input.value = '';
             return;
         }
 
@@ -197,7 +214,10 @@ export class MaterialsTabComponent implements OnInit {
         } finally {
             this.isUploadingFile.set(false);
             this.uploadingFileProgress.set(0);
-            input.value = '';
+            }
+        } catch (error) {
+            console.error('Error selecting file:', error);
+            this.notificationService.error('Error', 'No se pudo seleccionar el archivo');
         }
     }
 

@@ -1,12 +1,14 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { IosMediaService } from '../ios/ios-media.service';
+import { PermissionsService } from '../permissions/permissions.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AudioRecorderService {
   private readonly iosMediaService = inject(IosMediaService);
+  private readonly permissionsService = inject(PermissionsService);
   private readonly isIOS = Capacitor.getPlatform() === 'ios';
   
   private mediaRecorder: MediaRecorder | null = null;
@@ -16,6 +18,12 @@ export class AudioRecorderService {
   
   async startRecording(): Promise<void> {
     if (this.isRecording()) return;
+
+    // Verificar y solicitar permisos de micrófono
+    const hasPermission = await this.permissionsService.requestMicrophonePermission();
+    if (!hasPermission) {
+      throw new Error('Microphone permission denied. Please enable microphone access in your device settings.');
+    }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

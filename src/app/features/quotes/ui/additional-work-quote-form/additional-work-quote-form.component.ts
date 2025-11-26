@@ -22,7 +22,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import type { Project } from '../../../../core/models/project.model';
 import type { Customer } from '../../../../core/models/customer.model';
-import type { Quote, QuotePayload, Materials } from '../../../../core/models/quote.model';
+import type { Quote, QuotePayload, Materials, QuoteCategory } from '../../../../core/models/quote.model';
 import { QuoteService } from '../../../../core/services/quote/quote.service';
 import { HttpErrorService } from '../../../../core/services/error/http-error.service';
 import { NotificationService } from '../../../../core/services/notification/notification.service';
@@ -59,6 +59,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   @Input({ required: true }) companyId!: string;
   @Input({ required: true }) isSubmitting = false;
   @Input() quoteId: string | null = null;
+  @Input() category: QuoteCategory = 'additional-work'; // Categoría del quote (additional-work, bathroom, basement)
   @Output() readonly submitQuote = new EventEmitter<AdditionalWorkQuoteFormValue>();
   @Output() readonly cancelQuote = new EventEmitter<void>();
 
@@ -101,7 +102,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     }>,
     projectName: ['', [Validators.required]],
     status: ['draft', [Validators.required]],
-    category: this.fb.control<'additional-work'>('additional-work'),
+    category: this.fb.control<QuoteCategory>('additional-work'), // Se actualizará en ngOnInit
     source: [null as string | null],
     address: [null as string | null],
     notes: [null as string | null],
@@ -119,6 +120,9 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Establecer la categoría en el formulario
+    this.form.controls.category.setValue(this.category);
+    
     this.form.patchValue({
       customer: {
         name: `${this.customer.name} ${this.customer.lastName}`,
@@ -126,7 +130,8 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         phone: this.customer.phone ?? null
       },
       projectName: this.project.name,
-      address: this.customer.address ?? null
+      address: this.customer.address ?? null,
+      category: this.category
     });
 
     // Si hay un quoteId, cargar los datos del quote para crear una nueva versión
@@ -239,37 +244,114 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         // Guardar el quote original para obtener versionNumber
         this.originalQuote = quote;
 
-        // Asegurar que los campos dinámicos estén generados antes de asignar valores
+        // Actualizar la categoría si viene del quote (por si acaso)
+        if (quote.category && quote.category !== this.category) {
+          this.category = quote.category;
+          this.form.controls.category.setValue(quote.category);
+        }
+
+        // Asegurar que los campos dinámicos estén generados ANTES de asignar valores
         const inputs = this.inputsService.inputs();
         if (inputs.length > 0) {
           this.generateDynamicFormFields(inputs);
         }
 
-        // Cargar additionalWorkInformation después de generar los campos
-        if (quote.additionalWorkInformation) {
-          this.form.patchValue(quote.additionalWorkInformation as Partial<AdditionalWorkQuoteFormValue>, { emitEvent: false });
+        // Crear mapa de inputs para acceso rápido
+        const inputsMap = new Map(inputs.map(inp => [inp.name, inp]));
+
+        // Cargar la información según la categoría del quote
+        let categoryInformation: Record<string, unknown> | undefined;
+        if (quote.category === 'additional-work' && quote.additionalWorkInformation) {
+          categoryInformation = quote.additionalWorkInformation;
+        } else if (quote.category === 'bathroom' && quote.bathroomInformation) {
+          categoryInformation = quote.bathroomInformation;
+        } else if (quote.category === 'basement' && quote.basementInformation) {
+          categoryInformation = quote.basementInformation;
         }
-        
-        // Cargar materials si existen
+
+        if (categoryInformation) {
+          // Cargar cada campo dinámico
+          Object.keys(categoryInformation).forEach(key => {
+            // Excluir campos especiales
+            if (['source', 'address'].includes(key) || key.endsWith('Custom') || key.endsWith('Quantity')) {
+              return;
+            }
+
+            const control = this.form.get(key);
+            if (!control) {
+              console.warn(`Control not found for key: ${key}`);
+              return;
+            }
+
+            const input = inputsMap.get(key);
+            const value = categoryInformation![key];
+
+            // Convertir valores según el tipo de campo
+            if (input) {
+              if (input.element === 'checkbox') {
+                control.setValue(Boolean(value), { emitEvent: false });
+              } else if (input.element === 'radioButton' || input.element === 'selectCustomInputText') {
+                if (typeof value === 'boolean') {
+                  control.setValue(value ? 'Yes' : 'No', { emitEvent: false });
+                } else if (typeof value === 'number') {
+                  const stringValue = String(value);
+                  if (input.selections.includes(stringValue)) {
+                    control.setValue(stringValue, { emitEvent: false });
+                  } else if (input.custom) {
+                    const customValue = categoryInformation![`${key}Custom`] as number | undefined;
+                    if (customValue !== undefined) {
+                      control.setValue('custom', { emitEvent: false });
+                      const customControl = this.form.get(`${key}Custom`);
+                      if (customControl) {
+                        customControl.setValue(customValue, { emitEvent: false });
+                      }
+                    } else {
+                      control.setValue(stringValue, { emitEvent: false });
+                    }
+                  } else {
+                    control.setValue(stringValue, { emitEvent: false });
+                  }
+                } else {
+                  control.setValue(value, { emitEvent: false });
+                }
+              } else {
+                control.setValue(value, { emitEvent: false });
+              }
+            } else {
+              control.setValue(value, { emitEvent: false });
+            }
+          });
+        }
+
+        // Cargar campos base
+        if (quote.status) {
+          this.form.controls.status.setValue(quote.status, { emitEvent: false });
+        }
+        if (quote.notes !== undefined) {
+          this.form.controls.notes.setValue(quote.notes ?? null, { emitEvent: false });
+        }
+        const source = categoryInformation?.['source'] as string | undefined;
+        if (source) {
+          this.form.controls.source.setValue(source, { emitEvent: false });
+        }
+        const address = categoryInformation?.['address'] as string | undefined;
+        if (address) {
+          this.form.controls.address.setValue(address, { emitEvent: false });
+        }
+
+        // Cargar materials
         if (quote.materials) {
           const materialsValue = quote.materials as Materials;
           this.form.controls.materials.setValue(materialsValue, { emitEvent: false });
-          
-          setTimeout(() => {
-            if (this.materialsTabComponent) {
-              this.materialsTabComponent.setMaterialsValue(materialsValue);
-            }
-          }, 0);
+          if (this.materialsTabComponent) {
+            this.materialsTabComponent.setMaterialsValue(materialsValue);
+          }
         }
 
-        // Actualizar el estado del formulario sin disparar valueChanges
+        // Actualizar formulario y calcular total
         this.form.updateValueAndValidity({ emitEvent: false });
-
-        // Forzar el cálculo del total después de que Angular haya procesado todos los cambios
-        requestAnimationFrame(() => {
-          this.formChangeTrigger.update(val => val + 1);
-          this.showCostCounter.set(true);
-        });
+        this.formChangeTrigger.update(val => val + 1);
+        this.showCostCounter.set(true);
       },
       error: (error) => {
         const message = this.errorService.handle(error);
@@ -280,6 +362,57 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
   protected setActiveTab(tab: string): void {
     this.activeTab.set(tab);
+  }
+
+  /**
+   * Verifica si se debe mostrar el título de la subcategoría
+   * No se muestra si todos los inputs tienen el mismo label que el título de la subcategoría
+   */
+  protected shouldShowSubcategoryTitle(subcategoryGroup: { title: string; inputs: { label: string }[] }): boolean {
+    if (!subcategoryGroup.title || subcategoryGroup.inputs.length === 0) {
+      return false;
+    }
+
+    // Normalizar el título (case insensitive, sin espacios extra)
+    const normalizedTitle = subcategoryGroup.title.trim().toLowerCase();
+    
+    // Verificar si todos los inputs tienen el mismo label que el título
+    const allLabelsMatch = subcategoryGroup.inputs.every(input => {
+      const normalizedLabel = input.label.trim().toLowerCase();
+      return normalizedLabel === normalizedTitle;
+    });
+
+    // Si todos los labels coinciden con el título, no mostrar el título
+    return !allLabelsMatch;
+  }
+
+  /**
+   * Verifica si se debe mostrar el título de la categoría
+   * No se muestra si todos los inputs de todas las subcategorías tienen el mismo label que el título de la categoría
+   */
+  protected shouldShowCategoryTitle(categoryGroup: { title: string; subcategories: { inputs: { label: string }[] }[] }): boolean {
+    if (!categoryGroup.title || categoryGroup.subcategories.length === 0) {
+      return true; // Siempre mostrar si no hay subcategorías
+    }
+
+    // Normalizar el título de la categoría
+    const normalizedCategoryTitle = categoryGroup.title.trim().toLowerCase();
+    
+    // Obtener todos los inputs de todas las subcategorías
+    const allInputs = categoryGroup.subcategories.flatMap(sub => sub.inputs);
+    
+    if (allInputs.length === 0) {
+      return true;
+    }
+
+    // Verificar si todos los inputs tienen el mismo label que el título de la categoría
+    const allLabelsMatch = allInputs.every(input => {
+      const normalizedLabel = input.label.trim().toLowerCase();
+      return normalizedLabel === normalizedCategoryTitle;
+    });
+
+    // Si todos los labels coinciden con el título de la categoría, no mostrar el título
+    return !allLabelsMatch;
   }
 
   protected goBack(): void {
@@ -315,24 +448,30 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       materials = formValue.materials ?? null;
     }
 
-    // Determinar versionNumber: si hay quoteId, sumar 1 al versionNumber del quote original
-    const versionNumber = this.quoteId && this.originalQuote
-      ? (this.originalQuote.versionNumber ?? 1) + 1
-      : 1;
-
-    const quotePayload: QuotePayload & { versionNumber: number } = {
+    // No enviar versionNumber - el backend lo calcula automáticamente por projectId + category
+    // Si hay quoteId, estamos creando una nueva versión, pero el backend calculará el número correcto
+    // Construir el payload base
+    const quotePayload: QuotePayload = {
       customerId: this.customer._id,
       companyId: this.companyId,
       projectId: this.project._id,
-      category: 'additional-work',
+      category: this.category,
       status: formValue.status as QuotePayload['status'],
-      experience: 'basic', // Additional Work no tiene experiencia, usar 'basic' por defecto
+      experience: 'basic', // Para bathroom y basement usar 'basic' por defecto
       totalPrice: this.totalCost(),
       notes: formValue.notes ?? undefined,
-      userId,
-      versionNumber,
-      additionalWorkInformation
+      userId
+      // versionNumber no se envía - el backend lo calcula automáticamente
     };
+
+    // Agregar el campo de información según la categoría
+    if (this.category === 'additional-work') {
+      quotePayload.additionalWorkInformation = additionalWorkInformation;
+    } else if (this.category === 'bathroom') {
+      quotePayload.bathroomInformation = additionalWorkInformation;
+    } else if (this.category === 'basement') {
+      quotePayload.basementInformation = additionalWorkInformation;
+    }
     
     // Agregar materials solo si tiene valor
     if (materials !== null && materials !== undefined) {
@@ -344,9 +483,10 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       .createQuote(quotePayload)
       .subscribe({
         next: () => {
+          const categoryName = this.getCategoryDisplayName(this.category);
           const message = this.quoteId
             ? 'New version created successfully'
-            : 'Additional Work estimate created successfully';
+            : `${categoryName} estimate created successfully`;
           this.notificationService.success('Success', message);
           void this.router.navigateByUrl(`/projects/${this.project._id}`);
         },
@@ -377,6 +517,16 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     } catch {
       return null;
     }
+  }
+
+  protected getCategoryDisplayName(category: QuoteCategory): string {
+    const nameMap: Record<QuoteCategory, string> = {
+      kitchen: 'Kitchen',
+      bathroom: 'Bathroom',
+      basement: 'Basement',
+      'additional-work': 'Additional Work'
+    };
+    return nameMap[category] ?? category;
   }
 
   /**

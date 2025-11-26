@@ -46,7 +46,7 @@ export class ProjectFormComponent implements OnChanges {
   protected readonly form: ProjectFormGroup = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
     description: [''],
-    projectType: ['kitchen' as ProjectType, [Validators.required]]
+    projectType: ['kitchen' as ProjectType] // Opcional - ya no es requerido
   });
 
   ngOnChanges(changes: SimpleChanges): void {

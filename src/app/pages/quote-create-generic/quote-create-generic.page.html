@@ -1,0 +1,22 @@
+<app-page-layout [breadcrumbs]="breadcrumbs()">
+  @if (isLoadingProject() || isLoadingCustomer()) {
+  <div class="space-y-4">
+    <div class="h-32 rounded-2xl bg-fog/30"></div>
+    <div class="h-64 rounded-2xl bg-fog/30"></div>
+  </div>
+  } @else { @if (project() && customer() && category()) {
+  <!-- Para bathroom y basement, usar el formulario de additional-work como base -->
+  <!-- En el futuro, esto puede ser reemplazado por un formulario completamente genérico -->
+  <app-additional-work-quote-form
+    [project]="project()!"
+    [customer]="customer()!"
+    [companyId]="companyId()!"
+    [isSubmitting]="isSubmitting()"
+    [quoteId]="quoteId()"
+    [category]="category()!"
+    (submitQuote)="handleSubmit($event)"
+    (cancelQuote)="handleCancel()"
+  />
+  } }
+</app-page-layout>
+

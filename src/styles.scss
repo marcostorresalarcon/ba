@@ -6,9 +6,30 @@
   color-scheme: light;
 }
 
+html {
+  /* Mejoras de scroll nativo para iOS y Android */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* Prevenir zoom accidental en iOS */
+  touch-action: pan-x pan-y;
+}
+
 body {
   @apply min-h-screen bg-sand text-charcoal font-sans antialiased;
   background-color: #ead1ba;
+  /* Mejoras de scroll nativo */
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* Prevenir scroll horizontal no deseado */
+  overflow-x: hidden;
+  /* Mejorar rendimiento de scroll */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Aceleración de hardware para mejor rendimiento */
+  transform: translateZ(0);
+  will-change: scroll-position;
 }
 
 ::selection {
@@ -30,4 +51,83 @@ input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
   @apply ring-2 ring-offset-2 ring-pine ring-offset-sand;
+}
+
+/* Mejoras de scroll para contenedores con overflow */
+* {
+  /* Scroll suave nativo en iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Contenedores scrollables */
+.scroll-container,
+[class*="overflow"],
+[class*="scroll"] {
+  -webkit-overflow-scrolling: touch;
+  overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* Mejorar rendimiento */
+  transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+/* Prevenir rebote en iOS */
+.overscroll-none {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scroll suave para navegación programática */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Animaciones para el canvas de dibujo */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes canvasFromClick {
+  from {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--offset-x, 0px)), var(--offset-y, 0px)) scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.animate-canvasFromClick {
+  animation: canvasFromClick 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

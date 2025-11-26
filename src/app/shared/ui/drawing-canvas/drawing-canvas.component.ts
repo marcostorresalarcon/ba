@@ -1,7 +1,7 @@
 import type { ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { Component, ViewChild, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import type { Object as FabricObject} from 'fabric';
+import type { Object as FabricObject } from 'fabric';
 import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } from 'fabric';
 
 @Component({
@@ -9,7 +9,7 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="fixed inset-0 z-50 bg-white flex flex-col">
+    <div class="w-full h-screen bg-white flex flex-col overflow-hidden min-h-0">
       <!-- Toolbar -->
       <div class="flex flex-col border-b border-fog/60 bg-white shadow-sm">
         <!-- Top Bar: Actions -->
@@ -29,9 +29,9 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
             </button>
 
             <button 
-              (click)="clear()" 
+              (click)="deleteSelected()" 
               class="p-2 rounded-lg hover:bg-fog/20 transition text-red-500"
-              title="Clear All"
+              title="Delete Selected"
             >
               <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -51,6 +51,19 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
         <div class="flex items-center justify-between px-4 py-3 overflow-x-auto hide-scrollbar gap-4">
           <!-- Drawing Tools -->
           <div class="flex items-center gap-2 p-1 bg-fog/10 rounded-xl">
+            <button 
+              (click)="setTool('select')" 
+              [class.bg-white]="currentTool === 'select'"
+              [class.text-pine]="currentTool === 'select'"
+              [class.shadow-sm]="currentTool === 'select'"
+              class="p-2 rounded-lg hover:bg-white/50 transition text-slate"
+              title="Select & Move"
+            >
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+              </svg>
+            </button>
+            
             <button 
               (click)="setTool('pencil')" 
               [class.bg-white]="currentTool === 'pencil'"
@@ -203,8 +216,8 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
       </div>
 
       <!-- Canvas Area -->
-      <div class="flex-1 relative bg-fog/5 overflow-hidden touch-none">
-        <canvas #canvas></canvas>
+      <div class="flex-1 relative bg-fog/5 overflow-hidden touch-none h-screen">
+        <canvas #canvas class="w-full h-full"></canvas>
       </div>
     </div>
   `
@@ -215,11 +228,11 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
   @Output() cancel = new EventEmitter<void>();
 
   private canvas!: Canvas;
-  currentTool: 'pencil' | 'rect' | 'circle' | 'line' | 'polyline' = 'pencil';
-  currentColor = '#332F28'; 
+  currentTool: 'pencil' | 'rect' | 'circle' | 'line' | 'polyline' | 'select' = 'pencil';
+  currentColor = '#332F28';
   currentWidth = 3;
   isDashed = false;
-  
+
   colors = ['#332F28', '#3A7344', '#E74C3C', '#3498DB', '#F1C40F'];
 
   private history: string[] = [];
@@ -234,14 +247,17 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
 
   // Polyline specific state
   isDrawingPolyline = false;
-  private polylinePoints: {x: number, y: number}[] = [];
+  private polylinePoints: { x: number, y: number }[] = [];
   private activePolyline: Polyline | null = null;
   private activeLine: Line | null = null; // Elastic line
   private snapIndicator: Circle | null = null; // Visual indicator for snapping
 
   ngAfterViewInit() {
-    this.initCanvas();
-    this.setupResize();
+    // Pequeño delay para asegurar que el DOM esté completamente renderizado
+    setTimeout(() => {
+      this.initCanvas();
+      this.setupResize();
+    }, 0);
   }
 
   ngOnDestroy() {
@@ -266,6 +282,12 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     this.saveHistory();
 
     this.canvas.on('path:created', () => {
+      // Deshabilitar selección en los paths creados para evitar selección accidental
+      const activeObject = this.canvas.getActiveObject();
+      if (activeObject) {
+        activeObject.selectable = false;
+        activeObject.evented = false;
+      }
       this.saveHistory();
     });
 
@@ -274,7 +296,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     this.canvas.on('mouse:move', (opt) => this.onMouseMove(opt));
     this.canvas.on('mouse:up', (opt) => this.onMouseUp(opt));
     this.canvas.on('mouse:dblclick', () => {
-       if (this.isDrawingPolyline) this.finishPolyline(false);
+      if (this.isDrawingPolyline) this.finishPolyline(false);
     });
   }
 
@@ -283,42 +305,86 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     const brush = new PencilBrush(this.canvas);
     brush.width = this.currentWidth;
     brush.color = this.currentColor;
-    brush.decimate = 2; 
+    brush.decimate = 2;
     this.canvas.freeDrawingBrush = brush;
   }
 
   private setupResize() {
-    window.addEventListener('resize', () => {
+    const resizeObserver = new ResizeObserver(() => {
       const parent = this.canvasEl.nativeElement.parentElement;
-      if (parent) {
+      if (parent && this.canvas) {
         this.canvas.setDimensions({
           width: parent.clientWidth,
           height: parent.clientHeight
         });
+        this.canvas.renderAll();
+      }
+    });
+
+    const parent = this.canvasEl.nativeElement.parentElement;
+    if (parent) {
+      resizeObserver.observe(parent);
+    }
+
+    // También escuchar resize de ventana como fallback
+    window.addEventListener('resize', () => {
+      const parent = this.canvasEl.nativeElement.parentElement;
+      if (parent && this.canvas) {
+        this.canvas.setDimensions({
+          width: parent.clientWidth,
+          height: parent.clientHeight
+        });
+        this.canvas.renderAll();
       }
     });
   }
 
-  setTool(tool: 'pencil' | 'rect' | 'circle' | 'line' | 'polyline') {
+  setTool(tool: 'pencil' | 'rect' | 'circle' | 'line' | 'polyline' | 'select') {
     if (this.isDrawingPolyline) {
       this.finishPolyline(false);
     }
-    
+
     this.currentTool = tool;
-    
-    if (tool === 'pencil') {
+
+    if (tool === 'select') {
+      // Modo de selección: permitir seleccionar, mover, transformar y redimensionar
+      this.canvas.isDrawingMode = false;
+      this.canvas.selection = true;
+      // Habilitar todas las interacciones de selección
+      this.canvas.forEachObject((obj) => {
+        obj.selectable = true;
+        obj.evented = true;
+      });
+      // Deseleccionar cualquier objeto activo para limpiar el estado
+      this.canvas.discardActiveObject();
+      this.canvas.requestRenderAll();
+    } else if (tool === 'pencil') {
+      // Modo de dibujo: deshabilitar selección
       this.canvas.isDrawingMode = true;
       this.canvas.selection = false;
+      // Deshabilitar selección en todos los objetos mientras se dibuja
+      this.canvas.forEachObject((obj) => {
+        obj.selectable = false;
+        obj.evented = false;
+      });
+      this.canvas.discardActiveObject();
       this.setupPencilBrush();
     } else {
+      // Modo de creación de formas: deshabilitar selección
       this.canvas.isDrawingMode = false;
       this.canvas.selection = false;
+      // Deshabilitar selección en todos los objetos mientras se crean formas
+      this.canvas.forEachObject((obj) => {
+        obj.selectable = false;
+        obj.evented = false;
+      });
+      this.canvas.discardActiveObject();
     }
   }
 
   toggleDashed() {
     this.isDashed = !this.isDashed;
-    
+
     const activeObject = this.canvas.getActiveObject();
     if (activeObject && !(activeObject instanceof PencilBrush)) {
       activeObject.set('strokeDashArray', this.isDashed ? [10, 5] : undefined);
@@ -328,7 +394,8 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   private onMouseDown(opt: any) {
-    if (this.currentTool === 'pencil') return;
+    // No interferir con el modo de selección o dibujo
+    if (this.currentTool === 'pencil' || this.currentTool === 'select') return;
 
     const pointer = this.canvas.getPointer(opt.e);
 
@@ -365,7 +432,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
         radius: 0,
         originX: 'center',
         originY: 'center',
-        left: this.startX, 
+        left: this.startX,
         top: this.startY
       });
     } else if (this.currentTool === 'line') {
@@ -380,7 +447,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private handlePolylineClick(pointer: {x: number, y: number}) {
+  private handlePolylineClick(pointer: { x: number, y: number }) {
     // Snapping to start point to close shape
     if (this.isDrawingPolyline && this.polylinePoints.length > 2) {
       const startPoint = this.polylinePoints[0];
@@ -396,7 +463,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
       const lastPoint = this.polylinePoints[this.polylinePoints.length - 1];
       const dx = Math.abs(pointer.x - lastPoint.x);
       const dy = Math.abs(pointer.y - lastPoint.y);
-      
+
       // If very close to horizontal or vertical, snap it
       if (dx < 15) pointer.x = lastPoint.x; // Vertical snap
       if (dy < 15) pointer.y = lastPoint.y; // Horizontal snap
@@ -405,8 +472,8 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     if (!this.isDrawingPolyline) {
       // Start new polyline
       this.isDrawingPolyline = true;
-      this.polylinePoints = [{x: pointer.x, y: pointer.y}];
-      
+      this.polylinePoints = [{ x: pointer.x, y: pointer.y }];
+
       this.activePolyline = new Polyline(this.polylinePoints, {
         stroke: this.currentColor,
         strokeWidth: this.currentWidth,
@@ -418,11 +485,11 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
         evented: false,
         objectCaching: false
       });
-      
+
       this.canvas.add(this.activePolyline);
     } else {
       // Add point
-      this.polylinePoints.push({x: pointer.x, y: pointer.y});
+      this.polylinePoints.push({ x: pointer.x, y: pointer.y });
       this.activePolyline?.set({ points: [...this.polylinePoints] });
       this.canvas.requestRenderAll();
     }
@@ -436,7 +503,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
       if (this.polylinePoints.length > 2) {
         const startPoint = this.polylinePoints[0];
         const dist = Math.sqrt(Math.pow(pointer.x - startPoint.x, 2) + Math.pow(pointer.y - startPoint.y, 2));
-        
+
         if (dist < 20) {
           // Show snap indicator
           if (!this.snapIndicator) {
@@ -463,13 +530,13 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
           }
         }
       }
-      
+
       // 2. Orthogonal Snapping help (Architectural feel)
       if (!this.snapIndicator && this.polylinePoints.length > 0) {
         const lastPoint = this.polylinePoints[this.polylinePoints.length - 1];
         const dx = Math.abs(pointer.x - lastPoint.x);
         const dy = Math.abs(pointer.y - lastPoint.y);
-        
+
         if (dx < 15) pointer.x = lastPoint.x;
         if (dy < 15) pointer.y = lastPoint.y;
       }
@@ -478,7 +545,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
       if (this.activeLine) {
         this.canvas.remove(this.activeLine);
       }
-      
+
       const lastPoint = this.polylinePoints[this.polylinePoints.length - 1];
       this.activeLine = new Line([lastPoint.x, lastPoint.y, pointer.x, pointer.y], {
         stroke: this.currentColor,
@@ -487,7 +554,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
         selectable: false,
         evented: false
       });
-      
+
       this.canvas.add(this.activeLine);
       this.canvas.requestRenderAll();
       return;
@@ -499,7 +566,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
       const rect = this.activeShape as Rect;
       const width = Math.abs(pointer.x - this.startX);
       const height = Math.abs(pointer.y - this.startY);
-      
+
       rect.set({
         width: width,
         height: height,
@@ -530,12 +597,15 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
 
     this.isDrawing = false;
     if (this.activeShape) {
-      this.activeShape.set({ 
-        selectable: true, 
-        evented: true 
+      // Mantener selectable y evented en false para evitar selección accidental
+      // Solo se habilitarán cuando se use el tool 'select'
+      this.activeShape.set({
+        selectable: false,
+        evented: false
       });
       this.activeShape.setCoords();
-      this.canvas.setActiveObject(this.activeShape);
+      // No seleccionar automáticamente el objeto
+      this.canvas.discardActiveObject();
       this.activeShape = null;
       this.saveHistory();
     }
@@ -545,17 +615,17 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     if (!this.isDrawingPolyline || !this.activePolyline) return;
 
     this.isDrawingPolyline = false;
-    
+
     if (this.activeLine) {
       this.canvas.remove(this.activeLine);
       this.activeLine = null;
     }
-    
+
     if (this.snapIndicator) {
       this.canvas.remove(this.snapIndicator);
       this.snapIndicator = null;
     }
-    
+
     // Remove the temporary polyline
     this.canvas.remove(this.activePolyline);
 
@@ -585,12 +655,18 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
       });
     }
 
+    // Establecer propiedades para evitar selección accidental
+    finalShape.set({
+      selectable: false,
+      evented: false
+    });
     this.canvas.add(finalShape);
-    this.canvas.setActiveObject(finalShape);
-    
+    // No seleccionar automáticamente el objeto
+    this.canvas.discardActiveObject();
+
     this.activePolyline = null;
     this.polylinePoints = [];
-    
+
     this.saveHistory();
     this.canvas.requestRenderAll();
   }
@@ -598,7 +674,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
   setColor(color: string) {
     this.currentColor = color;
     this.updateBrush();
-    
+
     const activeObject = this.canvas.getActiveObject();
     if (activeObject) {
       activeObject.set('stroke', color);
@@ -631,6 +707,20 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  deleteSelected() {
+    const activeObjects = this.canvas.getActiveObjects();
+
+    if (activeObjects.length > 0) {
+      // Eliminar todos los objetos seleccionados
+      activeObjects.forEach((obj) => {
+        this.canvas.remove(obj);
+      });
+      this.canvas.discardActiveObject();
+      this.canvas.requestRenderAll();
+      this.saveHistory();
+    }
+  }
+
   clear() {
     this.canvas.clear();
     this.canvas.backgroundColor = '#ffffff';
@@ -645,7 +735,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
       this.canvas.loadFromJSON(JSON.parse(this.history[this.historyIndex])).then(() => {
         this.canvas.renderAll();
         this.isHistoryProcessing = false;
-        this.updateBrush(); 
+        this.updateBrush();
       });
     }
   }

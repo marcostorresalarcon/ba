@@ -136,10 +136,12 @@
         <!-- Excluir categorías que tienen secciones dedicadas -->
         @if (categoryGroup.id !== 'locationKitchen' && categoryGroup.id !== 'subFloor') {
           <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+            @if (shouldShowCategoryTitle(categoryGroup)) {
             <h3 class="mb-4 text-lg font-bold text-charcoal">{{ categoryGroup.title }}</h3>
+            }
             
             @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) {
-                @if (subcategoryGroup.id !== 'default') {
+                @if (subcategoryGroup.id !== 'default' && shouldShowSubcategoryTitle(subcategoryGroup)) {
                   <h4 class="mb-3 text-sm font-semibold uppercase text-clay">{{ subcategoryGroup.title }}</h4>
                 }
                 
@@ -160,20 +162,16 @@
               <h4 class="mb-4 text-sm font-semibold uppercase text-clay">Countertops Files</h4>
               <div class="space-y-4">
                 <!-- File Input -->
-                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20">
+                <button
+                  type="button"
+                  (click)="onCountertopsFilesSelected()"
+                  class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
+                >
                   <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <span class="text-sm font-medium text-charcoal">Select files</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,video/*"
-                    capture="environment"
-                    class="hidden"
-                    (change)="onCountertopsFilesSelected($event)"
-                  />
-                </label>
+                </button>
 
                 <!-- Uploading Files (Miniaturas con loader) -->
                 @if (uploadingCountertopsFiles().size > 0) {
@@ -291,20 +289,16 @@
               <h4 class="mb-4 text-sm font-semibold uppercase text-clay">Backsplash Files</h4>
               <div class="space-y-4">
                 <!-- File Input -->
-                <label class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20">
+                <button
+                  type="button"
+                  (click)="onBacksplashFilesSelected()"
+                  class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
+                >
                   <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <span class="text-sm font-medium text-charcoal">Seleccionar archivos</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,video/*"
-                    capture="environment"
-                    class="hidden"
-                    (change)="onBacksplashFilesSelected($event)"
-                  />
-                </label>
+                </button>
 
                 <!-- Uploading Files (Miniaturas con loader) -->
                 @if (uploadingBacksplashFiles().size > 0) {
@@ -545,7 +539,7 @@
               <button
                 type="button"
                 class="inline-flex items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-semibold text-white shadow-raised transition hover:bg-pine-dark"
-                (click)="showDrawingCanvas.set(true)"
+                (click)="openDrawingCanvas($event)"
               >
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -629,19 +623,16 @@
           <!-- Media Upload -->
           <div>
             <label class="mb-2 block text-sm font-medium text-charcoal">Photos & Videos</label>
-            <label class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20">
+            <button
+              type="button"
+              (click)="onAdditionalMediaSelected()"
+              class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
+            >
               <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
               <span class="text-sm font-medium text-charcoal">Select photos or videos</span>
-              <input
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                class="hidden"
-                (change)="onAdditionalMediaSelected($event)"
-              />
-            </label>
+            </button>
 
             <!-- Uploading Files -->
             @if (uploadingAdditionalMedia().size > 0) {
@@ -765,13 +756,6 @@
       </button>
     </div>
   </form>
-  
-  @if (showDrawingCanvas()) {
-    <app-drawing-canvas
-      (save)="onSketchSaved($event)"
-      (cancel)="showDrawingCanvas.set(false)"
-    />
-  }
 
   @if (previewMediaUrl(); as url) {
     <app-media-preview-modal
@@ -780,4 +764,5 @@
       (close)="closeMediaPreview()"
     />
   }
-</section>
+
+  </section>
