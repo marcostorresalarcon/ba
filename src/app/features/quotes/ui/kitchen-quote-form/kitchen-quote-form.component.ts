@@ -337,7 +337,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
             const control = this.form.get(key);
             if (!control) {
-              console.warn(`[loadQuoteForEdit] Control not found for key: ${key}`);
               return;
             }
 
@@ -355,13 +354,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
                   control.setValue(value ? 'Yes' : 'No', { emitEvent: false });
                 } else if (typeof value === 'number') {
                   // Convertir número a string para que coincida con las selecciones
-                  console.log('value', value);
                   const stringValue = String(value);
 
                   // Primero buscar coincidencia exacta
                   let matchingSelection = input.selections.find(sel => sel === stringValue);
-                  console.log('input.selections', input.selections);
-                  console.log('matchingSelection', matchingSelection);
 
                   // Si no hay coincidencia exacta, buscar por número extraído (para casos como "8 INCH" vs 8)
                   if (!matchingSelection) {
@@ -375,7 +371,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
                   if (matchingSelection) {
                     // Establecer el valor - usar emitEvent: true para que los componentes se actualicen
                     control.setValue(matchingSelection, { emitEvent: true });
-                    console.log(`[loadQuoteForEdit] Set ${key} to "${matchingSelection}" (from number ${value}, selections: ${input.selections.join(', ')})`);
                   } else if (input.custom) {
                     // Si no está en las selecciones y tiene custom, puede ser un valor custom
                     const customValue = kitchenInfo[`${key}Custom`] as number | undefined;
@@ -385,23 +380,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
                       if (customControl) {
                         customControl.setValue(customValue, { emitEvent: true });
                       }
-                      console.log(`[loadQuoteForEdit] Set ${key} to "custom" with value ${customValue}`);
                     } else {
                       // Si no hay custom, usar el valor como string de todas formas
                       // Esto maneja casos como stackers que puede tener valores adicionales como "none" o "18"
                       control.setValue(stringValue, { emitEvent: true });
-                      console.log(`[loadQuoteForEdit] Set ${key} to "${stringValue}" (no matching selection found, selections: ${input.selections.join(', ')})`);
                     }
                   } else {
                     // Si no tiene custom y no coincide, usar el valor como string
                     control.setValue(stringValue, { emitEvent: true });
-                    console.log(`[loadQuoteForEdit] Set ${key} to "${stringValue}" (no custom, selections: ${input.selections.join(', ')})`);
                   }
                 } else {
                   // Strings y otros tipos: usar directamente
                   // Esto incluye valores como "none" para stackers
                   control.setValue(value, { emitEvent: true });
-                  console.log(`[loadQuoteForEdit] Set ${key} to "${value}" (string, selections: ${input.selections.join(', ')})`);
                 }
               } else {
                 // Otros tipos (numberInput, select, etc.): usar el valor directamente
@@ -928,7 +919,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
       void this.processCountertopsFiles(files);
     } catch (error) {
-      console.error('Error selecting countertops files:', error);
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
     }
   }
@@ -937,13 +927,11 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Procesa los archivos seleccionados para countertops
    */
   private async processCountertopsFiles(fileArray: File[]): Promise<void> {
-    alert(`[DEBUG] processCountertopsFiles - Files count: ${fileArray.length}`);
     const currentFiles = this.form.controls.countertopsFiles.value ?? [];
     const uploadingMap = new Map<string, { file: File; preview: string; progress: number }>();
 
     // Crear previews y agregar a la lista de carga
     for (const file of fileArray) {
-      alert(`[DEBUG] Processing file: ${file.name}, size: ${file.size}, type: ${file.type}`);
       const fileId = `${Date.now()}-${Math.random()}-${file.name}`;
       const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
       uploadingMap.set(fileId, { file, preview, progress: 0 });
@@ -957,12 +945,9 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       // Subir archivos uno por uno para mostrar progreso individual
       for (const [fileId, fileData] of uploadingMap.entries()) {
         try {
-          alert(`[DEBUG] Processing media file for iOS: ${fileData.file.name}`);
           // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
           const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
-          alert(`[DEBUG] File processed - name: ${processedFile.name}, size: ${processedFile.size}, type: ${processedFile.type}`);
 
-          alert(`[DEBUG] Uploading file to S3: ${processedFile.name}`);
           const url = await this.s3UploadService.uploadFile(
             processedFile,
             (progress) => {
@@ -975,7 +960,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
               }
             }
           );
-          alert(`[DEBUG] File uploaded successfully - URL: ${url}`);
           uploadedUrls.push(url);
 
           // Limpiar preview URL si es imagen
@@ -988,7 +972,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           updatedMap.delete(fileId);
           this.uploadingCountertopsFiles.set(updatedMap);
         } catch (error) {
-          console.error('Error uploading file:', fileData.file.name, error);
           // Remover de la lista de carga incluso si falla
           const updatedMap = new Map(this.uploadingCountertopsFiles());
           updatedMap.delete(fileId);
@@ -1000,14 +983,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       }
 
       // Actualizar formulario con las URLs subidas
-      alert(`[DEBUG] All files uploaded - Total URLs: ${uploadedUrls.length}`);
       const updatedFiles = [...currentFiles, ...uploadedUrls];
       this.form.controls.countertopsFiles.setValue(updatedFiles);
-      alert('[DEBUG] Form updated with countertops files');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      alert(`[DEBUG] ERROR uploading countertops files: ${errorMsg}`);
-      console.error('Error uploading countertops files:', error);
       this.notificationService.error('Error', `No se pudieron subir los archivos de countertops: ${errorMsg}`);
 
       // Limpiar todos los previews en caso de error
@@ -1041,7 +1020,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
       void this.processBacksplashFiles(files);
     } catch (error) {
-      console.error('Error selecting backsplash files:', error);
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
     }
   }
@@ -1095,7 +1073,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           updatedMap.delete(fileId);
           this.uploadingBacksplashFiles.set(updatedMap);
         } catch (error) {
-          console.error('Error uploading file:', fileData.file.name, error);
           // Remover de la lista de carga incluso si falla
           const updatedMap = new Map(this.uploadingBacksplashFiles());
           updatedMap.delete(fileId);
@@ -1110,7 +1087,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const updatedFiles = [...currentFiles, ...uploadedUrls];
       this.form.controls.backsplashFiles.setValue(updatedFiles);
     } catch (error) {
-      console.error('Error uploading backsplash files:', error);
       this.notificationService.error('Error', 'No se pudieron subir los archivos de backsplash');
 
       // Limpiar todos los previews en caso de error
@@ -1175,43 +1151,30 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   private async stopRecording(): Promise<void> {
-    alert('[DEBUG] stopRecording - Called');
     try {
-      alert('[DEBUG] Calling audioRecorderService.stopRecording()...');
       const audioFile = await this.audioRecorderService.stopRecording();
-      alert(`[DEBUG] Audio file received - name: ${audioFile.name}, size: ${audioFile.size}, type: ${audioFile.type}`);
-      alert('[DEBUG] Processing audio file...');
       await this.processAudioFile(audioFile);
-      alert('[DEBUG] Audio file processed successfully');
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      alert(`[DEBUG] ERROR stopping recording: ${errorMsg}`);
-      console.error('Error stopping recording:', error);
       this.notificationService.error('Error', `Error stopping recording: ${errorMsg}`);
     }
   }
 
   private async processAudioFile(file: File): Promise<void> {
-    alert(`[DEBUG] processAudioFile - Starting - file: ${file.name}, size: ${file.size}, type: ${file.type}`);
     this.isUploadingAudio.set(true);
     this.isProcessingAudio.set(true);
 
     try {
       // 1. Subir a S3
-      alert('[DEBUG] Uploading audio file to S3...');
       const url = await this.s3UploadService.uploadFile(file);
-      alert(`[DEBUG] Audio uploaded to S3 - URL: ${url}`);
       this.isUploadingAudio.set(false);
 
       // 2. Procesar con API de audio
-      alert('[DEBUG] Processing audio with API...');
       this.notificationService.info('Processing', 'Generating audio summary...');
 
       this.audioService.summarizeAudio(file).subscribe({
         next: (response) => {
-          alert(`[DEBUG] Audio API response - success: ${response.success}`);
           if (response.success) {
-            alert('[DEBUG] Setting audio notes with transcription and summary');
             this.form.controls.audioNotes.setValue({
               url,
               transcription: response.data.transcription,
@@ -1219,18 +1182,13 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             });
             this.notificationService.success('Success', 'Audio processed successfully');
           } else {
-            alert('[DEBUG] API response not successful, saving only URL');
             // Si falla el resumen, guardamos solo la URL
             this.form.controls.audioNotes.setValue({ url });
             this.notificationService.info('Warning', 'Audio saved, but summary could not be generated');
           }
           this.isProcessingAudio.set(false);
-          alert('[DEBUG] Audio processing completed');
         },
-        error: (error) => {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          alert(`[DEBUG] ERROR summarizing audio: ${errorMsg}`);
-          console.error('Error summarizing audio:', error);
+        error: () => {
           // Si falla el resumen, guardamos solo la URL
           this.form.controls.audioNotes.setValue({ url });
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
@@ -1239,8 +1197,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      alert(`[DEBUG] ERROR uploading audio: ${errorMsg}`);
-      console.error('Error uploading audio:', error);
       this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
       this.isUploadingAudio.set(false);
       this.isProcessingAudio.set(false);
@@ -1302,7 +1258,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
       this.notificationService.success('Success', 'Sketch saved successfully');
     } catch (error) {
-      console.error('Error saving sketch:', error);
       this.notificationService.error('Error', 'Could not save sketch');
     } finally {
       this.isUploadingSketch.set(false);
@@ -1336,7 +1291,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
       void this.processAdditionalMediaFiles(files);
     } catch (error) {
-      console.error('Error selecting additional media files:', error);
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
     }
   }
@@ -1391,7 +1345,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           updatedMap.delete(fileId);
           this.uploadingAdditionalMedia.set(updatedMap);
         } catch (error) {
-          console.error('Error uploading file:', fileData.file.name, error);
           // Remover de la lista de carga incluso si falla
           const updatedMap = new Map(this.uploadingAdditionalMedia());
           updatedMap.delete(fileId);
@@ -1412,7 +1365,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
       // Limpiar el input para permitir seleccionar los mismos archivos de nuevo
     } catch (error) {
-      console.error('Error uploading additional media files:', error);
       this.notificationService.error('Error', 'No se pudieron subir los archivos');
 
       // Limpiar todos los previews en caso de error

@@ -56,8 +56,7 @@ export class AdditionalTabComponent {
       if (files.length > 0) {
       this.mediaFiles.set([...this.mediaFiles(), ...files]);
       }
-    } catch (error) {
-      console.error('Error selecting media files:', error);
+    } catch {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
     }
   }

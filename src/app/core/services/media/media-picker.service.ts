@@ -32,35 +32,25 @@ export class MediaPickerService {
    * Nota: Camera.getPhoto solo permite un archivo a la vez
    */
   private async pickMediaNative(): Promise<File[]> {
-    alert('[DEBUG] pickMediaNative - Starting media selection');
     try {
-      alert('[DEBUG] Calling Camera.getPhoto...');
       const photo = await Camera.getPhoto({
-        quality: 90,
+        quality: this.isNative ? 60 : 90, // Calidad reducida para optimizar memoria en móviles
         allowEditing: false,
         resultType: CameraResultType.Uri,
-        source: CameraSource.Prompt, // Permite elegir entre cámara o galería
-        // No especificamos mediaType para permitir cualquier tipo (imagen o video)
+        source: CameraSource.Prompt,
+        width: 1280, // Limitar resolución nativa para evitar OOM
+        correctOrientation: true,
+        presentationStyle: 'popover' // Mejor experiencia en iPad
       });
 
-      alert(`[DEBUG] Camera.getPhoto successful - path: ${photo.path}, webPath: ${photo.webPath}`);
-      
       // Convertir Photo a File
-      alert('[DEBUG] Converting photo to file...');
       const file = await this.photoToFile(photo);
-      alert(`[DEBUG] Photo converted to file - name: ${file.name}, size: ${file.size}, type: ${file.type}`);
       return [file];
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const errorName = error instanceof Error ? error.name : 'Unknown';
-      alert(`[DEBUG] Error picking media: ${errorName} - ${errorMsg}`);
-      
       // Si el usuario cancela, retornar array vacío
       if (error && typeof error === 'object' && 'message' in error && error.message === 'User cancelled photos app') {
-        alert('[DEBUG] User cancelled media selection');
         return [];
       }
-      console.error('Error picking media:', error);
       throw error;
     }
   }
@@ -102,66 +92,65 @@ export class MediaPickerService {
    * Convierte un Photo de Capacitor a File
    */
   private async photoToFile(photo: Photo): Promise<File> {
-    alert('[DEBUG] photoToFile - Starting conversion');
     let fileUri: string;
     let mimeType: string;
     let fileName: string;
 
     // Determinar la URI a usar
     if (photo.path) {
-      alert(`[DEBUG] Using photo.path: ${photo.path}`);
       // En nativo, convertir el path usando Capacitor
       fileUri = Capacitor.convertFileSrc(photo.path);
-      alert(`[DEBUG] Converted fileUri: ${fileUri}`);
-      
+
       // Determinar tipo MIME y nombre de archivo desde el path
       const extension = photo.path.split('.').pop()?.toLowerCase() || 'jpg';
       mimeType = this.getMimeTypeFromExtension(extension);
       fileName = `media-${Date.now()}.${extension}`;
-      alert(`[DEBUG] Detected extension: ${extension}, mimeType: ${mimeType}, fileName: ${fileName}`);
     } else if (photo.webPath) {
-      alert(`[DEBUG] Using photo.webPath: ${photo.webPath}`);
       // En web, usar webPath directamente
       fileUri = photo.webPath;
       fileName = `media-${Date.now()}.jpg`;
       mimeType = 'image/jpeg';
     } else {
-      alert('[DEBUG] ERROR: No valid path or webPath in photo');
       throw new Error('No valid path or webPath in photo');
     }
 
     // Obtener el archivo usando fetch
     try {
-      alert(`[DEBUG] Fetching file from URI: ${fileUri}`);
       const response = await fetch(fileUri);
-      alert(`[DEBUG] Fetch response status: ${response.status}, ok: ${response.ok}`);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
       }
-      
+
       const blob = await response.blob();
-      alert(`[DEBUG] Blob created - size: ${blob.size}, type: ${blob.type}`);
-      
+
+      if (!blob || blob.size === 0) {
+        throw new Error('File is empty');
+      }
+
+      // Validación de seguridad para evitar crashes por memoria en dispositivos móviles
+      // 50MB es un límite seguro para manejar en memoria (blob)
+      if (this.isNative && blob.size > 50 * 1024 * 1024) {
+        throw new Error('File is too large for mobile upload. Please choose a smaller file or shorter video (max 50MB).');
+      }
+
       // Usar el tipo MIME del blob si está disponible, sino usar el detectado
       const finalMimeType = blob.type || mimeType;
-      alert(`[DEBUG] Final mimeType: ${finalMimeType}`);
-      
+
       // Ajustar extensión si el tipo MIME es diferente
       if (blob.type && blob.type !== mimeType) {
         const correctExtension = this.getExtensionFromMimeType(blob.type);
         fileName = `media-${Date.now()}.${correctExtension}`;
-        alert(`[DEBUG] Adjusted fileName to: ${fileName}`);
       }
-      
+
       const file = new File([blob], fileName, { type: finalMimeType });
-      alert(`[DEBUG] File created successfully - name: ${file.name}, size: ${file.size}, type: ${file.type}`);
       return file;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      alert(`[DEBUG] ERROR converting photo to file: ${errorMsg}`);
-      console.error('Error converting photo to file:', error);
-      throw new Error(`Failed to convert photo to file: ${errorMsg}`);
+      if (errorMsg.includes('too large')) {
+        throw error; // Re-lanzar error de tamaño específico
+      }
+      throw new Error(`Failed to load file. It might be too large or format is unsupported: ${errorMsg}`);
     }
   }
 
@@ -230,8 +219,7 @@ export class MediaPickerService {
         } else {
           continueSelecting = false;
         }
-      } catch (error) {
-        console.error('Error selecting media:', error);
+      } catch {
         continueSelecting = false;
       }
     }

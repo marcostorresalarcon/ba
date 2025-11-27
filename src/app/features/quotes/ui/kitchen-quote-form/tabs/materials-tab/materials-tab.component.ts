@@ -202,8 +202,7 @@ export class MaterialsTabComponent implements OnInit {
             }
 
             this.notificationService.success('Éxito', 'Archivo subido correctamente');
-        } catch (error) {
-            console.error('Error uploading file:', error);
+        } catch {
             this.notificationService.error('Error', 'No se pudo subir el archivo');
 
             // Limpiar preview si existe
@@ -215,8 +214,7 @@ export class MaterialsTabComponent implements OnInit {
             this.isUploadingFile.set(false);
             this.uploadingFileProgress.set(0);
             }
-        } catch (error) {
-            console.error('Error selecting file:', error);
+        } catch {
             this.notificationService.error('Error', 'No se pudo seleccionar el archivo');
         }
     }
