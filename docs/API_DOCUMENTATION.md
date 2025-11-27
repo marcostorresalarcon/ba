@@ -18,7 +18,8 @@ Esta documentación describe todos los endpoints disponibles en la API del proye
 8. [KPIs](#kpis)
 9. [Subida de Archivos](#subida-de-archivos)
 10. [Audio](#audio)
-11. [General](#general)
+11. [Logs](#logs)
+12. [General](#general)
 
 ---
 
@@ -422,14 +423,6 @@ Elimina un cliente del sistema.
 
 **Nota Importante**: Las cotizaciones (quotes/estimaciones) se crean **después** de crear un proyecto. Primero debe existir un proyecto, y luego se pueden crear múltiples estimaciones para ese proyecto.
 
-**Múltiples Quotes por Proyecto**: Un proyecto puede tener múltiples estimaciones de diferentes categorías (kitchen, bathroom, basement, additional-work). Cada categoría tiene su propio sistema de versiones independiente. Por ejemplo, un proyecto puede tener:
-- Quote Kitchen v1, v2, v3
-- Quote Bathroom v1, v2
-- Quote Basement v1
-- Quote Additional Work v1
-
-**Sistema de Versiones por Categoría**: El `versionNumber` se calcula automáticamente por `projectId + category`. Si no se proporciona, el sistema busca la última versión de esa categoría para ese proyecto y la incrementa en 1. Si es la primera cotización de esa categoría, se asigna versión 1.
-
 ### POST `/quote`
 
 Crea una nueva cotización/estimación para un proyecto existente (disponible para las categorías `kitchen`, `bathroom`, `basement` y `additional-work`).
@@ -446,7 +439,7 @@ Crea una nueva cotización/estimación para un proyecto existente (disponible pa
   "experience": "string (requerido)",
   "category": "kitchen | bathroom | basement | additional-work (requerido)",
   "userId": "string (requerido, MongoDB ObjectId)",
-  "versionNumber": "number (opcional, se calcula automáticamente si no se proporciona)",
+  "versionNumber": "number (requerido)",
   "totalPrice": "number (requerido)",
   "status": "draft | sent | approved | rejected | in_progress | completed (opcional, default: draft)",
   "notes": "string (opcional)",
@@ -532,8 +525,6 @@ El formulario de cocina se basa directamente en `docs/inputs.json`, por lo que t
 
 - El `projectId` debe existir en el sistema
 - El `companyId` de la cotización debe coincidir con el `companyId` del proyecto
-- Si no se proporciona `versionNumber`, se calcula automáticamente buscando la última versión de esa categoría para ese proyecto y sumando 1
-- Un proyecto puede tener múltiples quotes de diferentes categorías, cada una con su propio sistema de versiones
 
 **Respuesta exitosa** (201):
 
@@ -699,26 +690,21 @@ Obtiene una cotización específica por su ID, incluyendo la información comple
 ### GET `/quote/project/:projectId/versions`
 
 Obtiene todas las versiones registradas para un proyecto (útil para auditar el historial completo).  
-Se puede filtrar por `category` y/o `versionNumber` opcionales.
+Se puede pasar un `versionNumber` opcional para filtrar una versión concreta.
 
 **Autenticación**: No especificada
 
 **Parámetros**:
 
-- `projectId` (string, requerido, path param)
-- `category` (string, opcional, query param): Filtrar por categoría (`kitchen`, `bathroom`, `basement`, `additional-work`)
-- `versionNumber` (number, opcional, query param): Filtrar por número de versión específico
+- `projectId` (string, requerido)
+- `versionNumber` (number, opcional, query param)
 
 **Ejemplos**:
 
 ```
 GET /quote/project/507f1f77bcf86cd799439012/versions
-GET /quote/project/507f1f77bcf86cd799439012/versions?category=kitchen
-GET /quote/project/507f1f77bcf86cd799439012/versions?category=kitchen&versionNumber=3
-GET /quote/project/507f1f77bcf86cd799439012/versions?versionNumber=1
+GET /quote/project/507f1f77bcf86cd799439012/versions?versionNumber=3
 ```
-
-**Nota**: Si no se especifica `category`, se devuelven todas las versiones de todas las categorías del proyecto, ordenadas por categoría y número de versión.
 
 **Respuesta exitosa** (200):
 
@@ -745,7 +731,7 @@ GET /quote/project/507f1f77bcf86cd799439012/versions?versionNumber=1
 
 ### PATCH `/quote/:id`
 
-Actualiza una cotización existente. Para crear una nueva versión, se recomienda crear un nuevo quote con el mismo `projectId` y `category`; el sistema calculará automáticamente el siguiente `versionNumber` para esa categoría.
+Actualiza una cotización existente (se usa para generar nuevas versiones incrementando `versionNumber` manualmente cuando sea necesario).
 
 **Autenticación**: No especificada
 
@@ -814,9 +800,7 @@ Elimina una cotización del sistema.
 
 ## Proyectos
 
-**Nota Importante**: Los proyectos se crean **primero**, antes de las cotizaciones. Una vez creado el proyecto, se pueden crear múltiples estimaciones (quotes) para ese proyecto de diferentes categorías (kitchen, bathroom, basement, additional-work).
-
-**Aprobación de Quotes**: Un proyecto puede tener múltiples quotes aprobados, uno por cada categoría. Se recomienda usar `approvedQuotesByCategory` para gestionar las aprobaciones por categoría. El campo `approvedQuoteId` se mantiene para backward compatibility pero está deprecated.
+**Nota Importante**: Los proyectos se crean **primero**, antes de las cotizaciones. Una vez creado el proyecto, se pueden crear múltiples estimaciones (quotes) para ese proyecto. Cuando se aprueba una estimación, se puede asociar al proyecto mediante `approvedQuoteId`.
 
 ### POST `/project`
 
@@ -839,13 +823,7 @@ Crea un nuevo proyecto. **Este es el primer paso** en el flujo de trabajo.
   "expectedEndDate": "Date (opcional)",
   "actualEndDate": "Date (opcional)",
   "budget": "number (opcional)",
-  "approvedQuoteId": "string (opcional, deprecated - usar approvedQuotesByCategory)",
-  "approvedQuotesByCategory": {
-    "kitchen": "string (opcional, MongoDB ObjectId)",
-    "bathroom": "string (opcional, MongoDB ObjectId)",
-    "basement": "string (opcional, MongoDB ObjectId)",
-    "additional-work": "string (opcional, MongoDB ObjectId)"
-  },
+  "approvedQuoteId": "string (opcional, MongoDB ObjectId)",
   "milestones": [
     {
       "name": "string",
@@ -890,21 +868,7 @@ Crea un nuevo proyecto. **Este es el primer paso** en el flujo de trabajo.
 }
 ```
 
-**Nota sobre Aprobación de Quotes**:
-- **`approvedQuotesByCategory`** (recomendado): Permite aprobar un quote por cada categoría. Un proyecto puede tener múltiples quotes aprobados simultáneamente (uno por categoría).
-- **`approvedQuoteId`** (deprecated): Se mantiene para backward compatibility. Si se usa, se recomienda migrar a `approvedQuotesByCategory`.
-
-**Ejemplo con approvedQuotesByCategory**:
-```json
-{
-  "name": "Remodelación Completa - Juan Pérez",
-  "projectType": "kitchen",
-  "approvedQuotesByCategory": {
-    "kitchen": "507f1f77bcf86cd799439020",
-    "bathroom": "507f1f77bcf86cd799439021"
-  }
-}
-```
+**Nota**: El campo `approvedQuoteId` se puede establecer cuando se aprueba una estimación, asociando la cotización aprobada al proyecto.
 
 ---
 
@@ -1352,6 +1316,444 @@ Procesa un archivo de audio y genera un resumen usando OpenAI Whisper.
 
 ---
 
+## Logs
+
+El módulo de logs permite registrar y consultar notificaciones y errores de la plataforma. Los logs pueden estar asociados a compañías y usuarios, y permiten un seguimiento detallado de eventos del sistema.
+
+### POST `/log`
+
+Crea un nuevo log (notificación o error) en el sistema.
+
+**Autenticación**: No especificada
+
+**Body**:
+
+```json
+{
+  "type": "notification | error (requerido)",
+  "severity": "low | medium | high | critical (opcional, requerido si type es error)",
+  "message": "string (requerido, máximo 500 caracteres)",
+  "description": "string (opcional, máximo 2000 caracteres)",
+  "companyId": "string (opcional, MongoDB ObjectId)",
+  "userId": "string (opcional, MongoDB ObjectId)",
+  "source": "string (opcional, origen del log)",
+  "stackTrace": "string (opcional, stack trace para errores)",
+  "metadata": "object (opcional, datos adicionales)",
+  "endpoint": "string (opcional, endpoint HTTP relacionado)",
+  "method": "string (opcional, método HTTP)",
+  "statusCode": "number (opcional, código de estado HTTP)",
+  "ipAddress": "string (opcional)",
+  "userAgent": "string (opcional)",
+  "resolved": "boolean (opcional, default: false)",
+  "resolvedAt": "Date (opcional)",
+  "resolvedBy": "string (opcional, MongoDB ObjectId)"
+}
+```
+
+**Ejemplo de log de error**:
+
+```json
+{
+  "type": "error",
+  "severity": "high",
+  "message": "Error al procesar pago",
+  "description": "Fallo en la conexión con el proveedor de pagos",
+  "companyId": "507f1f77bcf86cd799439011",
+  "source": "payment-service",
+  "stackTrace": "Error: Connection timeout\n    at PaymentService.processPayment...",
+  "metadata": {
+    "paymentId": "123",
+    "amount": 1000,
+    "customerId": "507f1f77bcf86cd799439013"
+  },
+  "endpoint": "/payment/create-intent",
+  "method": "POST",
+  "statusCode": 500,
+  "ipAddress": "192.168.1.1",
+  "userAgent": "Mozilla/5.0..."
+}
+```
+
+**Ejemplo de notificación**:
+
+```json
+{
+  "type": "notification",
+  "message": "Cotización aprobada",
+  "description": "La cotización #123 ha sido aprobada por el cliente",
+  "companyId": "507f1f77bcf86cd799439011",
+  "userId": "507f1f77bcf86cd799439012",
+  "source": "quote-service",
+  "metadata": {
+    "quoteId": "507f1f77bcf86cd799439014",
+    "projectId": "507f1f77bcf86cd799439015"
+  }
+}
+```
+
+**Respuesta exitosa** (201):
+
+```json
+{
+  "_id": "log_id",
+  "type": "error",
+  "severity": "high",
+  "message": "Error al procesar pago",
+  "description": "Fallo en la conexión con el proveedor de pagos",
+  "companyId": "507f1f77bcf86cd799439011",
+  "source": "payment-service",
+  "resolved": false,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z"
+}
+```
+
+---
+
+### GET `/log`
+
+Obtiene todos los logs con filtros opcionales.
+
+**Autenticación**: No especificada
+
+**Query Parameters**:
+
+- `type` (string, opcional): Filtrar por tipo (`notification` o `error`)
+- `severity` (string, opcional): Filtrar por severidad (`low`, `medium`, `high`, `critical`)
+- `companyId` (string, opcional): Filtrar por compañía
+- `userId` (string, opcional): Filtrar por usuario
+- `source` (string, opcional): Filtrar por origen
+- `resolved` (string, opcional): Filtrar por estado de resolución (`true` o `false`)
+- `startDate` (string, opcional): Fecha de inicio (formato ISO 8601)
+- `endDate` (string, opcional): Fecha de fin (formato ISO 8601)
+- `limit` (number, opcional): Límite de resultados (default: 100)
+- `skip` (number, opcional): Número de resultados a omitir (default: 0)
+
+**Ejemplo**:
+
+```
+GET /log?type=error&severity=critical&companyId=507f1f77bcf86cd799439011&resolved=false&limit=50
+```
+
+**Respuesta exitosa** (200):
+
+```json
+[
+  {
+    "_id": "log_id",
+    "type": "error",
+    "severity": "critical",
+    "message": "Error crítico en el sistema",
+    "companyId": "507f1f77bcf86cd799439011",
+    "resolved": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    ...
+  }
+]
+```
+
+---
+
+### GET `/log/errors`
+
+Obtiene solo los logs de tipo error con filtros opcionales.
+
+**Autenticación**: No especificada
+
+**Query Parameters**:
+
+- `severity` (string, opcional): Filtrar por severidad
+- `companyId` (string, opcional): Filtrar por compañía
+- `userId` (string, opcional): Filtrar por usuario
+- `source` (string, opcional): Filtrar por origen
+- `resolved` (string, opcional): Filtrar por estado de resolución
+- `limit` (number, opcional): Límite de resultados
+- `skip` (number, opcional): Número de resultados a omitir
+
+**Ejemplo**:
+
+```
+GET /log/errors?severity=high&resolved=false&limit=20
+```
+
+---
+
+### GET `/log/notifications`
+
+Obtiene solo los logs de tipo notificación con filtros opcionales.
+
+**Autenticación**: No especificada
+
+**Query Parameters**:
+
+- `companyId` (string, opcional): Filtrar por compañía
+- `userId` (string, opcional): Filtrar por usuario
+- `source` (string, opcional): Filtrar por origen
+- `limit` (number, opcional): Límite de resultados
+- `skip` (number, opcional): Número de resultados a omitir
+
+**Ejemplo**:
+
+```
+GET /log/notifications?companyId=507f1f77bcf86cd799439011&limit=50
+```
+
+---
+
+### GET `/log/unresolved-errors`
+
+Obtiene solo los errores que no han sido resueltos.
+
+**Autenticación**: No especificada
+
+**Query Parameters**:
+
+- `severity` (string, opcional): Filtrar por severidad
+- `companyId` (string, opcional): Filtrar por compañía
+- `userId` (string, opcional): Filtrar por usuario
+- `source` (string, opcional): Filtrar por origen
+- `limit` (number, opcional): Límite de resultados
+- `skip` (number, opcional): Número de resultados a omitir
+
+**Ejemplo**:
+
+```
+GET /log/unresolved-errors?severity=critical&companyId=507f1f77bcf86cd799439011
+```
+
+**Respuesta exitosa** (200):
+
+```json
+[
+  {
+    "_id": "log_id",
+    "type": "error",
+    "severity": "critical",
+    "message": "Error crítico en el sistema",
+    "resolved": false,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    ...
+  }
+]
+```
+
+---
+
+### GET `/log/stats`
+
+Obtiene estadísticas agregadas de los logs.
+
+**Autenticación**: No especificada
+
+**Query Parameters**:
+
+- `companyId` (string, opcional): Filtrar estadísticas por compañía
+- `startDate` (string, opcional): Fecha de inicio (formato ISO 8601)
+- `endDate` (string, opcional): Fecha de fin (formato ISO 8601)
+
+**Ejemplo**:
+
+```
+GET /log/stats?companyId=507f1f77bcf86cd799439011&startDate=2024-01-01&endDate=2024-01-31
+```
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "total": 150,
+  "errors": 45,
+  "notifications": 105,
+  "bySeverity": {
+    "low": 10,
+    "medium": 15,
+    "high": 15,
+    "critical": 5
+  },
+  "unresolved": 12
+}
+```
+
+---
+
+### GET `/log/company/:companyId`
+
+Obtiene todos los logs de una compañía específica.
+
+**Autenticación**: No especificada
+
+**Parámetros**:
+
+- `companyId` (string, requerido): ID de la compañía
+
+**Query Parameters**:
+
+- `type` (string, opcional): Filtrar por tipo
+- `severity` (string, opcional): Filtrar por severidad
+- `limit` (number, opcional): Límite de resultados
+- `skip` (number, opcional): Número de resultados a omitir
+
+**Ejemplo**:
+
+```
+GET /log/company/507f1f77bcf86cd799439011?type=error&severity=high
+```
+
+---
+
+### GET `/log/user/:userId`
+
+Obtiene todos los logs de un usuario específico.
+
+**Autenticación**: No especificada
+
+**Parámetros**:
+
+- `userId` (string, requerido): ID del usuario
+
+**Query Parameters**:
+
+- `type` (string, opcional): Filtrar por tipo
+- `severity` (string, opcional): Filtrar por severidad
+- `limit` (number, opcional): Límite de resultados
+- `skip` (number, opcional): Número de resultados a omitir
+
+**Ejemplo**:
+
+```
+GET /log/user/507f1f77bcf86cd799439012?type=notification
+```
+
+---
+
+### GET `/log/:id`
+
+Obtiene un log específico por su ID.
+
+**Autenticación**: No especificada
+
+**Parámetros**:
+
+- `id` (string, requerido): ID del log
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "_id": "log_id",
+  "type": "error",
+  "severity": "high",
+  "message": "Error al procesar pago",
+  "description": "Fallo en la conexión con el proveedor de pagos",
+  "companyId": "507f1f77bcf86cd799439011",
+  "userId": "507f1f77bcf86cd799439012",
+  "source": "payment-service",
+  "stackTrace": "Error: Connection timeout...",
+  "metadata": {
+    "paymentId": "123",
+    "amount": 1000
+  },
+  "endpoint": "/payment/create-intent",
+  "method": "POST",
+  "statusCode": 500,
+  "ipAddress": "192.168.1.1",
+  "userAgent": "Mozilla/5.0...",
+  "resolved": false,
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "updatedAt": "2024-01-01T00:00:00.000Z"
+}
+```
+
+---
+
+### PATCH `/log/:id`
+
+Actualiza un log existente.
+
+**Autenticación**: No especificada
+
+**Parámetros**:
+
+- `id` (string, requerido): ID del log
+
+**Body**: Todos los campos son opcionales (mismo formato que POST `/log`)
+
+**Ejemplo**:
+
+```json
+{
+  "resolved": true,
+  "description": "Error resuelto mediante reinicio del servicio"
+}
+```
+
+**Nota**: Si se establece `resolved: true` sin especificar `resolvedAt`, se establece automáticamente la fecha actual.
+
+---
+
+### PATCH `/log/:id/resolve`
+
+Marca un log como resuelto. Endpoint específico para resolver logs de manera rápida.
+
+**Autenticación**: No especificada
+
+**Parámetros**:
+
+- `id` (string, requerido): ID del log
+
+**Body**:
+
+```json
+{
+  "resolvedBy": "string (opcional, MongoDB ObjectId del usuario que resuelve)"
+}
+```
+
+**Ejemplo**:
+
+```json
+{
+  "resolvedBy": "507f1f77bcf86cd799439012"
+}
+```
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "_id": "log_id",
+  "resolved": true,
+  "resolvedAt": "2024-01-01T12:00:00.000Z",
+  "resolvedBy": "507f1f77bcf86cd799439012",
+  ...
+}
+```
+
+---
+
+### DELETE `/log/:id`
+
+Elimina un log del sistema.
+
+**Autenticación**: No especificada
+
+**Parámetros**:
+
+- `id` (string, requerido): ID del log
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "_id": "log_id",
+  "type": "error",
+  "message": "Error al procesar pago",
+  ...
+}
+```
+
+---
+
 ## General
 
 ### GET `/`
@@ -1397,7 +1799,7 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 
 2. **Sistema de Compañías**: Todos los recursos principales (cotizaciones, proyectos, pagos) están asociados a una compañía. Use el parámetro `companyId` para filtrar datos por compañía.
 
-3. **Sistema de Versiones por Categoría**: Cada cotización posee un `versionNumber` que se calcula automáticamente por `projectId + category`. Si no se proporciona al crear un quote, el sistema busca la última versión de esa categoría para ese proyecto y la incrementa en 1. Puedes consultar el historial con `GET /quote/project/:projectId/versions` filtrando opcionalmente por `category`.
+3. **Sistema de Versiones**: Cada cotización posee un `versionNumber`. Puedes actualizarla vía `PATCH /quote/:id` (incrementando manualmente el número) y consultar el historial con `GET /quote/project/:projectId/versions`.
 
 4. **Validación**: Todos los endpoints utilizan `ValidationPipe` de NestJS que:
 
@@ -1410,7 +1812,7 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 
 7. **ObjectId de MongoDB**: Los IDs de MongoDB son strings que representan ObjectIds. Asegúrate de usar el formato correcto (24 caracteres hexadecimales).
 
-8. **Categorías de Cotizaciones**: Las cotizaciones pueden ser `kitchen`, `bathroom`, `basement` o `additional-work`. Cada tipo tiene campos dedicados (`kitchenInformation`, `bathroomInformation`, `basementInformation`, `additionalWorkInformation`) con nombres estandarizados. **Un proyecto puede tener múltiples quotes de diferentes categorías**, cada una con su propio sistema de versiones independiente.
+8. **Categorías de Cotizaciones**: Las cotizaciones pueden ser `kitchen`, `bathroom`, `basement` o `additional-work`. Cada tipo tiene campos dedicados (`kitchenInformation`, `bathroomInformation`, `basementInformation`, `additionalWorkInformation`) con nombres estandarizados.
 
 9. **Estados de Cotizaciones**: `draft`, `sent`, `approved`, `rejected`, `in_progress`, `completed`
 
@@ -1418,9 +1820,7 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 
 11. **Estados de Pagos**: `pending`, `completed`, `failed`, `refunded`
 
-12. **Relación Proyecto-Cotización**: Cada cotización debe tener un `projectId` válido. El sistema valida que el proyecto exista y que pertenezca a la misma compañía antes de crear la cotización. Un proyecto puede tener múltiples quotes de diferentes categorías, y cada categoría mantiene su propio sistema de versiones.
-
-13. **Aprobación de Quotes**: Un proyecto puede tener múltiples quotes aprobados simultáneamente, uno por cada categoría. Use `approvedQuotesByCategory` para gestionar las aprobaciones. El campo `approvedQuoteId` está deprecated pero se mantiene para backward compatibility.
+12. **Relación Proyecto-Cotización**: Cada cotización debe tener un `projectId` válido. El sistema valida que el proyecto exista y que pertenezca a la misma compañía antes de crear la cotización.
 
 13. **Lista de Materiales (`materials`)**: El campo `materials` es opcional y es un objeto que puede contener:
     - **`file` (string, opcional)**: URL de una imagen o PDF que contiene la lista de materiales
@@ -1451,7 +1851,6 @@ const projectResponse = await fetch('/project', {
 const project = await projectResponse.json()
 
 // 2. SEGUNDO PASO: Crear primera estimación para el proyecto
-// Nota: versionNumber es opcional, se calcula automáticamente si no se proporciona
 const quoteResponse = await fetch('/quote', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -1461,7 +1860,7 @@ const quoteResponse = await fetch('/quote', {
     projectId: project._id, // ✅ Asociar al proyecto creado
     category: 'kitchen',
     experience: '5 años',
-    // versionNumber: 1, // ✅ Opcional - se calcula automáticamente si no se proporciona
+    versionNumber: 1,
     totalPrice: 50000,
     userId: '507f1f77bcf86cd799439011',
     status: 'draft',
@@ -1511,48 +1910,17 @@ await fetch(`/quote/${quote._id}`, {
 // 4. Obtener todas las estimaciones del proyecto
 const projectQuotes = await fetch(`/quote/project/${project._id}`)
 
-// 5. Crear otra estimación de diferente categoría para el mismo proyecto
-const bathroomQuoteResponse = await fetch('/quote', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    customerId: '507f1f77bcf86cd799439013',
-    companyId: '507f1f77bcf86cd799439011',
-    projectId: project._id,
-    category: 'bathroom', // ✅ Diferente categoría
-    experience: '5 años',
-    // versionNumber se calculará automáticamente como 1 (primera versión de bathroom)
-    totalPrice: 30000,
-    userId: '507f1f77bcf86cd799439011',
-    status: 'draft',
-  }),
-})
-
-// 6. Obtener versiones de una categoría específica
-const kitchenVersions = await fetch(
-  `/quote/project/${project._id}/versions?category=kitchen`
-)
-
-// 7. Cuando se aprueban estimaciones, asociarlas al proyecto usando approvedQuotesByCategory
+// 5. Cuando se aprueba una estimación, asociarla al proyecto
 await fetch(`/quote/${quote._id}`, {
   method: 'PATCH',
   body: JSON.stringify({ status: 'approved' }),
 })
 
-const bathroomQuote = await bathroomQuoteResponse.json()
-await fetch(`/quote/${bathroomQuote._id}`, {
-  method: 'PATCH',
-  body: JSON.stringify({ status: 'approved' }),
-})
-
-// 8. Actualizar proyecto con las estimaciones aprobadas (recomendado: usar approvedQuotesByCategory)
+// 6. Actualizar proyecto con la estimación aprobada
 await fetch(`/project/${project._id}`, {
   method: 'PATCH',
   body: JSON.stringify({
-    approvedQuotesByCategory: {
-      kitchen: quote._id,
-      bathroom: bathroomQuote._id,
-    },
+    approvedQuoteId: quote._id,
     status: 'in_progress',
   }),
 })
@@ -1706,11 +2074,4 @@ Obtiene el historial de pagos de una factura específica.
 
 ---
 
-**Última actualización**: 25 de Noviembre de 2025
-
-**Cambios recientes**:
-- `versionNumber` ahora es opcional en POST `/quote` - se calcula automáticamente por `projectId + category`
-- GET `/quote/project/:projectId/versions` ahora acepta `category` como query param para filtrar por categoría
-- POST `/project` y PATCH `/project` ahora soportan `approvedQuotesByCategory` para aprobar múltiples quotes por categoría
-- `approvedQuoteId` está deprecated pero se mantiene para backward compatibility
-- Un proyecto puede tener múltiples quotes de diferentes categorías, cada una con su propio sistema de versiones
+**Última actualización**: 12 de Diciembre de 2025

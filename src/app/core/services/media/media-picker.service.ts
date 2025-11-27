@@ -1,6 +1,8 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource, type Photo } from '@capacitor/camera';
+
+import { LogService } from '../log/log.service';
 
 /**
  * Servicio para seleccionar medios (imágenes/videos) usando Capacitor Camera
@@ -11,6 +13,7 @@ import { Camera, CameraResultType, CameraSource, type Photo } from '@capacitor/c
 })
 export class MediaPickerService {
   private readonly isNative = Capacitor.isNativePlatform();
+  private readonly logService = inject(LogService);
 
   /**
    * Selecciona un medio (imagen o video) desde la cámara o galería
@@ -51,6 +54,23 @@ export class MediaPickerService {
       if (error && typeof error === 'object' && 'message' in error && error.message === 'User cancelled photos app') {
         return [];
       }
+
+      // Registrar error en logs
+      void this.logService.logError(
+        'Error al seleccionar medio en plataforma nativa',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error al seleccionar medio usando Capacitor Camera',
+          source: 'media-picker-service',
+          metadata: {
+            service: 'MediaPickerService',
+            method: 'pickMediaNative',
+            platform: this.isNative ? 'native' : 'web'
+          }
+        }
+      );
+
       throw error;
     }
   }
@@ -80,6 +100,23 @@ export class MediaPickerService {
       };
 
       input.onerror = (error) => {
+        // Registrar error en logs
+        void this.logService.logError(
+          'Error al seleccionar medio en web',
+          error,
+          {
+            severity: 'medium',
+            description: 'Error al seleccionar medio usando input file en web',
+            source: 'media-picker-service',
+            metadata: {
+              service: 'MediaPickerService',
+              method: 'pickMediaWeb',
+              platform: 'web',
+              allowMultiple
+            }
+          }
+        );
+
         reject(error);
       };
 
@@ -147,6 +184,25 @@ export class MediaPickerService {
       return file;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Registrar error en logs
+      void this.logService.logError(
+        'Error al convertir Photo a File',
+        error,
+        {
+          severity: errorMsg.includes('too large') ? 'high' : 'medium',
+          description: `Error al convertir Photo de Capacitor a File: ${errorMsg}`,
+          source: 'media-picker-service',
+          metadata: {
+            service: 'MediaPickerService',
+            method: 'photoToFile',
+            platform: this.isNative ? 'native' : 'web',
+            photoPath: photo.path,
+            photoWebPath: photo.webPath
+          }
+        }
+      );
+
       if (errorMsg.includes('too large')) {
         throw error; // Re-lanzar error de tamaño específico
       }

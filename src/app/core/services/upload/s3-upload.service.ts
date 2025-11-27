@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { firstValueFrom, type Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
+import { LogService } from '../log/log.service';
 
 export interface PresignedUrlRequest {
   fileName: string;
@@ -27,6 +28,7 @@ export interface UploadProgress {
 export class S3UploadService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
+  private readonly logService = inject(LogService);
 
   /**
    * Solicita una URL presignada para subir un archivo a S3
@@ -78,16 +80,78 @@ export class S3UploadService {
           const publicUrl = presignedUrl.split('?')[0];
           resolve(publicUrl);
         } else {
-          reject(new Error(`Upload failed with status ${xhr.status}`));
+          const error = new Error(`Upload failed with status ${xhr.status}`);
+          
+          // Registrar error en logs
+          void this.logService.logError(
+            `Error al subir archivo a S3: Status ${xhr.status}`,
+            error,
+            {
+              severity: 'high',
+              description: `Error HTTP al subir archivo a S3. Status: ${xhr.status}`,
+              source: 's3-upload-service',
+              metadata: {
+                service: 'S3UploadService',
+                method: 'uploadFileToS3',
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                statusCode: xhr.status,
+                statusText: xhr.statusText
+              }
+            }
+          );
+          
+          reject(error);
         }
       });
 
       xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed due to network error'));
+        const error = new Error('Upload failed due to network error');
+        
+        // Registrar error en logs
+        void this.logService.logError(
+          'Error de red al subir archivo a S3',
+          error,
+          {
+            severity: 'high',
+            description: 'Error de red al intentar subir archivo a S3 usando URL presignada',
+            source: 's3-upload-service',
+            metadata: {
+              service: 'S3UploadService',
+              method: 'uploadFileToS3',
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type
+            }
+          }
+        );
+        
+        reject(error);
       });
 
       xhr.addEventListener('abort', () => {
-        reject(new Error('Upload was aborted'));
+        const error = new Error('Upload was aborted');
+        
+        // Registrar error en logs
+        void this.logService.logError(
+          'Subida de archivo a S3 cancelada',
+          error,
+          {
+            severity: 'low',
+            description: 'La subida del archivo a S3 fue cancelada por el usuario',
+            source: 's3-upload-service',
+            metadata: {
+              service: 'S3UploadService',
+              method: 'uploadFileToS3',
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type
+            }
+          }
+        );
+        
+        reject(error);
       });
 
       // Iniciar la subida
@@ -120,6 +184,25 @@ export class S3UploadService {
       return response.publicUrl;
     } catch (error) {
       console.error('[S3UploadService] Error uploading file:', error);
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al subir archivo a S3',
+        error,
+        {
+          severity: 'high',
+          description: 'Error general al subir archivo a S3 (obtener URL presignada o subir archivo)',
+          source: 's3-upload-service',
+          metadata: {
+            service: 'S3UploadService',
+            method: 'uploadFile',
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
+          }
+        }
+      );
+      
       throw error;
     }
   }

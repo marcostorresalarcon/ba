@@ -36,6 +36,7 @@ import { IosMediaService } from '../../../../core/services/ios/ios-media.service
 import { PermissionsService } from '../../../../core/services/permissions/permissions.service';
 import { MediaPickerService } from '../../../../core/services/media/media-picker.service';
 import { DrawingCanvasService } from '../../../../core/services/drawing-canvas/drawing-canvas.service';
+import { LogService } from '../../../../core/services/log/log.service';
 import { DynamicFormFieldComponent } from './dynamic-form-field/dynamic-form-field.component';
 import { MaterialsTabComponent } from './tabs/materials-tab/materials-tab.component';
 import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
@@ -69,6 +70,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   private readonly permissionsService = inject(PermissionsService);
   private readonly mediaPickerService = inject(MediaPickerService);
   private readonly drawingCanvasService = inject(DrawingCanvasService);
+  private readonly logService = inject(LogService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -920,6 +922,23 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       void this.processCountertopsFiles(files);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al seleccionar archivos de countertops',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error al seleccionar archivos de countertops en el formulario de kitchen',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'onCountertopsFilesSelected',
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -979,6 +998,26 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
+          
+          // Registrar error en logs
+          await this.logService.logError(
+            'Error al subir archivo de countertops',
+            error,
+            {
+              severity: 'high',
+              description: `Error al subir archivo de countertops: ${fileData.file.name}`,
+              source: 'kitchen-quote-form',
+              metadata: {
+                component: 'KitchenQuoteFormComponent',
+                action: 'processCountertopsFiles',
+                fileName: fileData.file.name,
+                fileSize: fileData.file.size,
+                fileType: fileData.file.type,
+                projectId: this.project._id,
+                customerId: this.customer._id
+              }
+            }
+          );
         }
       }
 
@@ -996,6 +1035,24 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         }
       }
       this.uploadingCountertopsFiles.set(new Map());
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error general al procesar archivos de countertops',
+        error,
+        {
+          severity: 'high',
+          description: 'Error general al procesar y subir archivos de countertops',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'processCountertopsFiles',
+            filesCount: fileArray.length,
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -1021,6 +1078,23 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       void this.processBacksplashFiles(files);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al seleccionar archivos de backsplash',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error al seleccionar archivos de backsplash en el formulario de kitchen',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'onBacksplashFilesSelected',
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -1080,6 +1154,26 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
+          
+          // Registrar error en logs
+          await this.logService.logError(
+            'Error al subir archivo de backsplash',
+            error,
+            {
+              severity: 'high',
+              description: `Error al subir archivo de backsplash: ${fileData.file.name}`,
+              source: 'kitchen-quote-form',
+              metadata: {
+                component: 'KitchenQuoteFormComponent',
+                action: 'processBacksplashFiles',
+                fileName: fileData.file.name,
+                fileSize: fileData.file.size,
+                fileType: fileData.file.type,
+                projectId: this.project._id,
+                customerId: this.customer._id
+              }
+            }
+          );
         }
       }
 
@@ -1088,6 +1182,24 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.form.controls.backsplashFiles.setValue(updatedFiles);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron subir los archivos de backsplash');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error general al procesar archivos de backsplash',
+        error,
+        {
+          severity: 'high',
+          description: 'Error general al procesar y subir archivos de backsplash',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'processBacksplashFiles',
+            filesCount: fileArray.length,
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
 
       // Limpiar todos los previews en caso de error
       for (const fileData of uploadingMap.values()) {
@@ -1145,8 +1257,26 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   private async startRecording(): Promise<void> {
     try {
       await this.audioRecorderService.startRecording();
-    } catch {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       this.notificationService.error('Error', 'Could not start recording. Please check microphone permissions.');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al iniciar grabación de audio',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error al intentar iniciar la grabación de audio en el formulario de kitchen',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'startRecording',
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -1157,6 +1287,23 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.notificationService.error('Error', `Error stopping recording: ${errorMsg}`);
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al detener grabación de audio',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error al intentar detener la grabación de audio en el formulario de kitchen',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'stopRecording',
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -1185,14 +1332,48 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             // Si falla el resumen, guardamos solo la URL
             this.form.controls.audioNotes.setValue({ url });
             this.notificationService.info('Warning', 'Audio saved, but summary could not be generated');
+            
+            // Registrar advertencia en logs
+            void this.logService.logNotification(
+              'Audio guardado pero resumen no generado',
+              {
+                description: 'El audio se subió correctamente pero no se pudo generar el resumen',
+                source: 'kitchen-quote-form',
+                metadata: {
+                  component: 'KitchenQuoteFormComponent',
+                  action: 'processAudioFile',
+                  audioUrl: url,
+                  projectId: this.project._id,
+                  customerId: this.customer._id
+                }
+              }
+            );
           }
           this.isProcessingAudio.set(false);
         },
-        error: () => {
+        error: (error) => {
           // Si falla el resumen, guardamos solo la URL
           this.form.controls.audioNotes.setValue({ url });
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
           this.isProcessingAudio.set(false);
+          
+          // Registrar error en logs
+          void this.logService.logError(
+            'Error al procesar audio con API',
+            error,
+            {
+              severity: 'medium',
+              description: 'Error al procesar el audio con la API de resumen, pero el archivo se guardó correctamente',
+              source: 'kitchen-quote-form',
+              metadata: {
+                component: 'KitchenQuoteFormComponent',
+                action: 'summarizeAudio',
+                audioUrl: url,
+                projectId: this.project._id,
+                customerId: this.customer._id
+              }
+            }
+          );
         }
       });
     } catch (error) {
@@ -1200,6 +1381,26 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
       this.isUploadingAudio.set(false);
       this.isProcessingAudio.set(false);
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al subir archivo de audio',
+        error,
+        {
+          severity: 'high',
+          description: 'Error al subir el archivo de audio a S3',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'processAudioFile',
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -1259,6 +1460,23 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.notificationService.success('Success', 'Sketch saved successfully');
     } catch (error) {
       this.notificationService.error('Error', 'Could not save sketch');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al guardar sketch',
+        error,
+        {
+          severity: 'high',
+          description: 'Error al subir el sketch (dibujo) a S3',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'onSketchSaved',
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     } finally {
       this.isUploadingSketch.set(false);
     }
@@ -1292,6 +1510,23 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       void this.processAdditionalMediaFiles(files);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error al seleccionar archivos de medios adicionales',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error al seleccionar archivos de medios adicionales en el formulario de kitchen',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'onAdditionalMediaSelected',
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
     }
   }
 
@@ -1352,6 +1587,26 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
+          
+          // Registrar error en logs
+          await this.logService.logError(
+            'Error al subir archivo de medios adicionales',
+            error,
+            {
+              severity: 'high',
+              description: `Error al subir archivo de medios adicionales: ${fileData.file.name}`,
+              source: 'kitchen-quote-form',
+              metadata: {
+                component: 'KitchenQuoteFormComponent',
+                action: 'processAdditionalMediaFiles',
+                fileName: fileData.file.name,
+                fileSize: fileData.file.size,
+                fileType: fileData.file.type,
+                projectId: this.project._id,
+                customerId: this.customer._id
+              }
+            }
+          );
         }
       }
 
@@ -1366,6 +1621,24 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       // Limpiar el input para permitir seleccionar los mismos archivos de nuevo
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron subir los archivos');
+      
+      // Registrar error en logs
+      await this.logService.logError(
+        'Error general al procesar archivos de medios adicionales',
+        error,
+        {
+          severity: 'high',
+          description: 'Error general al procesar y subir archivos de medios adicionales',
+          source: 'kitchen-quote-form',
+          metadata: {
+            component: 'KitchenQuoteFormComponent',
+            action: 'processAdditionalMediaFiles',
+            filesCount: fileArray.length,
+            projectId: this.project._id,
+            customerId: this.customer._id
+          }
+        }
+      );
 
       // Limpiar todos los previews en caso de error
       for (const fileData of uploadingMap.values()) {
