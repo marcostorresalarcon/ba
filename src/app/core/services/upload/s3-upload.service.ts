@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { firstValueFrom, type Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
@@ -47,12 +48,127 @@ export class S3UploadService {
 
   /**
    * Sube un archivo directamente a S3 usando una URL presignada
+   * Usa fetch API en Capacitor (más compatible) y XMLHttpRequest en web (soporta progreso)
    * @param file Archivo a subir
    * @param presignedUrl URL presignada obtenida de getPresignedUrl
    * @param onProgress Callback opcional para reportar progreso
    * @returns Promise que se resuelve con la URL pública del archivo subido
    */
   async uploadFileToS3(
+    file: File,
+    presignedUrl: string,
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<string> {
+    const isNative = Capacitor.isNativePlatform();
+
+    // En Capacitor, usar fetch (más compatible)
+    // En web, usar XMLHttpRequest (soporta progreso)
+    if (isNative) {
+      return this.uploadFileToS3WithFetch(file, presignedUrl);
+    } else {
+      return this.uploadFileToS3WithXHR(file, presignedUrl, onProgress);
+    }
+  }
+
+  /**
+   * Sube archivo usando fetch API (para Capacitor)
+   */
+  private async uploadFileToS3WithFetch(
+    file: File,
+    presignedUrl: string
+  ): Promise<string> {
+    try {
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        const error = new Error(`Upload failed with status ${response.status}: ${errorText}`);
+        
+        // Registrar error en logs
+        await this.logService.logError(
+          `Error al subir archivo a S3: Status ${response.status}`,
+          error,
+          {
+            severity: 'high',
+            description: `Error HTTP al subir archivo a S3. Status: ${response.status}, StatusText: ${response.statusText}`,
+            source: 's3-upload-service',
+            metadata: {
+              service: 'S3UploadService',
+              method: 'uploadFileToS3WithFetch',
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              statusCode: response.status,
+              statusText: response.statusText,
+              errorResponse: errorText.substring(0, 500),
+              platform: 'capacitor'
+            }
+          }
+        );
+        
+        throw error;
+      }
+
+      // Extraer la URL pública de la presignedUrl (remover parámetros de query)
+      const publicUrl = presignedUrl.split('?')[0];
+      return publicUrl;
+    } catch (error) {
+      // Si el error ya fue manejado arriba, re-lanzarlo
+      if (error instanceof Error && error.message.includes('Upload failed with status')) {
+        throw error;
+      }
+
+      // Manejar otros tipos de errores (red, timeout, etc.)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isNetworkError = 
+        errorMessage.includes('network') || 
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('Failed to fetch') ||
+        errorMessage.includes('NetworkError');
+
+      const logError = new Error(
+        isNetworkError 
+          ? `Upload failed due to network error: ${errorMessage}`
+          : `Upload failed: ${errorMessage}`
+      );
+
+      // Registrar error en logs
+      await this.logService.logError(
+        isNetworkError ? 'Error de red al subir archivo a S3' : 'Error al subir archivo a S3',
+        logError,
+        {
+          severity: 'high',
+          description: isNetworkError
+            ? 'Error de red al intentar subir archivo a S3 usando URL presignada (Capacitor)'
+            : `Error al subir archivo a S3: ${errorMessage}`,
+          source: 's3-upload-service',
+          metadata: {
+            service: 'S3UploadService',
+            method: 'uploadFileToS3WithFetch',
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            errorType: error instanceof Error ? error.constructor.name : typeof error,
+            errorMessage: errorMessage.substring(0, 500),
+            platform: 'capacitor'
+          }
+        }
+      );
+
+      throw logError;
+    }
+  }
+
+  /**
+   * Sube archivo usando XMLHttpRequest (para web, soporta progreso)
+   */
+  private async uploadFileToS3WithXHR(
     file: File,
     presignedUrl: string,
     onProgress?: (progress: UploadProgress) => void
@@ -92,12 +208,13 @@ export class S3UploadService {
               source: 's3-upload-service',
               metadata: {
                 service: 'S3UploadService',
-                method: 'uploadFileToS3',
+                method: 'uploadFileToS3WithXHR',
                 fileName: file.name,
                 fileSize: file.size,
                 fileType: file.type,
                 statusCode: xhr.status,
-                statusText: xhr.statusText
+                statusText: xhr.statusText,
+                platform: 'web'
               }
             }
           );
@@ -115,14 +232,15 @@ export class S3UploadService {
           error,
           {
             severity: 'high',
-            description: 'Error de red al intentar subir archivo a S3 usando URL presignada',
+            description: 'Error de red al intentar subir archivo a S3 usando URL presignada (Web)',
             source: 's3-upload-service',
             metadata: {
               service: 'S3UploadService',
-              method: 'uploadFileToS3',
+              method: 'uploadFileToS3WithXHR',
               fileName: file.name,
               fileSize: file.size,
-              fileType: file.type
+              fileType: file.type,
+              platform: 'web'
             }
           }
         );
@@ -143,10 +261,11 @@ export class S3UploadService {
             source: 's3-upload-service',
             metadata: {
               service: 'S3UploadService',
-              method: 'uploadFileToS3',
+              method: 'uploadFileToS3WithXHR',
               fileName: file.name,
               fileSize: file.size,
-              fileType: file.type
+              fileType: file.type,
+              platform: 'web'
             }
           }
         );
@@ -171,37 +290,100 @@ export class S3UploadService {
     file: File,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<string> {
+    let presignedUrlResponse: PresignedUrlResponse | null = null;
+
     try {
       // 1. Solicitar URL presignada
-      const response = await firstValueFrom(
-        this.getPresignedUrl(file.name, file.type)
-      );
+      try {
+        presignedUrlResponse = await firstValueFrom(
+          this.getPresignedUrl(file.name, file.type)
+        );
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        // Registrar error específico de obtener URL presignada
+        await this.logService.logError(
+          'Error al obtener URL presignada de S3',
+          error,
+          {
+            severity: 'high',
+            description: `Error al solicitar URL presignada desde el backend: ${errorMessage}`,
+            source: 's3-upload-service',
+            metadata: {
+              service: 'S3UploadService',
+              method: 'uploadFile',
+              step: 'getPresignedUrl',
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              endpoint: `${this.baseUrl}/upload/presigned-url`
+            }
+          }
+        );
+        
+        throw new Error(`Failed to get presigned URL: ${errorMessage}`);
+      }
 
       // 2. Subir archivo directamente a S3
-      await this.uploadFileToS3(file, response.presignedUrl, onProgress);
+      try {
+        await this.uploadFileToS3(file, presignedUrlResponse.presignedUrl, onProgress);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        // Registrar error específico de subida a S3
+        await this.logService.logError(
+          'Error al subir archivo a S3 después de obtener URL presignada',
+          error,
+          {
+            severity: 'high',
+            description: `Error al subir archivo a S3 usando URL presignada: ${errorMessage}`,
+            source: 's3-upload-service',
+            metadata: {
+              service: 'S3UploadService',
+              method: 'uploadFile',
+              step: 'uploadFileToS3',
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              presignedUrl: presignedUrlResponse.presignedUrl.substring(0, 100) + '...' // Solo primeros 100 caracteres por seguridad
+            }
+          }
+        );
+        
+        throw new Error(`Failed to upload file to S3: ${errorMessage}`);
+      }
 
       // 3. Retornar la URL pública
-      return response.publicUrl;
+      return presignedUrlResponse.publicUrl;
     } catch (error) {
+      // Este catch captura errores que no fueron manejados en los try-catch internos
+      // o errores de formato inesperado
       console.error('[S3UploadService] Error uploading file:', error);
       
-      // Registrar error en logs
-      await this.logService.logError(
-        'Error al subir archivo a S3',
-        error,
-        {
-          severity: 'high',
-          description: 'Error general al subir archivo a S3 (obtener URL presignada o subir archivo)',
-          source: 's3-upload-service',
-          metadata: {
-            service: 'S3UploadService',
-            method: 'uploadFile',
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Solo registrar si no fue registrado ya en los pasos anteriores
+      if (!errorMessage.includes('Failed to get presigned URL') && 
+          !errorMessage.includes('Failed to upload file to S3')) {
+        await this.logService.logError(
+          'Error inesperado al subir archivo a S3',
+          error,
+          {
+            severity: 'high',
+            description: `Error inesperado al subir archivo a S3: ${errorMessage}`,
+            source: 's3-upload-service',
+            metadata: {
+              service: 'S3UploadService',
+              method: 'uploadFile',
+              step: 'unknown',
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              errorType: error instanceof Error ? error.constructor.name : typeof error
+            }
           }
-        }
-      );
+        );
+      }
       
       throw error;
     }
