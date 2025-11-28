@@ -9,7 +9,13 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     iosScheme: 'https',
     // Deshabilitar errores de CORS en desarrollo (solo para desarrollo)
-    // hostname: 'localhost'
+    // hostname: 'localhost',
+    // Permitir peticiones a dominios externos (S3)
+    allowNavigation: [
+      'https://*.s3.*.amazonaws.com',
+      'https://*.s3.amazonaws.com',
+      'https://ba-bucket-aws.s3.us-east-1.amazonaws.com'
+    ]
   },
   android: {
     // Mejoras de rendimiento para Android

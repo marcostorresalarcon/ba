@@ -72,17 +72,22 @@ export class S3UploadService {
 
   /**
    * Sube archivo usando fetch API (para Capacitor)
+   * Si fetch falla, intenta con XMLHttpRequest como fallback
    */
   private async uploadFileToS3WithFetch(
     file: File,
     presignedUrl: string
   ): Promise<string> {
+    // Limpiar Content-Type para evitar problemas con codecs (ej: "audio/mp4; codecs=mp4a.40.2")
+    const cleanContentType = this.cleanContentType(file.type);
+
     try {
+      // Intentar primero con fetch
       const response = await fetch(presignedUrl, {
         method: 'PUT',
         body: file,
         headers: {
-          'Content-Type': file.type || 'application/octet-stream'
+          'Content-Type': cleanContentType
         }
       });
 
@@ -104,6 +109,7 @@ export class S3UploadService {
               fileName: file.name,
               fileSize: file.size,
               fileType: file.type,
+              cleanContentType,
               statusCode: response.status,
               statusText: response.statusText,
               errorResponse: errorText.substring(0, 500),
@@ -119,34 +125,59 @@ export class S3UploadService {
       const publicUrl = presignedUrl.split('?')[0];
       return publicUrl;
     } catch (error) {
-      // Si el error ya fue manejado arriba, re-lanzarlo
+      // Si el error ya fue manejado arriba, intentar con XMLHttpRequest como fallback
       if (error instanceof Error && error.message.includes('Upload failed with status')) {
         throw error;
       }
 
-      // Manejar otros tipos de errores (red, timeout, etc.)
+      // Si fetch falla con "Load failed" o errores de red, intentar con XMLHttpRequest
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const isNetworkError = 
-        errorMessage.includes('network') || 
-        errorMessage.includes('fetch') ||
+      const shouldRetryWithXHR = 
+        errorMessage.includes('Load failed') ||
         errorMessage.includes('Failed to fetch') ||
+        errorMessage.includes('network') ||
         errorMessage.includes('NetworkError');
 
-      const logError = new Error(
-        isNetworkError 
-          ? `Upload failed due to network error: ${errorMessage}`
-          : `Upload failed: ${errorMessage}`
-      );
+      if (shouldRetryWithXHR) {
+        // Intentar con XMLHttpRequest como fallback
+        try {
+          return await this.uploadFileToS3WithXHRFallback(file, presignedUrl, cleanContentType);
+        } catch (xhrError) {
+          // Si XMLHttpRequest también falla, registrar ambos errores
+          await this.logService.logError(
+            'Error al subir archivo a S3: fetch y XMLHttpRequest fallaron',
+            xhrError,
+            {
+              severity: 'critical',
+              description: `Tanto fetch como XMLHttpRequest fallaron al subir archivo. Fetch error: ${errorMessage}`,
+              source: 's3-upload-service',
+              metadata: {
+                service: 'S3UploadService',
+                method: 'uploadFileToS3WithFetch',
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                cleanContentType,
+                originalError: errorMessage.substring(0, 500),
+                xhrError: xhrError instanceof Error ? xhrError.message.substring(0, 500) : String(xhrError),
+                platform: 'capacitor'
+              }
+            }
+          );
+          
+          throw xhrError;
+        }
+      }
 
-      // Registrar error en logs
+      // Para otros errores, registrar y lanzar
+      const logError = new Error(`Upload failed: ${errorMessage}`);
+
       await this.logService.logError(
-        isNetworkError ? 'Error de red al subir archivo a S3' : 'Error al subir archivo a S3',
+        'Error al subir archivo a S3',
         logError,
         {
           severity: 'high',
-          description: isNetworkError
-            ? 'Error de red al intentar subir archivo a S3 usando URL presignada (Capacitor)'
-            : `Error al subir archivo a S3: ${errorMessage}`,
+          description: `Error al subir archivo a S3: ${errorMessage}`,
           source: 's3-upload-service',
           metadata: {
             service: 'S3UploadService',
@@ -154,6 +185,7 @@ export class S3UploadService {
             fileName: file.name,
             fileSize: file.size,
             fileType: file.type,
+            cleanContentType,
             errorType: error instanceof Error ? error.constructor.name : typeof error,
             errorMessage: errorMessage.substring(0, 500),
             platform: 'capacitor'
@@ -163,6 +195,61 @@ export class S3UploadService {
 
       throw logError;
     }
+  }
+
+  /**
+   * Fallback usando XMLHttpRequest cuando fetch falla en Capacitor
+   */
+  private async uploadFileToS3WithXHRFallback(
+    file: File,
+    presignedUrl: string,
+    contentType: string
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          const publicUrl = presignedUrl.split('?')[0];
+          resolve(publicUrl);
+        } else {
+          const error = new Error(`Upload failed with status ${xhr.status}`);
+          reject(error);
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed due to network error (XHR fallback)'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload was aborted (XHR fallback)'));
+      });
+
+      xhr.open('PUT', presignedUrl);
+      xhr.setRequestHeader('Content-Type', contentType);
+      xhr.send(file);
+    });
+  }
+
+  /**
+   * Limpia el Content-Type removiendo parámetros como codecs que pueden causar problemas
+   */
+  private cleanContentType(contentType: string | null | undefined): string {
+    if (!contentType) {
+      return 'application/octet-stream';
+    }
+
+    // Remover parámetros después del punto y coma (ej: "audio/mp4; codecs=mp4a.40.2" -> "audio/mp4")
+    const baseType = contentType.split(';')[0].trim();
+
+    // Mapear tipos problemáticos a tipos más seguros
+    const typeMap: Record<string, string> = {
+      'audio/mp4': 'audio/m4a',
+      'audio/x-m4a': 'audio/m4a'
+    };
+
+    return typeMap[baseType] || baseType || 'application/octet-stream';
   }
 
   /**
