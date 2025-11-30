@@ -1,6 +1,253 @@
 <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
-  <!-- Header with Back Button and Project Information -->
-  <div class="mb-6">
+  <!-- Confirmation Screen - Replaces form -->
+  @if (showConfirmationScreen()) {
+    <div class="space-y-6">
+      <!-- Success Message -->
+      <div class="mb-6 rounded-2xl border-2 border-green-500 bg-green-50 p-6 text-center">
+        <div class="mb-4 flex justify-center">
+          <svg class="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="mb-2 text-2xl font-bold text-green-700">Application submitted successfully.</h2>
+        <p class="text-sm text-green-600">The estimate has been created and sent to the selected recipients.</p>
+      </div>
+
+      <!-- Complete Summary -->
+      <div class="rounded-2xl border border-fog/60 bg-white p-6 shadow-raised">
+        <h3 class="mb-6 text-xl font-bold text-charcoal">Complete Summary</h3>
+
+        <div class="space-y-6">
+          <!-- Project Information -->
+          <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Project Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Client</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.customer.controls.name.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Project Name</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.projectName.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Status</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.status.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Experience</span>
+                <p class="text-sm font-medium text-charcoal">{{ getCurrentExperience() }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Kitchen Size</span>
+                <p class="text-sm font-medium text-charcoal">
+                  {{ kitchenSize().charAt(0).toUpperCase() + kitchenSize().slice(1) }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Total Price</span>
+                <p class="text-lg font-bold text-pine">${{ totalCost() | number:'1.2-2' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget Information -->
+          <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Budget Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Rough Quote</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ toNumber(form.controls.roughQuote.value) | number:'1.2-2' }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Client Budget</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ toNumber(form.controls.clientBudget.value) | number:'1.2-2' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Status -->
+          <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Media Status</h4>
+            <div class="space-y-3">
+              <!-- Audio Status -->
+              <div class="rounded-lg border border-fog/40 bg-white p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Audio</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasAudio()"
+                    [class.text-green-700]="hasAudio()"
+                    [class.bg-red-100]="!hasAudio()"
+                    [class.text-red-700]="!hasAudio()"
+                  >
+                    {{ hasAudio() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+                @if (hasAudio() && form.controls.audioNotes.value; as audioNote) {
+                  <div class="mt-2 space-y-1 text-xs text-slate">
+                    @if (audioNote.summary) {
+                      <div class="flex items-start gap-2">
+                        <span class="text-pine font-medium">Summary:</span>
+                        <span class="text-charcoal">{{ audioNote.summary }}</span>
+                      </div>
+                    }
+                    @if (audioNote.transcription) {
+                      <div class="flex items-start gap-2">
+                        <span class="text-clay font-medium">Transcription:</span>
+                        <span class="text-charcoal">{{ audioNote.transcription }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-charcoal">Photos/Videos</span>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  [class.bg-green-100]="hasMediaFiles()"
+                  [class.text-green-700]="hasMediaFiles()"
+                  [class.bg-red-100]="!hasMediaFiles()"
+                  [class.text-red-700]="!hasMediaFiles()"
+                >
+                  {{ hasMediaFiles() ? 'Uploaded' : 'Not Uploaded' }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-charcoal">Sketches</span>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  [class.bg-green-100]="hasSketches()"
+                  [class.text-green-700]="hasSketches()"
+                  [class.bg-red-100]="!hasSketches()"
+                  [class.text-red-700]="!hasSketches()"
+                >
+                  {{ hasSketches() ? 'Uploaded' : 'Not Uploaded' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kitchen Details (Dynamic Fields) -->
+          @if (categories().length > 0) {
+            <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+              <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Kitchen Details</h4>
+              <div class="space-y-4">
+                @for (categoryGroup of categories(); track categoryGroup.id) {
+                  <div>
+                    @if (categoryGroup.title) {
+                      <h5 class="mb-2 text-xs font-semibold text-charcoal">{{ categoryGroup.title }}</h5>
+                    }
+                    <div class="space-y-2">
+                      @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) {
+                        @if (subcategoryGroup.id !== 'default' && shouldShowSubcategoryTitle(subcategoryGroup)) {
+                          <h6 class="mb-1 text-xs font-medium text-slate">{{ subcategoryGroup.title }}</h6>
+                        }
+                        <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+                          @for (input of subcategoryGroup.inputs; track input.name) {
+                            @let value = form.controls[input.name]?.value;
+                            @if (value !== null && value !== undefined && value !== false && value !== '' && value !== 'No') {
+                              <div class="flex items-start justify-between border-b border-fog/20 pb-1">
+                                <span class="text-xs text-slate">{{ input.label }}:</span>
+                                <span class="text-xs font-medium text-charcoal text-right">
+                                  @if (value === true) {
+                                    Yes
+                                  } @else {
+                                    {{ value }}{{ input.unit ? ' ' + input.unit : '' }}
+                                  }
+                                </span>
+                              </div>
+                            }
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Materials -->
+          @if (form.controls.materials.value && (form.controls.materials.value.file || (form.controls.materials.value.items && form.controls.materials.value.items.length > 0))) {
+            <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+              <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Materials</h4>
+              @if (form.controls.materials.value.file) {
+                <div class="mb-2">
+                  <span class="text-xs text-slate">File:</span>
+                  <p class="text-xs font-medium text-charcoal">Uploaded</p>
+                </div>
+              }
+              @if (form.controls.materials.value.items && form.controls.materials.value.items.length > 0) {
+                <div class="space-y-1">
+                  @for (item of form.controls.materials.value.items; track $index) {
+                    <div class="flex items-center justify-between border-b border-fog/20 pb-1">
+                      <span class="text-xs text-charcoal">{{ item.description }}</span>
+                      <span class="text-xs font-medium text-charcoal">Qty: {{ item.quantity }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Recipients -->
+          @if (selectedRecipients().length > 0) {
+            <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+              <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Recipients</h4>
+              <div class="flex flex-wrap gap-2">
+                @for (recipient of selectedRecipients(); track recipient) {
+                  <span class="rounded-full bg-pine/10 px-3 py-1 text-xs font-semibold text-pine">
+                    {{ recipient }}
+                  </span>
+                }
+              </div>
+              <p class="mt-2 text-xs text-slate">The PDF report with all details, photos, videos, and audio has been sent to the selected recipients.</p>
+            </div>
+          }
+
+          <!-- Notes -->
+          @if (form.controls.notes.value) {
+            <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+              <h4 class="mb-2 text-sm font-semibold uppercase tracking-wide text-clay">Notes</h4>
+              <p class="text-sm text-charcoal">{{ form.controls.notes.value }}</p>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3">
+        <button
+          type="button"
+          class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark"
+          (click)="goToProject()"
+        >
+          Go to Project
+        </button>
+        <button
+          type="button"
+          class="rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-fog/20"
+          (click)="closeConfirmationScreen()"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  } @else {
+    <!-- Form - Only shown when confirmation screen is not visible -->
+    <!-- Header with Back Button and Project Information -->
+    <div class="mb-6">
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <button
@@ -809,13 +1056,13 @@
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-charcoal">Rough Quote</span>
               <span class="text-base font-semibold text-charcoal">
-                ${{ (form.controls.roughQuote.value ?? 0) | number:'1.2-2' }}
+                ${{ toNumber(form.controls.roughQuote.value) | number:'1.2-2' }}
               </span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-charcoal">Client Budget</span>
               <span class="text-base font-semibold text-charcoal">
-                ${{ (form.controls.clientBudget.value ?? 0) | number:'1.2-2' }}
+                ${{ toNumber(form.controls.clientBudget.value) | number:'1.2-2' }}
               </span>
             </div>
             <div class="flex items-center justify-between border-t border-fog/40 pt-3">
@@ -889,16 +1136,16 @@
             <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Budget Information</h4>
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div>
-                <span class="text-xs text-slate">Rough Quote</span>
-                <p class="text-sm font-medium text-charcoal">
-                  ${{ (form.controls.roughQuote.value ?? 0) | number:'1.2-2' }}
-                </p>
-              </div>
-              <div>
-                <span class="text-xs text-slate">Client Budget</span>
-                <p class="text-sm font-medium text-charcoal">
-                  ${{ (form.controls.clientBudget.value ?? 0) | number:'1.2-2' }}
-                </p>
+                  <span class="text-xs text-slate">Rough Quote</span>
+                  <p class="text-sm font-medium text-charcoal">
+                    ${{ toNumber(form.controls.roughQuote.value) | number:'1.2-2' }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-xs text-slate">Client Budget</span>
+                  <p class="text-sm font-medium text-charcoal">
+                    ${{ toNumber(form.controls.clientBudget.value) | number:'1.2-2' }}
+                  </p>
               </div>
             </div>
           </div>
@@ -1030,8 +1277,10 @@
         Cancel
       </button>
     </div>
-  </form>
+    </form>
+    }
 
+  <!-- Modals - Always available -->
   @if (previewMediaUrl(); as url) {
     <app-media-preview-modal
       [url]="url"
@@ -1040,4 +1289,59 @@
     />
   }
 
-  </section>
+  <!-- Recipients Selection Modal -->
+  @if (showRecipientsModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/60 p-4" (click)="cancelRecipientsSelection()">
+      <div class="w-full max-w-md rounded-2xl border border-fog/60 bg-white p-6 shadow-raised" (click)="$event.stopPropagation()">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-charcoal">Select Recipients</h3>
+          <button
+            type="button"
+            class="rounded-full p-2 text-clay transition hover:bg-fog/20"
+            (click)="cancelRecipientsSelection()"
+            aria-label="Close"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p class="mb-4 text-sm text-slate">Choose who will receive the PDF report:</p>
+
+        <div class="space-y-3">
+          @for (recipient of ['Baldemar', 'Fila', 'Office']; track recipient) {
+            <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-fog/60 bg-white p-4 transition hover:bg-fog/10">
+              <input
+                type="checkbox"
+                [checked]="selectedRecipients().includes(recipient)"
+                (change)="toggleRecipient(recipient)"
+                class="h-5 w-5 rounded border-fog/60 text-pine focus:ring-2 focus:ring-pine"
+              />
+              <span class="text-sm font-medium text-charcoal">{{ recipient }}</span>
+            </label>
+          }
+        </div>
+
+        <div class="mt-6 flex gap-3">
+          <button
+            type="button"
+            class="flex-1 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-sm font-semibold text-charcoal transition hover:bg-fog/20"
+            (click)="cancelRecipientsSelection()"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="flex-1 rounded-2xl bg-pine px-4 py-3 text-sm font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+            (click)="onRecipientsSelected(selectedRecipients())"
+            [disabled]="selectedRecipients().length === 0"
+          >
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</section>

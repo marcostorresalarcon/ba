@@ -125,6 +125,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   protected readonly showBudgetDetails = signal<boolean>(false);
   protected readonly showSummary = signal<boolean>(false);
 
+  // Estados para el modal de destinatarios y pantalla de confirmación
+  protected readonly showRecipientsModal = signal<boolean>(false);
+  protected readonly showConfirmationScreen = signal<boolean>(false);
+  protected readonly selectedRecipients = signal<string[]>([]);
+  protected readonly submittedQuote = signal<Quote | null>(null);
+
   // Verificar que el formulario esté listo
   protected get isFormReady(): boolean {
     return !!(this.form && this.form.controls.roughQuote && this.form.controls.clientBudget);
@@ -774,18 +780,22 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       quotePayload.materials = materials;
     }
 
+    // Nota: Los destinatarios se manejarán en una petición separada o en el backend
+    // después de crear el quote. Por ahora, no se envían en el payload del quote.
+
     // Siempre usar createQuote, incluso para nuevas versiones
     this.quoteService.createQuote(quotePayload).subscribe({
-      next: () => {
-        const message = this.quoteId
-          ? 'New version created successfully'
-          : 'Kitchen estimate created successfully';
-        this.notificationService.success('Success', message);
-        void this.router.navigateByUrl(`/projects/${this.project._id}`);
+      next: (quote) => {
+        // Guardar el quote creado para mostrar en la pantalla de confirmación
+        this.submittedQuote.set(quote);
+        // Mostrar pantalla de confirmación
+        this.showConfirmationScreen.set(true);
       },
       error: (error) => {
         const message = this.errorService.handle(error);
         this.notificationService.error('Error', message);
+        // Volver al resumen en caso de error
+        this.showSummary.set(true);
       },
     });
   }
@@ -1918,7 +1928,26 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    */
   protected confirmSubmit(): void {
     this.showSummary.set(false);
+    // Mostrar modal de destinatarios antes de enviar
+    this.showRecipientsModal.set(true);
+  }
+
+  /**
+   * Maneja la selección de destinatarios
+   */
+  protected onRecipientsSelected(recipients: string[]): void {
+    this.selectedRecipients.set(recipients);
+    this.showRecipientsModal.set(false);
+    // Proceder con el envío
     this.actuallySubmit();
+  }
+
+  /**
+   * Cancela la selección de destinatarios
+   */
+  protected cancelRecipientsSelection(): void {
+    this.showRecipientsModal.set(false);
+    this.showSummary.set(true); // Volver al resumen
   }
 
   /**
@@ -1952,5 +1981,39 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    */
   protected hasSketches(): boolean {
     return (this.form.controls.sketchFiles.value?.length ?? 0) > 0;
+  }
+
+  /**
+   * Alterna la selección de un destinatario
+   */
+  protected toggleRecipient(recipient: string): void {
+    const current = this.selectedRecipients();
+    if (current.includes(recipient)) {
+      this.selectedRecipients.set(current.filter((r) => r !== recipient));
+    } else {
+      this.selectedRecipients.set([...current, recipient]);
+    }
+  }
+
+  /**
+   * Navega al proyecto después de la confirmación
+   */
+  protected goToProject(): void {
+    void this.router.navigateByUrl(`/projects/${this.project._id}`);
+  }
+
+  /**
+   * Cierra la pantalla de confirmación
+   */
+  protected closeConfirmationScreen(): void {
+    this.showConfirmationScreen.set(false);
+    void this.router.navigateByUrl(`/projects/${this.project._id}`);
+  }
+
+  /**
+   * Convierte un valor a número para usar en el pipe number
+   */
+  protected toNumber(value: number | null | undefined): number {
+    return value ?? 0;
   }
 }

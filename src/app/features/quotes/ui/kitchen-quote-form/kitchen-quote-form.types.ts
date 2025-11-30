@@ -24,26 +24,30 @@ export interface KitchenQuoteFormValue {
   // Campos de archivos
   countertopsFiles?: string[] | null;
   backsplashFiles?: string[] | null;
-  
+
   // Notas de audio
   audioNotes?: {
     url: string;
     transcription?: string;
     summary?: string;
   } | null;
-  
+
   // Archivos de dibujo (múltiples)
   sketchFiles?: string[] | null;
-  
+
   // Sección de comentarios adicionales con fotos/videos
   additionalComments?: {
     comment?: string | null;
     mediaFiles?: string[] | null;
   } | null;
-  
+
   // Materiales (objeto con file e items)
   materials?: Materials | null;
-  
+
+  // Campos de presupuesto
+  roughQuote?: number | null;
+  clientBudget?: number | null;
+
   // Campos dinámicos generados desde inputs.json
   // Estos se añaden dinámicamente según inputs.json
   [key: string]: unknown;
