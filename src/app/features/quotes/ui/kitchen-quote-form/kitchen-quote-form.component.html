@@ -139,12 +139,12 @@
             @if (shouldShowCategoryTitle(categoryGroup)) {
             <h3 class="mb-4 text-lg font-bold text-charcoal">{{ categoryGroup.title }}</h3>
             }
-            
+
             @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) {
                 @if (subcategoryGroup.id !== 'default' && shouldShowSubcategoryTitle(subcategoryGroup)) {
                   <h4 class="mb-3 text-sm font-semibold uppercase text-clay">{{ subcategoryGroup.title }}</h4>
                 }
-                
+
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   @for (input of subcategoryGroup.inputs; track input.name) {
                     <app-dynamic-form-field
@@ -192,7 +192,7 @@
                             </svg>
                           </div>
                         }
-                        
+
                         <!-- Loader Overlay -->
                         <div class="absolute inset-0 flex flex-col items-center justify-center bg-charcoal/60">
                           <!-- Spinner -->
@@ -203,7 +203,7 @@
                           <!-- Progress -->
                           <span class="text-xs font-semibold text-white">{{ fileData.progress }}%</span>
                         </div>
-                        
+
                         <!-- File Name -->
                         <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
                           <p class="truncate text-xs text-white">{{ fileData.file.name }}</p>
@@ -239,7 +239,7 @@
                             </svg>
                           </div>
                         }
-                        
+
                         <!-- Overlay con botones -->
                         <div class="absolute inset-0 flex items-center justify-center gap-2 bg-charcoal/0 transition group-hover:bg-charcoal/60">
                           <!-- Botón previsualizar -->
@@ -268,7 +268,7 @@
                             </svg>
                           </button>
                         </div>
-                        
+
                         <!-- File Name -->
                         <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
                           <span class="block truncate text-xs text-white">
@@ -319,7 +319,7 @@
                             </svg>
                           </div>
                         }
-                        
+
                         <!-- Loader Overlay -->
                         <div class="absolute inset-0 flex flex-col items-center justify-center bg-charcoal/60">
                           <!-- Spinner -->
@@ -330,7 +330,7 @@
                           <!-- Progress -->
                           <span class="text-xs font-semibold text-white">{{ fileData.progress }}%</span>
                         </div>
-                        
+
                         <!-- File Name -->
                         <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
                           <p class="truncate text-xs text-white">{{ fileData.file.name }}</p>
@@ -366,7 +366,7 @@
                             </svg>
                           </div>
                         }
-                        
+
                         <!-- Overlay con botones -->
                         <div class="absolute inset-0 flex items-center justify-center gap-2 bg-charcoal/0 transition group-hover:bg-charcoal/60">
                           <!-- Botón previsualizar -->
@@ -395,7 +395,7 @@
                             </svg>
                           </button>
                         </div>
-                        
+
                         <!-- File Name -->
                         <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
                           <span class="block truncate text-xs text-white">
@@ -417,7 +417,7 @@
       <!-- Voice Recording Notes Section -->
       <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
         <h3 class="mb-4 text-lg font-bold text-charcoal">Voice Recording Notes</h3>
-        
+
         <div class="flex flex-col gap-6">
           <!-- Record Button -->
           <div class="flex items-center gap-4">
@@ -444,13 +444,13 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               }
             </svg>
-            
+
             <!-- Pulse animation when recording -->
             @if (isRecording()) {
               <span class="absolute -inset-1 animate-ping rounded-full bg-red-500 opacity-75"></span>
             }
           </button>
-          
+
           <div class="flex flex-col">
             <span class="font-semibold text-charcoal">
               @if (isRecording()) {
@@ -502,7 +502,7 @@
                     <p class="text-sm text-charcoal">{{ audioNote.summary }}</p>
                   </div>
                 }
-                
+
                 @if (audioNote.transcription) {
                   <div>
                     <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-clay">Transcription</h5>
@@ -519,7 +519,7 @@
       <!-- Notes & Sketch Section -->
       <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
         <h3 class="mb-4 text-lg font-bold text-charcoal">Write or add your notes here</h3>
-        
+
         <div class="space-y-6">
           <!-- Text Notes -->
           <div>
@@ -554,12 +554,12 @@
                 @for (sketchUrl of form.controls.sketchFiles.value; track sketchUrl; let i = $index) {
                   <div class="relative overflow-hidden rounded-xl border border-fog/60 bg-white group cursor-pointer"
                        (click)="openMediaPreview(sketchUrl, $event)">
-                    <img 
-                      [src]="sketchUrl" 
-                      [alt]="'Sketch ' + (i + 1)" 
+                    <img
+                      [src]="sketchUrl"
+                      [alt]="'Sketch ' + (i + 1)"
                       class="w-full h-48 object-contain bg-white"
                     >
-                    
+
                     <!-- Actions Overlay -->
                     <div class="absolute inset-0 flex items-center justify-center gap-3 bg-charcoal/0 transition group-hover:bg-charcoal/40 pointer-events-none group-hover:pointer-events-auto">
                       <button
@@ -607,7 +607,7 @@
       <!-- Additional Comments Section -->
       <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
         <h3 class="mb-4 text-lg font-bold text-charcoal">Additional Comments & Media</h3>
-        
+
         <div class="space-y-6">
           <!-- Comment Text Area -->
           <div>
@@ -685,7 +685,7 @@
                         </svg>
                       </div>
                     }
-                    
+
                     <!-- Overlay con botones -->
                     <div class="absolute inset-0 flex items-center justify-center gap-2 bg-charcoal/0 transition group-hover:bg-charcoal/60">
                       <!-- Botón previsualizar -->
@@ -733,7 +733,7 @@
     @if (isFormReady) {
     <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
       <h3 class="mb-4 text-lg font-bold text-charcoal">Budget Estimation</h3>
-      
+
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <!-- Rough Quote -->
         <div class="rounded-2xl bg-charcoal p-4 shadow-raised">
@@ -906,7 +906,55 @@
           <!-- Media Status -->
           <div class="rounded-xl border border-fog/60 bg-white p-4">
             <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Media Status</h4>
-            <div class="space-y-2">
+            <div class="space-y-3">
+              <!-- Audio Status - Always visible and detailed -->
+              <div class="rounded-lg border border-fog/40 bg-fog/5 p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Audio</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasAudio()"
+                    [class.text-green-700]="hasAudio()"
+                    [class.bg-red-100]="!hasAudio()"
+                    [class.text-red-700]="!hasAudio()"
+                  >
+                    {{ hasAudio() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+                @if (hasAudio() && form.controls.audioNotes.value; as audioNote) {
+                  <div class="mt-2 space-y-1 text-xs text-slate">
+                    @if (audioNote.summary) {
+                      <div class="flex items-start gap-2">
+                        <svg class="h-4 w-4 text-pine mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="text-pine font-medium">Summary:</span>
+                        <span class="text-charcoal">{{ audioNote.summary.length > 100 ? (audioNote.summary.substring(0, 100) + '...') : audioNote.summary }}</span>
+                      </div>
+                    }
+                    @if (audioNote.transcription) {
+                      <div class="flex items-start gap-2">
+                        <svg class="h-4 w-4 text-clay mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span class="text-clay font-medium">Transcription:</span>
+                        <span class="text-charcoal">{{ audioNote.transcription.length > 100 ? (audioNote.transcription.substring(0, 100) + '...') : audioNote.transcription }}</span>
+                      </div>
+                    }
+                    @if (!audioNote.summary && !audioNote.transcription) {
+                      <div class="text-slate italic">Audio uploaded, processing pending...</div>
+                    }
+                  </div>
+                } @else if (!hasAudio()) {
+                  <div class="mt-2 text-xs text-slate italic">No audio recording available</div>
+                }
+              </div>
+
               <div class="flex items-center justify-between">
                 <span class="text-sm text-charcoal">Photos/Videos</span>
                 <span
@@ -917,18 +965,6 @@
                   [class.text-red-700]="!hasMediaFiles()"
                 >
                   {{ hasMediaFiles() ? 'Uploaded' : 'Not Uploaded' }}
-                </span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-charcoal">Audio (AI)</span>
-                <span
-                  class="rounded-full px-3 py-1 text-xs font-semibold"
-                  [class.bg-green-100]="hasAudio()"
-                  [class.text-green-700]="hasAudio()"
-                  [class.bg-red-100]="!hasAudio()"
-                  [class.text-red-700]="!hasAudio()"
-                >
-                  {{ hasAudio() ? 'Uploaded' : 'Not Uploaded' }}
                 </span>
               </div>
               <div class="flex items-center justify-between">
