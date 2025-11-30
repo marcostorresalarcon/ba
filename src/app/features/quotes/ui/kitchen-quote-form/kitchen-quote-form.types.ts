@@ -79,6 +79,8 @@ type KitchenQuoteFormControls = {
     mediaFiles: FormControl<string[] | null>;
   }>;
   materials: FormControl<Materials | null>;
+  roughQuote: FormControl<number | null>;
+  clientBudget: FormControl<number | null>;
 } & Record<string, FormControl<unknown> | FormGroup<Record<string, FormControl<unknown>>>>;
 
 /**

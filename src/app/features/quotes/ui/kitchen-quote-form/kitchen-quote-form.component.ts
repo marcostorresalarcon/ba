@@ -13,7 +13,7 @@ import {
   DestroyRef,
   effect,
   type OnInit,
-  type AfterViewInit
+  type AfterViewInit,
 } from '@angular/core';
 import type { FormControl, FormGroup } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -28,7 +28,10 @@ import { QuoteService } from '../../../../core/services/quote/quote.service';
 import { HttpErrorService } from '../../../../core/services/error/http-error.service';
 import { NotificationService } from '../../../../core/services/notification/notification.service';
 import { KitchenCalculationService } from '../../../../core/services/calculation/kitchen-calculation.service';
-import { KitchenInputsService, type KitchenInput } from '../../../../core/services/kitchen-inputs/kitchen-inputs.service';
+import {
+  KitchenInputsService,
+  type KitchenInput,
+} from '../../../../core/services/kitchen-inputs/kitchen-inputs.service';
 import { S3UploadService } from '../../../../core/services/upload/s3-upload.service';
 import { AudioRecorderService } from '../../../../core/services/audio/audio-recorder.service';
 import { AudioService } from '../../../../core/services/audio/audio.service';
@@ -50,10 +53,10 @@ import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quo
     ReactiveFormsModule,
     DynamicFormFieldComponent,
     MaterialsTabComponent,
-    MediaPreviewModalComponent
+    MediaPreviewModalComponent,
   ],
   templateUrl: './kitchen-quote-form.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   private readonly fb = inject(FormBuilder);
@@ -87,14 +90,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   protected readonly activeTab = signal<string>('kitchen-details');
 
   // Referencia al componente de materiales
-  @ViewChild(MaterialsTabComponent, { static: false }) protected materialsTabComponent: MaterialsTabComponent | null = null;
+  @ViewChild(MaterialsTabComponent, { static: false })
+  protected materialsTabComponent: MaterialsTabComponent | null = null;
   protected readonly selectedKitchenTypeValue = signal<string>('basic');
   protected readonly kitchenSize = signal<'small' | 'medium' | 'large'>('small');
   protected readonly showCostCounter = signal<boolean>(false);
 
   // Estados de carga de archivos
-  protected readonly uploadingCountertopsFiles = signal<Map<string, { file: File; preview: string; progress: number }>>(new Map());
-  protected readonly uploadingBacksplashFiles = signal<Map<string, { file: File; preview: string; progress: number }>>(new Map());
+  protected readonly uploadingCountertopsFiles = signal<
+    Map<string, { file: File; preview: string; progress: number }>
+  >(new Map());
+  protected readonly uploadingBacksplashFiles = signal<
+    Map<string, { file: File; preview: string; progress: number }>
+  >(new Map());
 
   // Estado de grabación de audio
   protected readonly isRecording = this.audioRecorderService.isRecording;
@@ -103,13 +111,24 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
   // Estado de dibujo
   protected readonly isUploadingSketch = signal(false);
-  protected readonly uploadingAdditionalMedia = signal<Map<string, { file: File; preview: string; progress: number }>>(new Map());
+  protected readonly uploadingAdditionalMedia = signal<
+    Map<string, { file: File; preview: string; progress: number }>
+  >(new Map());
 
   // Estado de previsualización de media
   protected readonly previewMediaUrl = signal<string | null>(null);
 
   // Quote original para obtener versionNumber
   private originalQuote: Quote | null = null;
+
+  // Estados para la sección de estimación
+  protected readonly showBudgetDetails = signal<boolean>(false);
+  protected readonly showSummary = signal<boolean>(false);
+
+  // Verificar que el formulario esté listo
+  protected get isFormReady(): boolean {
+    return !!(this.form && this.form.controls.roughQuote && this.form.controls.clientBudget);
+  }
 
   // Signal para forzar recálculo cuando cambie el formulario
   private readonly formChangeTrigger = signal<number>(0);
@@ -135,14 +154,27 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     return this.calculationService.calculateEstimateTotal(this.form, experience, size);
   });
 
-  protected readonly statusOptions = ['draft', 'sent', 'approved', 'rejected', 'in_progress', 'completed'];
-  protected readonly sourceOptions = ['website', 'referral', 'social_media', 'advertisement', 'other'];
+  protected readonly statusOptions = [
+    'draft',
+    'sent',
+    'approved',
+    'rejected',
+    'in_progress',
+    'completed',
+  ];
+  protected readonly sourceOptions = [
+    'website',
+    'referral',
+    'social_media',
+    'advertisement',
+    'other',
+  ];
 
   protected readonly form: KitchenQuoteFormGroup = this.fb.group({
     customer: this.fb.group({
       name: ['', [Validators.required]],
       email: [null as string | null],
-      phone: [null as string | null]
+      phone: [null as string | null],
     }) as FormGroup<{
       name: FormControl<string>;
       email: FormControl<string | null>;
@@ -162,12 +194,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     sketchFiles: [null as string[] | null],
     additionalComments: this.fb.group({
       comment: [null as string | null],
-      mediaFiles: [null as string[] | null]
+      mediaFiles: [null as string[] | null],
     }) as FormGroup<{
       comment: FormControl<string | null>;
       mediaFiles: FormControl<string[] | null>;
     }>,
-    materials: [null as Materials | null]
+    materials: [null as Materials | null],
+    roughQuote: [null as number | null],
+    clientBudget: [null as number | null],
   }) as unknown as KitchenQuoteFormGroup;
 
   constructor() {
@@ -190,12 +224,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       customer: {
         name: `${this.customer.name} ${this.customer.lastName}`,
         email: this.customer.email ?? null,
-        phone: this.customer.phone ?? null
+        phone: this.customer.phone ?? null,
       },
       projectName: this.project.name,
       address: this.customer.address ?? null,
       experience,
-      type: size
+      type: size,
     });
 
     // Establecer el tamaño en el signal
@@ -208,26 +242,20 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Suscribirse a los cambios del formulario para recalcular el costo en tiempo real
     this.form.valueChanges
-      .pipe(
-        debounceTime(100),
-        takeUntilDestroyed(this.destroyRef)
-      )
+      .pipe(debounceTime(100), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.formChangeTrigger.update(val => val + 1);
+        this.formChangeTrigger.update((val) => val + 1);
       });
 
     // También escuchar cambios en statusChanges
     this.form.statusChanges
-      .pipe(
-        debounceTime(100),
-        takeUntilDestroyed(this.destroyRef)
-      )
+      .pipe(debounceTime(100), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.formChangeTrigger.update(val => val + 1);
+        this.formChangeTrigger.update((val) => val + 1);
       });
 
     // Forzar un cálculo inicial
-    this.formChangeTrigger.update(val => val + 1);
+    this.formChangeTrigger.update((val) => val + 1);
   }
 
   ngAfterViewInit(): void {
@@ -237,7 +265,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.setupMaterialsSync();
     }, 0);
   }
-
 
   /**
    * Configura la sincronización de materiales con el formulario
@@ -306,7 +333,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   protected toggleCostCounter(): void {
-    this.showCostCounter.update(val => !val);
+    this.showCostCounter.update((val) => !val);
   }
 
   private loadQuoteForEdit(quoteId: string): void {
@@ -322,18 +349,34 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         }
 
         // Crear mapa de inputs para acceso rápido
-        const inputsMap = new Map(inputs.map(inp => [inp.name, inp]));
+        const inputsMap = new Map(inputs.map((inp) => [inp.name, inp]));
 
         // Cargar kitchenInformation
         if (quote.kitchenInformation) {
           const kitchenInfo = quote.kitchenInformation as Record<string, unknown>;
 
           // Cargar cada campo dinámico
-          Object.keys(kitchenInfo).forEach(key => {
+          Object.keys(kitchenInfo).forEach((key) => {
             // Excluir campos especiales que se manejan por separado
             // ceilingHeight, wallCabinetHeight y stackers se manejan específicamente después
-            const excludedFields = ['countertopsFiles', 'backsplashFiles', 'audioNotes', 'sketchFiles', 'sketchFile', 'additionalComments', 'type', 'source', 'address', 'wallCabinetHeight', 'stackers'];
-            if (excludedFields.includes(key) || key.endsWith('Custom') || key.endsWith('Quantity')) {
+            const excludedFields = [
+              'countertopsFiles',
+              'backsplashFiles',
+              'audioNotes',
+              'sketchFiles',
+              'sketchFile',
+              'additionalComments',
+              'type',
+              'source',
+              'address',
+              'wallCabinetHeight',
+              'stackers',
+            ];
+            if (
+              excludedFields.includes(key) ||
+              key.endsWith('Custom') ||
+              key.endsWith('Quantity')
+            ) {
               return;
             }
 
@@ -359,11 +402,11 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
                   const stringValue = String(value);
 
                   // Primero buscar coincidencia exacta
-                  let matchingSelection = input.selections.find(sel => sel === stringValue);
+                  let matchingSelection = input.selections.find((sel) => sel === stringValue);
 
                   // Si no hay coincidencia exacta, buscar por número extraído (para casos como "8 INCH" vs 8)
                   if (!matchingSelection) {
-                    matchingSelection = input.selections.find(sel => {
+                    matchingSelection = input.selections.find((sel) => {
                       // Extraer el número de la selección (puede ser "8" o "8 INCH", etc.)
                       const selNum = sel.replace(/\D/g, '');
                       return selNum === stringValue;
@@ -410,7 +453,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           // Estos campos se manejan en kitchen-details-tab con radio buttons personalizados
           // Ahora que los radio buttons tienen el name correcto, podemos asignar directamente por el nombre del campo
           const heightFields = ['ceilingHeight', 'wallCabinetHeight', 'stackers'] as const;
-          heightFields.forEach(field => {
+          heightFields.forEach((field) => {
             const fieldValue = kitchenInfo[field];
             const control = this.form.get(field);
 
@@ -451,10 +494,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           // Cargar campos de archivos
           const countertopsFiles = kitchenInfo['countertopsFiles'] as string[] | undefined;
           const backsplashFiles = kitchenInfo['backsplashFiles'] as string[] | undefined;
-          const audioNotes = kitchenInfo['audioNotes'] as { url: string; transcription?: string; summary?: string } | undefined;
+          const audioNotes = kitchenInfo['audioNotes'] as
+            | { url: string; transcription?: string; summary?: string }
+            | undefined;
           const sketchFiles = kitchenInfo['sketchFiles'] as string[] | undefined;
           const sketchFile = kitchenInfo['sketchFile'] as string | undefined;
-          const additionalComments = kitchenInfo['additionalComments'] as { comment?: string | null; mediaFiles?: string[] | null } | undefined;
+          const additionalComments = kitchenInfo['additionalComments'] as
+            | { comment?: string | null; mediaFiles?: string[] | null }
+            | undefined;
 
           if (countertopsFiles) {
             this.form.controls.countertopsFiles.setValue(countertopsFiles, { emitEvent: true });
@@ -471,9 +518,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             this.form.controls.sketchFiles.setValue([sketchFile], { emitEvent: true });
           }
           if (additionalComments) {
-            this.form.controls.additionalComments.patchValue(additionalComments, { emitEvent: true });
+            this.form.controls.additionalComments.patchValue(additionalComments, {
+              emitEvent: true,
+            });
           } else {
-            this.form.controls.additionalComments.patchValue({ comment: null, mediaFiles: null }, { emitEvent: true });
+            this.form.controls.additionalComments.patchValue(
+              { comment: null, mediaFiles: null },
+              { emitEvent: true }
+            );
           }
 
           // Cargar tipo (size)
@@ -513,18 +565,28 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           this.form.controls.address.setValue(address, { emitEvent: true });
         }
 
+        // Cargar campos de budget
+        const roughQuote = quote.kitchenInformation?.['roughQuote'] as number | undefined;
+        if (roughQuote !== undefined) {
+          this.form.controls.roughQuote.setValue(roughQuote, { emitEvent: true });
+        }
+        const clientBudget = quote.kitchenInformation?.['clientBudget'] as number | undefined;
+        if (clientBudget !== undefined) {
+          this.form.controls.clientBudget.setValue(clientBudget, { emitEvent: true });
+        }
+
         // Actualizar formulario y calcular total
         // Usar setTimeout para asegurar que todos los cambios se hayan propagado
         setTimeout(() => {
           this.form.updateValueAndValidity({ emitEvent: false });
-          this.formChangeTrigger.update(val => val + 1);
+          this.formChangeTrigger.update((val) => val + 1);
           this.showCostCounter.set(true);
         }, 0);
       },
       error: (error) => {
         const message = this.errorService.handle(error);
         this.notificationService.error('Error', `Could not load estimate: ${message}`);
-      }
+      },
     });
   }
 
@@ -532,11 +594,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     this.activeTab.set(tab);
   }
 
-
   protected handleKitchenSizeChange(size: 'small' | 'medium' | 'large'): void {
     this.kitchenSize.set(size);
     this.form.controls.type.setValue(size);
-    this.formChangeTrigger.update(val => val + 1);
+    this.formChangeTrigger.update((val) => val + 1);
   }
 
   protected readonly window = window;
@@ -549,7 +610,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Verifica si se debe mostrar el título de la subcategoría
    * No se muestra si todos los inputs tienen el mismo label que el título de la subcategoría
    */
-  protected shouldShowSubcategoryTitle(subcategoryGroup: { title: string; inputs: { label: string }[] }): boolean {
+  protected shouldShowSubcategoryTitle(subcategoryGroup: {
+    title: string;
+    inputs: { label: string }[];
+  }): boolean {
     if (!subcategoryGroup.title || subcategoryGroup.inputs.length === 0) {
       return false;
     }
@@ -558,7 +622,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     const normalizedTitle = subcategoryGroup.title.trim().toLowerCase();
 
     // Verificar si todos los inputs tienen el mismo label que el título
-    const allLabelsMatch = subcategoryGroup.inputs.every(input => {
+    const allLabelsMatch = subcategoryGroup.inputs.every((input) => {
       const normalizedLabel = input.label.trim().toLowerCase();
       return normalizedLabel === normalizedTitle;
     });
@@ -571,7 +635,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Verifica si se debe mostrar el título de la categoría
    * No se muestra si todos los inputs de todas las subcategorías tienen el mismo label que el título de la categoría
    */
-  protected shouldShowCategoryTitle(categoryGroup: { title: string; subcategories: { inputs: { label: string }[] }[] }): boolean {
+  protected shouldShowCategoryTitle(categoryGroup: {
+    title: string;
+    subcategories: { inputs: { label: string }[] }[];
+  }): boolean {
     if (!categoryGroup.title || categoryGroup.subcategories.length === 0) {
       return true; // Siempre mostrar si no hay subcategorías
     }
@@ -580,14 +647,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     const normalizedCategoryTitle = categoryGroup.title.trim().toLowerCase();
 
     // Obtener todos los inputs de todas las subcategorías
-    const allInputs = categoryGroup.subcategories.flatMap(sub => sub.inputs);
+    const allInputs = categoryGroup.subcategories.flatMap((sub) => sub.inputs);
 
     if (allInputs.length === 0) {
       return true;
     }
 
     // Verificar si todos los inputs tienen el mismo label que el título de la categoría
-    const allLabelsMatch = allInputs.every(input => {
+    const allLabelsMatch = allInputs.every((input) => {
       const normalizedLabel = input.label.trim().toLowerCase();
       return normalizedLabel === normalizedCategoryTitle;
     });
@@ -607,7 +674,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     return [
       { label: 'Small', size: 'small' },
       { label: 'Medium', size: 'medium' },
-      { label: 'Large', size: 'large' }
+      { label: 'Large', size: 'large' },
     ];
   }
 
@@ -638,6 +705,20 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Mostrar resumen antes de enviar
+    if (!this.showSummary()) {
+      this.showSummary.set(true);
+      return;
+    }
+
+    // Si ya se mostró el resumen, llamar al método real de envío
+    this.actuallySubmit();
+  }
+
+  /**
+   * Realiza el envío real del formulario
+   */
+  private actuallySubmit(): void {
     const userId = this.getCurrentUserId();
     if (!userId) {
       this.notificationService.error('Error', 'User ID is required');
@@ -666,8 +747,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       materials = formValue.materials ?? null;
     }
 
-    // No enviar versionNumber - el backend lo calcula automáticamente por projectId + category
-    // Si hay quoteId, estamos creando una nueva versión, pero el backend calculará el número correcto
+    // Calcular versionNumber
+    // Si hay originalQuote, crear una nueva versión (versionNumber + 1)
+    // Si no hay, es un nuevo quote (versionNumber = 1)
+    let versionNumber = 1;
+    if (this.originalQuote && this.originalQuote.versionNumber) {
+      versionNumber = this.originalQuote.versionNumber + 1;
+    }
+
     const quotePayload: QuotePayload = {
       customerId: this.customer._id,
       companyId: this.companyId,
@@ -678,8 +765,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       totalPrice: this.totalCost(),
       notes: formValue.notes ?? undefined,
       userId,
-      // versionNumber no se envía - el backend lo calcula automáticamente
-      kitchenInformation
+      versionNumber,
+      kitchenInformation,
     };
 
     // Agregar materials solo si tiene valor
@@ -688,21 +775,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     }
 
     // Siempre usar createQuote, incluso para nuevas versiones
-    this.quoteService
-      .createQuote(quotePayload)
-      .subscribe({
-        next: () => {
-          const message = this.quoteId
-            ? 'New version created successfully'
-            : 'Kitchen estimate created successfully';
-          this.notificationService.success('Success', message);
-          void this.router.navigateByUrl(`/projects/${this.project._id}`);
-        },
-        error: (error) => {
-          const message = this.errorService.handle(error);
-          this.notificationService.error('Error', message);
-        }
-      });
+    this.quoteService.createQuote(quotePayload).subscribe({
+      next: () => {
+        const message = this.quoteId
+          ? 'New version created successfully'
+          : 'Kitchen estimate created successfully';
+        this.notificationService.success('Success', message);
+        void this.router.navigateByUrl(`/projects/${this.project._id}`);
+      },
+      error: (error) => {
+        const message = this.errorService.handle(error);
+        this.notificationService.error('Error', message);
+      },
+    });
   }
 
   protected saveAsDraft(): void {
@@ -733,7 +818,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   protected getCategoryTitle(category: string): string {
     return category
       .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase())
+      .replace(/^./, (str) => str.toUpperCase())
       .trim();
   }
 
@@ -756,7 +841,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       'experience',
       'notes',
       'type',
-      'materials' // materials va en el nivel raíz del payload, no en kitchenInformation
+      'materials', // materials va en el nivel raíz del payload, no en kitchenInformation
     ]);
 
     // Agregar campos de archivos si existen
@@ -777,6 +862,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
     if (formValue['additionalComments']) {
       kitchenInfo['additionalComments'] = formValue['additionalComments'];
+    }
+
+    // Agregar campos de budget
+    if (formValue['roughQuote'] !== null && formValue['roughQuote'] !== undefined) {
+      kitchenInfo['roughQuote'] = formValue['roughQuote'];
+    }
+    if (formValue['clientBudget'] !== null && formValue['clientBudget'] !== undefined) {
+      kitchenInfo['clientBudget'] = formValue['clientBudget'];
     }
 
     // Obtener todos los nombres de campos válidos desde inputs.json
@@ -819,9 +912,9 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         if (typeof value === 'string') {
           const lowerValue = value.toLowerCase();
           // Verificar si el input tiene selecciones Yes/No
-          const input = inputs.find(inp => inp.name === key);
+          const input = inputs.find((inp) => inp.name === key);
           if (input && input.element === 'radioButton' && input.selections.length === 2) {
-            const selections = input.selections.map(s => s.toLowerCase());
+            const selections = input.selections.map((s) => s.toLowerCase());
             const hasYesNo = selections.includes('yes') && selections.includes('no');
 
             if (hasYesNo) {
@@ -851,8 +944,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         }
 
         // 6. Si el campo tiene custom: true y el valor es "custom", usar el valor custom en su lugar
-        const input = inputs.find(inp => inp.name === key);
-        if (input?.custom && typeof processedValue === 'string' && processedValue.toLowerCase() === 'custom') {
+        const input = inputs.find((inp) => inp.name === key);
+        if (
+          input?.custom &&
+          typeof processedValue === 'string' &&
+          processedValue.toLowerCase() === 'custom'
+        ) {
           const customFieldName = `${key}Custom`;
           const customValue = formValue[customFieldName];
           if (customValue !== null && customValue !== undefined) {
@@ -869,13 +966,17 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           continue;
         }
 
-        // 7. Para campos radioButton con valores numéricos como strings ("8", "9", "10"), 
+        // 7. Para campos radioButton con valores numéricos como strings ("8", "9", "10"),
         // convertirlos a números si el backend los espera como números
         // Esto es para campos como ceilingHeight que vienen del backend como números
         if (input?.element === 'radioButton' && typeof processedValue === 'string') {
           // Si el valor es un número puro (ej: "8", "9", "10"), convertirlo a número
           const numValue = parseFloat(processedValue);
-          if (!isNaN(numValue) && processedValue.trim() === numValue.toString() && !input.selections.some(s => s.toLowerCase() === 'yes' || s.toLowerCase() === 'no')) {
+          if (
+            !isNaN(numValue) &&
+            processedValue.trim() === numValue.toString() &&
+            !input.selections.some((s) => s.toLowerCase() === 'yes' || s.toLowerCase() === 'no')
+          ) {
             // Solo convertir si no es Yes/No y es un número puro
             kitchenInfo[key] = numValue;
             continue;
@@ -886,7 +987,11 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         if (typeof processedValue === 'string') {
           // Verificar si es un número válido (puede tener decimales)
           const numValue = parseFloat(processedValue);
-          if (!isNaN(numValue) && isFinite(numValue) && processedValue.trim() === numValue.toString()) {
+          if (
+            !isNaN(numValue) &&
+            isFinite(numValue) &&
+            processedValue.trim() === numValue.toString()
+          ) {
             kitchenInfo[key] = numValue;
             continue;
           }
@@ -922,23 +1027,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       void this.processCountertopsFiles(files);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error al seleccionar archivos de countertops',
-        error,
-        {
-          severity: 'medium',
-          description: 'Error al seleccionar archivos de countertops en el formulario de kitchen',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'onCountertopsFilesSelected',
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error al seleccionar archivos de countertops', error, {
+        severity: 'medium',
+        description: 'Error al seleccionar archivos de countertops en el formulario de kitchen',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onCountertopsFilesSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -967,18 +1068,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
           const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
 
-          const url = await this.s3UploadService.uploadFile(
-            processedFile,
-            (progress) => {
-              // Actualizar progreso de este archivo específico
-              const updatedMap = new Map(this.uploadingCountertopsFiles());
-              const existing = updatedMap.get(fileId);
-              if (existing) {
-                updatedMap.set(fileId, { ...existing, progress: progress.percentage });
-                this.uploadingCountertopsFiles.set(updatedMap);
-              }
+          const url = await this.s3UploadService.uploadFile(processedFile, (progress) => {
+            // Actualizar progreso de este archivo específico
+            const updatedMap = new Map(this.uploadingCountertopsFiles());
+            const existing = updatedMap.get(fileId);
+            if (existing) {
+              updatedMap.set(fileId, { ...existing, progress: progress.percentage });
+              this.uploadingCountertopsFiles.set(updatedMap);
             }
-          );
+          });
           uploadedUrls.push(url);
 
           // Limpiar preview URL si es imagen
@@ -998,26 +1096,22 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
-          
+
           // Registrar error en logs
-          await this.logService.logError(
-            'Error al subir archivo de countertops',
-            error,
-            {
-              severity: 'high',
-              description: `Error al subir archivo de countertops: ${fileData.file.name}`,
-              source: 'kitchen-quote-form',
-              metadata: {
-                component: 'KitchenQuoteFormComponent',
-                action: 'processCountertopsFiles',
-                fileName: fileData.file.name,
-                fileSize: fileData.file.size,
-                fileType: fileData.file.type,
-                projectId: this.project._id,
-                customerId: this.customer._id
-              }
-            }
-          );
+          await this.logService.logError('Error al subir archivo de countertops', error, {
+            severity: 'high',
+            description: `Error al subir archivo de countertops: ${fileData.file.name}`,
+            source: 'kitchen-quote-form',
+            metadata: {
+              component: 'KitchenQuoteFormComponent',
+              action: 'processCountertopsFiles',
+              fileName: fileData.file.name,
+              fileSize: fileData.file.size,
+              fileType: fileData.file.type,
+              projectId: this.project._id,
+              customerId: this.customer._id,
+            },
+          });
         }
       }
 
@@ -1026,7 +1120,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.form.controls.countertopsFiles.setValue(updatedFiles);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.notificationService.error('Error', `No se pudieron subir los archivos de countertops: ${errorMsg}`);
+      this.notificationService.error(
+        'Error',
+        `No se pudieron subir los archivos de countertops: ${errorMsg}`
+      );
 
       // Limpiar todos los previews en caso de error
       for (const fileData of uploadingMap.values()) {
@@ -1035,24 +1132,20 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         }
       }
       this.uploadingCountertopsFiles.set(new Map());
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error general al procesar archivos de countertops',
-        error,
-        {
-          severity: 'high',
-          description: 'Error general al procesar y subir archivos de countertops',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'processCountertopsFiles',
-            filesCount: fileArray.length,
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error general al procesar archivos de countertops', error, {
+        severity: 'high',
+        description: 'Error general al procesar y subir archivos de countertops',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'processCountertopsFiles',
+          filesCount: fileArray.length,
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -1078,23 +1171,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       void this.processBacksplashFiles(files);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error al seleccionar archivos de backsplash',
-        error,
-        {
-          severity: 'medium',
-          description: 'Error al seleccionar archivos de backsplash en el formulario de kitchen',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'onBacksplashFilesSelected',
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error al seleccionar archivos de backsplash', error, {
+        severity: 'medium',
+        description: 'Error al seleccionar archivos de backsplash en el formulario de kitchen',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onBacksplashFilesSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -1123,18 +1212,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
           const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
 
-          const url = await this.s3UploadService.uploadFile(
-            processedFile,
-            (progress) => {
-              // Actualizar progreso de este archivo específico
-              const updatedMap = new Map(this.uploadingBacksplashFiles());
-              const existing = updatedMap.get(fileId);
-              if (existing) {
-                updatedMap.set(fileId, { ...existing, progress: progress.percentage });
-                this.uploadingBacksplashFiles.set(updatedMap);
-              }
+          const url = await this.s3UploadService.uploadFile(processedFile, (progress) => {
+            // Actualizar progreso de este archivo específico
+            const updatedMap = new Map(this.uploadingBacksplashFiles());
+            const existing = updatedMap.get(fileId);
+            if (existing) {
+              updatedMap.set(fileId, { ...existing, progress: progress.percentage });
+              this.uploadingBacksplashFiles.set(updatedMap);
             }
-          );
+          });
           uploadedUrls.push(url);
 
           // Limpiar preview URL si es imagen
@@ -1154,26 +1240,22 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
-          
+
           // Registrar error en logs
-          await this.logService.logError(
-            'Error al subir archivo de backsplash',
-            error,
-            {
-              severity: 'high',
-              description: `Error al subir archivo de backsplash: ${fileData.file.name}`,
-              source: 'kitchen-quote-form',
-              metadata: {
-                component: 'KitchenQuoteFormComponent',
-                action: 'processBacksplashFiles',
-                fileName: fileData.file.name,
-                fileSize: fileData.file.size,
-                fileType: fileData.file.type,
-                projectId: this.project._id,
-                customerId: this.customer._id
-              }
-            }
-          );
+          await this.logService.logError('Error al subir archivo de backsplash', error, {
+            severity: 'high',
+            description: `Error al subir archivo de backsplash: ${fileData.file.name}`,
+            source: 'kitchen-quote-form',
+            metadata: {
+              component: 'KitchenQuoteFormComponent',
+              action: 'processBacksplashFiles',
+              fileName: fileData.file.name,
+              fileSize: fileData.file.size,
+              fileType: fileData.file.type,
+              projectId: this.project._id,
+              customerId: this.customer._id,
+            },
+          });
         }
       }
 
@@ -1182,24 +1264,20 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.form.controls.backsplashFiles.setValue(updatedFiles);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron subir los archivos de backsplash');
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error general al procesar archivos de backsplash',
-        error,
-        {
-          severity: 'high',
-          description: 'Error general al procesar y subir archivos de backsplash',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'processBacksplashFiles',
-            filesCount: fileArray.length,
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error general al procesar archivos de backsplash', error, {
+        severity: 'high',
+        description: 'Error general al procesar y subir archivos de backsplash',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'processBacksplashFiles',
+          filesCount: fileArray.length,
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
 
       // Limpiar todos los previews en caso de error
       for (const fileData of uploadingMap.values()) {
@@ -1259,24 +1337,23 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       await this.audioRecorderService.startRecording();
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.notificationService.error('Error', 'Could not start recording. Please check microphone permissions.');
-      
-      // Registrar error en logs
-      await this.logService.logError(
-        'Error al iniciar grabación de audio',
-        error,
-        {
-          severity: 'medium',
-          description: 'Error al intentar iniciar la grabación de audio en el formulario de kitchen',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'startRecording',
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
+      this.notificationService.error(
+        'Error',
+        'Could not start recording. Please check microphone permissions.'
       );
+
+      // Registrar error en logs
+      await this.logService.logError('Error al iniciar grabación de audio', error, {
+        severity: 'medium',
+        description: 'Error al intentar iniciar la grabación de audio en el formulario de kitchen',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'startRecording',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -1287,23 +1364,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.notificationService.error('Error', `Error stopping recording: ${errorMsg}`);
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error al detener grabación de audio',
-        error,
-        {
-          severity: 'medium',
-          description: 'Error al intentar detener la grabación de audio en el formulario de kitchen',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'stopRecording',
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error al detener grabación de audio', error, {
+        severity: 'medium',
+        description: 'Error al intentar detener la grabación de audio en el formulario de kitchen',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'stopRecording',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -1325,29 +1398,29 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             this.form.controls.audioNotes.setValue({
               url,
               transcription: response.data.transcription,
-              summary: response.data.summary
+              summary: response.data.summary,
             });
             this.notificationService.success('Success', 'Audio processed successfully');
           } else {
             // Si falla el resumen, guardamos solo la URL
             this.form.controls.audioNotes.setValue({ url });
-            this.notificationService.info('Warning', 'Audio saved, but summary could not be generated');
-            
-            // Registrar advertencia en logs
-            void this.logService.logNotification(
-              'Audio guardado pero resumen no generado',
-              {
-                description: 'El audio se subió correctamente pero no se pudo generar el resumen',
-                source: 'kitchen-quote-form',
-                metadata: {
-                  component: 'KitchenQuoteFormComponent',
-                  action: 'processAudioFile',
-                  audioUrl: url,
-                  projectId: this.project._id,
-                  customerId: this.customer._id
-                }
-              }
+            this.notificationService.info(
+              'Warning',
+              'Audio saved, but summary could not be generated'
             );
+
+            // Registrar advertencia en logs
+            void this.logService.logNotification('Audio guardado pero resumen no generado', {
+              description: 'El audio se subió correctamente pero no se pudo generar el resumen',
+              source: 'kitchen-quote-form',
+              metadata: {
+                component: 'KitchenQuoteFormComponent',
+                action: 'processAudioFile',
+                audioUrl: url,
+                projectId: this.project._id,
+                customerId: this.customer._id,
+              },
+            });
           }
           this.isProcessingAudio.set(false);
         },
@@ -1356,51 +1429,44 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           this.form.controls.audioNotes.setValue({ url });
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
           this.isProcessingAudio.set(false);
-          
+
           // Registrar error en logs
-          void this.logService.logError(
-            'Error al procesar audio con API',
-            error,
-            {
-              severity: 'medium',
-              description: 'Error al procesar el audio con la API de resumen, pero el archivo se guardó correctamente',
-              source: 'kitchen-quote-form',
-              metadata: {
-                component: 'KitchenQuoteFormComponent',
-                action: 'summarizeAudio',
-                audioUrl: url,
-                projectId: this.project._id,
-                customerId: this.customer._id
-              }
-            }
-          );
-        }
+          void this.logService.logError('Error al procesar audio con API', error, {
+            severity: 'medium',
+            description:
+              'Error al procesar el audio con la API de resumen, pero el archivo se guardó correctamente',
+            source: 'kitchen-quote-form',
+            metadata: {
+              component: 'KitchenQuoteFormComponent',
+              action: 'summarizeAudio',
+              audioUrl: url,
+              projectId: this.project._id,
+              customerId: this.customer._id,
+            },
+          });
+        },
       });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
       this.isUploadingAudio.set(false);
       this.isProcessingAudio.set(false);
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error al subir archivo de audio',
-        error,
-        {
-          severity: 'high',
-          description: 'Error al subir el archivo de audio a S3',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'processAudioFile',
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error al subir archivo de audio', error, {
+        severity: 'high',
+        description: 'Error al subir el archivo de audio a S3',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'processAudioFile',
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -1421,8 +1487,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       // Calcular el offset desde el centro horizontal y la parte inferior de la pantalla hasta el centro del botón
       const centerX = window.innerWidth / 2;
       const bottomY = window.innerHeight; // Parte inferior de la pantalla
-      const buttonCenterX = rect.left + (rect.width / 2);
-      const buttonCenterY = rect.top + (rect.height / 2);
+      const buttonCenterX = rect.left + rect.width / 2;
+      const buttonCenterY = rect.top + rect.height / 2;
       const offsetX = buttonCenterX - centerX;
       const offsetY = buttonCenterY - bottomY; // Offset desde la parte inferior
       position = { top: offsetY, left: offsetX };
@@ -1460,23 +1526,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.notificationService.success('Success', 'Sketch saved successfully');
     } catch (error) {
       this.notificationService.error('Error', 'Could not save sketch');
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error al guardar sketch',
-        error,
-        {
-          severity: 'high',
-          description: 'Error al subir el sketch (dibujo) a S3',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'onSketchSaved',
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error al guardar sketch', error, {
+        severity: 'high',
+        description: 'Error al subir el sketch (dibujo) a S3',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onSketchSaved',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     } finally {
       this.isUploadingSketch.set(false);
     }
@@ -1510,23 +1572,20 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       void this.processAdditionalMediaFiles(files);
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-      
+
       // Registrar error en logs
-      await this.logService.logError(
-        'Error al seleccionar archivos de medios adicionales',
-        error,
-        {
-          severity: 'medium',
-          description: 'Error al seleccionar archivos de medios adicionales en el formulario de kitchen',
-          source: 'kitchen-quote-form',
-          metadata: {
-            component: 'KitchenQuoteFormComponent',
-            action: 'onAdditionalMediaSelected',
-            projectId: this.project._id,
-            customerId: this.customer._id
-          }
-        }
-      );
+      await this.logService.logError('Error al seleccionar archivos de medios adicionales', error, {
+        severity: 'medium',
+        description:
+          'Error al seleccionar archivos de medios adicionales en el formulario de kitchen',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onAdditionalMediaSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
     }
   }
 
@@ -1556,18 +1615,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
           const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
 
-          const url = await this.s3UploadService.uploadFile(
-            processedFile,
-            (progress) => {
-              // Actualizar progreso de este archivo específico
-              const updatedMap = new Map(this.uploadingAdditionalMedia());
-              const existing = updatedMap.get(fileId);
-              if (existing) {
-                updatedMap.set(fileId, { ...existing, progress: progress.percentage });
-                this.uploadingAdditionalMedia.set(updatedMap);
-              }
+          const url = await this.s3UploadService.uploadFile(processedFile, (progress) => {
+            // Actualizar progreso de este archivo específico
+            const updatedMap = new Map(this.uploadingAdditionalMedia());
+            const existing = updatedMap.get(fileId);
+            if (existing) {
+              updatedMap.set(fileId, { ...existing, progress: progress.percentage });
+              this.uploadingAdditionalMedia.set(updatedMap);
             }
-          );
+          });
           uploadedUrls.push(url);
 
           // Limpiar preview URL si es imagen
@@ -1587,26 +1643,22 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
-          
+
           // Registrar error en logs
-          await this.logService.logError(
-            'Error al subir archivo de medios adicionales',
-            error,
-            {
-              severity: 'high',
-              description: `Error al subir archivo de medios adicionales: ${fileData.file.name}`,
-              source: 'kitchen-quote-form',
-              metadata: {
-                component: 'KitchenQuoteFormComponent',
-                action: 'processAdditionalMediaFiles',
-                fileName: fileData.file.name,
-                fileSize: fileData.file.size,
-                fileType: fileData.file.type,
-                projectId: this.project._id,
-                customerId: this.customer._id
-              }
-            }
-          );
+          await this.logService.logError('Error al subir archivo de medios adicionales', error, {
+            severity: 'high',
+            description: `Error al subir archivo de medios adicionales: ${fileData.file.name}`,
+            source: 'kitchen-quote-form',
+            metadata: {
+              component: 'KitchenQuoteFormComponent',
+              action: 'processAdditionalMediaFiles',
+              fileName: fileData.file.name,
+              fileSize: fileData.file.size,
+              fileType: fileData.file.type,
+              projectId: this.project._id,
+              customerId: this.customer._id,
+            },
+          });
         }
       }
 
@@ -1615,13 +1667,13 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const currentComment = currentComments?.comment ?? null;
       this.form.controls.additionalComments.setValue({
         comment: currentComment,
-        mediaFiles: updatedFiles
+        mediaFiles: updatedFiles,
       });
 
       // Limpiar el input para permitir seleccionar los mismos archivos de nuevo
     } catch (error) {
       this.notificationService.error('Error', 'No se pudieron subir los archivos');
-      
+
       // Registrar error en logs
       await this.logService.logError(
         'Error general al procesar archivos de medios adicionales',
@@ -1635,8 +1687,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             action: 'processAdditionalMediaFiles',
             filesCount: fileArray.length,
             projectId: this.project._id,
-            customerId: this.customer._id
-          }
+            customerId: this.customer._id,
+          },
         }
       );
 
@@ -1660,7 +1712,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     const currentComment = currentComments?.comment ?? null;
     this.form.controls.additionalComments.setValue({
       comment: currentComment,
-      mediaFiles: updatedFiles.length > 0 ? updatedFiles : null
+      mediaFiles: updatedFiles.length > 0 ? updatedFiles : null,
     });
   }
 
@@ -1680,5 +1732,60 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    */
   protected closeMediaPreview(): void {
     this.previewMediaUrl.set(null);
+  }
+
+  /**
+   * Toggle para mostrar/ocultar detalles del budget
+   */
+  protected toggleBudgetDetails(): void {
+    this.showBudgetDetails.update((val) => !val);
+  }
+
+  /**
+   * Cierra el resumen y permite editar
+   */
+  protected closeSummary(): void {
+    this.showSummary.set(false);
+  }
+
+  /**
+   * Confirma el envío del formulario después de revisar el resumen
+   */
+  protected confirmSubmit(): void {
+    this.showSummary.set(false);
+    this.actuallySubmit();
+  }
+
+  /**
+   * Calcula la diferencia entre el budget calculado y el client budget
+   */
+  protected getBudgetDifference(): number {
+    const total = this.totalCost();
+    const clientBudget = this.form.controls.clientBudget.value ?? 0;
+    return total - clientBudget;
+  }
+
+  /**
+   * Verifica si hay fotos/videos subidos
+   */
+  protected hasMediaFiles(): boolean {
+    const countertops = this.form.controls.countertopsFiles.value?.length ?? 0;
+    const backsplash = this.form.controls.backsplashFiles.value?.length ?? 0;
+    const additional = this.form.controls.additionalComments.value?.mediaFiles?.length ?? 0;
+    return countertops > 0 || backsplash > 0 || additional > 0;
+  }
+
+  /**
+   * Verifica si hay audio subido
+   */
+  protected hasAudio(): boolean {
+    return this.form.controls.audioNotes.value !== null;
+  }
+
+  /**
+   * Verifica si hay sketches subidos
+   */
+  protected hasSketches(): boolean {
+    return (this.form.controls.sketchFiles.value?.length ?? 0) > 0;
   }
 }

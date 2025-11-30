@@ -729,15 +729,254 @@
       <app-materials-tab />
     </div>
 
+    <!-- Budget Estimation Section -->
+    @if (isFormReady) {
+    <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+      <h3 class="mb-4 text-lg font-bold text-charcoal">Budget Estimation</h3>
+      
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Rough Quote -->
+        <div class="rounded-2xl bg-charcoal p-4 shadow-raised">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/80">
+            Rough Quote
+          </label>
+          <input
+            type="number"
+            formControlName="roughQuote"
+            class="w-full rounded-xl border-0 bg-white/10 px-4 py-3 text-lg font-bold text-white placeholder:text-white/50 focus:bg-white/20 focus:ring-2 focus:ring-white/50"
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+          />
+          <p class="mt-2 text-xs text-white/70">
+            Internal estimated budget for the work
+          </p>
+        </div>
+
+        <!-- Client Budget -->
+        <div class="rounded-2xl border border-fog/60 bg-white p-4">
+          <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-clay">
+            Client Budget
+          </label>
+          <input
+            type="number"
+            formControlName="clientBudget"
+            class="w-full rounded-xl border border-fog/60 bg-white px-4 py-3 text-lg font-bold text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+          />
+          <p class="mt-2 text-xs text-slate">
+            Budget the client says they have
+          </p>
+        </div>
+      </div>
+
+      <!-- Click to view - Budget Details -->
+      <div class="mt-4">
+        <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-2xl border border-fog/60 bg-white px-6 py-4 transition hover:bg-fog/10"
+          (click)="toggleBudgetDetails()"
+        >
+          <span class="text-sm font-semibold text-charcoal">Click to view</span>
+          <svg
+            class="h-5 w-5 text-clay transition-transform"
+            [class.rotate-180]="showBudgetDetails()"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    }
+
+    <!-- Budget Details (Expandable) - Below Budget Estimation -->
+    @if (isFormReady && showBudgetDetails()) {
+      <div class="rounded-2xl border border-fog/60 bg-white p-6">
+        <div class="space-y-4">
+          <!-- Total Calculated -->
+          <div class="flex items-center justify-between border-b border-fog/40 pb-4">
+            <span class="text-sm font-semibold text-clay">Final Calculated Total</span>
+            <span class="text-xl font-bold text-pine">${{ totalCost() | number:'1.2-2' }}</span>
+          </div>
+
+          <!-- Comparison -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-charcoal">Rough Quote</span>
+              <span class="text-base font-semibold text-charcoal">
+                ${{ (form.controls.roughQuote.value ?? 0) | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-charcoal">Client Budget</span>
+              <span class="text-base font-semibold text-charcoal">
+                ${{ (form.controls.clientBudget.value ?? 0) | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between border-t border-fog/40 pt-3">
+              <span class="text-sm font-semibold text-charcoal">Budget vs Client Budget</span>
+              <span
+                class="text-base font-bold"
+                [class.text-green-600]="getBudgetDifference() >= 0"
+                [class.text-red-600]="getBudgetDifference() < 0"
+              >
+                {{ getBudgetDifference() >= 0 ? '+' : '' }}${{ getBudgetDifference() | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Summary Section (Read-only, Expandable) -->
+    @if (showSummary()) {
+      <div class="mb-6 rounded-2xl border-2 border-pine/40 bg-pine/5 p-6">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-charcoal">Estimate Summary</h3>
+          <button
+            type="button"
+            class="rounded-full p-2 text-clay transition hover:bg-white/50"
+            (click)="closeSummary()"
+            aria-label="Close summary"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Project Information -->
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Project Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Client</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.customer.controls.name.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Project Name</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.projectName.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Status</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.status.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Experience</span>
+                <p class="text-sm font-medium text-charcoal">{{ getCurrentExperience() }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Kitchen Size</span>
+                <p class="text-sm font-medium text-charcoal">
+                  {{ kitchenSize().charAt(0).toUpperCase() + kitchenSize().slice(1) }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Total Price</span>
+                <p class="text-lg font-bold text-pine">${{ totalCost() | number:'1.2-2' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget Information -->
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Budget Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Rough Quote</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ (form.controls.roughQuote.value ?? 0) | number:'1.2-2' }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Client Budget</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ (form.controls.clientBudget.value ?? 0) | number:'1.2-2' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Status -->
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Media Status</h4>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-charcoal">Photos/Videos</span>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  [class.bg-green-100]="hasMediaFiles()"
+                  [class.text-green-700]="hasMediaFiles()"
+                  [class.bg-red-100]="!hasMediaFiles()"
+                  [class.text-red-700]="!hasMediaFiles()"
+                >
+                  {{ hasMediaFiles() ? 'Uploaded' : 'Not Uploaded' }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-charcoal">Audio (AI)</span>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  [class.bg-green-100]="hasAudio()"
+                  [class.text-green-700]="hasAudio()"
+                  [class.bg-red-100]="!hasAudio()"
+                  [class.text-red-700]="!hasAudio()"
+                >
+                  {{ hasAudio() ? 'Uploaded' : 'Not Uploaded' }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-charcoal">Sketches</span>
+                <span
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  [class.bg-green-100]="hasSketches()"
+                  [class.text-green-700]="hasSketches()"
+                  [class.bg-red-100]="!hasSketches()"
+                  [class.text-red-700]="!hasSketches()"
+                >
+                  {{ hasSketches() ? 'Uploaded' : 'Not Uploaded' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          @if (form.controls.notes.value) {
+            <div class="rounded-xl border border-fog/60 bg-white p-4">
+              <h4 class="mb-2 text-sm font-semibold uppercase tracking-wide text-clay">Notes</h4>
+              <p class="text-sm text-charcoal">{{ form.controls.notes.value }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Actions -->
     <div class="flex gap-3 border-t border-fog/40 pt-6">
-      <button
-        type="submit"
-        class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
-        [disabled]="isSubmitting || form.invalid"
-      >
-        Create Estimate
-      </button>
+      @if (showSummary()) {
+        <button
+          type="button"
+          class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+          (click)="confirmSubmit()"
+          [disabled]="isSubmitting"
+        >
+          Confirm & Submit
+        </button>
+      } @else {
+        <button
+          type="submit"
+          class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+          [disabled]="isSubmitting || form.invalid"
+        >
+          Create Estimate
+        </button>
+      }
       <button
         type="button"
         class="rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-fog/20"
