@@ -126,21 +126,184 @@ export class IosMediaService {
   }
 
   /**
-   * Comprimir video para iOS (reducir calidad/resolución)
-   * Nota: La compresión real de video requiere librerías más complejas
-   * Por ahora, validamos el tamaño y formato
+   * Comprimir video reduciendo calidad y resolución
+   * Usa MediaRecorder API para comprimir videos en el navegador
+   */
+  async compressVideo(file: File, maxSizeMB = 50, targetBitrate = 2000000): Promise<File> {
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    
+    // Si el archivo ya es pequeño, no comprimir
+    if (file.size <= maxSizeBytes * 0.8) {
+      return this.validateVideoFile(file, maxSizeMB);
+    }
+
+    // Validar formato de video
+    const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm'];
+    const validExtensions = /\.(mp4|mov|avi|mkv|webm)$/i;
+    
+    if (!validFormats.includes(file.type) && !file.name.match(validExtensions)) {
+      throw new Error('Unsupported video format. Please use MP4, MOV, AVI, MKV, or WebM');
+    }
+
+    // En iOS nativo, solo validar (la compresión real requiere librerías nativas)
+    if (this.isIOS && this.isNative) {
+      return this.validateVideoFile(file, maxSizeMB);
+    }
+
+    // En web, intentar comprimir usando MediaRecorder
+    try {
+      return await this.compressVideoWeb(file, targetBitrate, maxSizeBytes);
+    } catch (error) {
+      // Si la compresión falla, validar y retornar el original si es aceptable
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.warn('[IosMediaService] Video compression failed:', errorMsg);
+      
+      // Si el archivo es demasiado grande incluso después del fallo, lanzar error
+      if (file.size > maxSizeBytes) {
+        throw new Error(`Video file is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${maxSizeMB}MB. Please choose a smaller video.`);
+      }
+      
+      // Si la compresión falla pero el archivo es aceptable, retornar original
+      return file;
+    }
+  }
+
+  /**
+   * Comprimir video en web usando MediaRecorder API
+   */
+  private async compressVideoWeb(file: File, targetBitrate: number, maxSizeBytes: number): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const stream = canvas.captureStream(30); // 30 FPS
+      
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+
+      video.onloadedmetadata = () => {
+        // Reducir resolución si es muy grande (máximo 1280x720)
+        const maxWidth = 1280;
+        const maxHeight = 720;
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+
+        // Configurar MediaRecorder con compresión
+        const options: MediaRecorderOptions = {
+          mimeType: 'video/webm;codecs=vp9',
+          videoBitsPerSecond: targetBitrate,
+        };
+
+        // Fallback a codecs más compatibles si vp9 no está disponible
+        if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
+          options.mimeType = 'video/webm;codecs=vp8';
+          if (!MediaRecorder.isTypeSupported(options.mimeType!)) {
+            options.mimeType = 'video/webm';
+          }
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, options);
+        const chunks: Blob[] = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          const compressedBlob = new Blob(chunks, { type: options.mimeType || 'video/webm' });
+          
+          // Verificar si el archivo comprimido es más pequeño
+          if (compressedBlob.size >= file.size) {
+            // Si la compresión no ayudó, retornar el original
+            resolve(file);
+            return;
+          }
+
+          // Verificar tamaño máximo
+          if (compressedBlob.size > maxSizeBytes) {
+            reject(new Error(`Compressed video is still too large (${(compressedBlob.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${(maxSizeBytes / 1024 / 1024).toFixed(0)}MB`));
+            return;
+          }
+
+          // Convertir a File
+          const fileName = file.name.replace(/\.[^/.]+$/, '') + '.webm';
+          const compressedFile = new File([compressedBlob], fileName, { type: compressedBlob.type });
+          
+          // Limpiar referencias
+          video.src = '';
+          canvas.width = 0;
+          canvas.height = 0;
+          stream.getTracks().forEach(track => track.stop());
+          
+          resolve(compressedFile);
+        };
+
+        mediaRecorder.onerror = (event) => {
+          reject(new Error('MediaRecorder error during video compression'));
+        };
+
+        // Iniciar grabación
+        mediaRecorder.start();
+
+        // Reproducir video y dibujar en canvas
+        video.onplay = () => {
+          const drawFrame = () => {
+            if (!video.paused && !video.ended) {
+              ctx.drawImage(video, 0, 0, width, height);
+              requestAnimationFrame(drawFrame);
+            } else if (video.ended) {
+              mediaRecorder.stop();
+            }
+          };
+          drawFrame();
+        };
+
+        video.play().catch((error) => {
+          mediaRecorder.stop();
+          reject(new Error(`Could not play video for compression: ${error.message}`));
+        });
+      };
+
+      video.onerror = () => {
+        reject(new Error('Could not load video for compression'));
+      };
+
+      video.src = URL.createObjectURL(file);
+    });
+  }
+
+  /**
+   * Validar archivo de video (tamaño y formato)
    */
   async validateVideoFile(file: File, maxSizeMB = 50): Promise<File> {
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     
     if (file.size > maxSizeBytes) {
-      throw new Error(`Video file is too large for mobile upload. Maximum size is ${maxSizeMB}MB`);
+      throw new Error(`Video file is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Maximum size is ${maxSizeMB}MB. Please choose a smaller video.`);
     }
     
     // Validar formato de video
-    const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
-    if (!validFormats.includes(file.type) && !file.name.match(/\.(mp4|mov|avi)$/i)) {
-      throw new Error('Unsupported video format. Please use MP4, MOV, or AVI');
+    const validFormats = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm'];
+    const validExtensions = /\.(mp4|mov|avi|mkv|webm|heic)$/i;
+    
+    if (!validFormats.includes(file.type) && !file.name.match(validExtensions)) {
+      throw new Error('Unsupported video format. Please use MP4, MOV, AVI, MKV, or WebM');
     }
     
     return file;
@@ -157,7 +320,8 @@ export class IosMediaService {
     } else if (file.type.startsWith('audio/')) {
       return this.convertAudioFormat(file);
     } else if (file.type.startsWith('video/')) {
-      return this.validateVideoFile(file);
+      // Comprimir video si es necesario
+      return await this.compressVideo(file);
     }
     
     return file;

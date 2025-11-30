@@ -83,7 +83,7 @@ export class MediaPickerService {
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = allowMultiple;
-      input.accept = 'image/*,video/*';
+      input.accept = 'image/*,video/mp4,video/quicktime,video/x-matroska,video/x-msvideo,video/webm,image/heic,image/heif';
 
       input.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
@@ -220,6 +220,8 @@ export class MediaPickerService {
       png: 'image/png',
       gif: 'image/gif',
       webp: 'image/webp',
+      heic: 'image/heic',
+      heif: 'image/heif',
       mp4: 'video/mp4',
       mov: 'video/quicktime',
       avi: 'video/x-msvideo',
@@ -239,6 +241,8 @@ export class MediaPickerService {
       'image/png': 'png',
       'image/gif': 'gif',
       'image/webp': 'webp',
+      'image/heic': 'heic',
+      'image/heif': 'heif',
       'video/mp4': 'mp4',
       'video/quicktime': 'mov',
       'video/x-msvideo': 'avi',

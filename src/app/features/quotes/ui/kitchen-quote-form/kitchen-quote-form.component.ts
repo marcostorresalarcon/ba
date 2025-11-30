@@ -1318,7 +1318,106 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Verifica si una URL es un video
    */
   protected isVideoUrl(url: string): boolean {
-    return /\.(mp4|mov|avi|mkv|webm)$/i.test(url);
+    return /\.(mp4|mov|avi|mkv|webm|heic)$/i.test(url);
+  }
+
+  /**
+   * Crea un thumbnail de un video para mostrar como preview
+   * Si falla, retorna string vacío para mostrar el icono de video por defecto
+   */
+  private async createVideoThumbnail(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const videoUrl = URL.createObjectURL(file);
+
+      if (!ctx) {
+        URL.revokeObjectURL(videoUrl);
+        resolve(''); // Retornar string vacío para mostrar icono por defecto
+        return;
+      }
+
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+
+      const cleanup = () => {
+        video.src = '';
+        canvas.width = 0;
+        canvas.height = 0;
+        URL.revokeObjectURL(videoUrl);
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve(''); // Timeout: retornar string vacío
+      }, 5000); // Timeout de 5 segundos
+
+      video.onloadedmetadata = () => {
+        try {
+          // Configurar canvas con dimensiones del video (máximo 320x240 para thumbnails)
+          const maxWidth = 320;
+          const maxHeight = 240;
+          let width = video.videoWidth;
+          let height = video.videoHeight;
+
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          // Capturar frame en el primer segundo o a la mitad si es muy corto
+          const seekTime = video.duration > 1 ? 1 : video.duration / 2;
+          video.currentTime = Math.max(0.1, seekTime);
+        } catch (error) {
+          clearTimeout(timeout);
+          cleanup();
+          resolve(''); // Retornar string vacío en caso de error
+        }
+      };
+
+      video.onseeked = () => {
+        try {
+          clearTimeout(timeout);
+
+          // Dibujar frame en canvas
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Convertir a blob y crear URL
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const thumbnailUrl = URL.createObjectURL(blob);
+                cleanup();
+                resolve(thumbnailUrl);
+              } else {
+                cleanup();
+                resolve(''); // Retornar string vacío si no se puede crear el blob
+              }
+            },
+            'image/jpeg',
+            0.8
+          );
+        } catch (error) {
+          clearTimeout(timeout);
+          cleanup();
+          resolve(''); // Retornar string vacío en caso de error
+        }
+      };
+
+      video.onerror = () => {
+        clearTimeout(timeout);
+        cleanup();
+        resolve(''); // Retornar string vacío si hay error al cargar el video
+      };
+
+      video.src = videoUrl;
+    });
   }
 
   /**
@@ -1600,7 +1699,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     // Crear previews y agregar a la lista de carga
     for (const file of fileArray) {
       const fileId = `${Date.now()}-${Math.random()}-${file.name}`;
-      const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
+      // Crear preview para imágenes y videos
+      let preview = '';
+      if (file.type.startsWith('image/')) {
+        preview = URL.createObjectURL(file);
+      } else if (file.type.startsWith('video/')) {
+        // Para videos, crear un thumbnail usando un elemento video
+        preview = await this.createVideoThumbnail(file);
+      }
       uploadingMap.set(fileId, { file, preview, progress: 0 });
     }
 
@@ -1612,8 +1718,53 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       // Subir archivos uno por uno para mostrar progreso individual
       for (const [fileId, fileData] of uploadingMap.entries()) {
         try {
-          // Procesar archivo para iOS (comprimir imágenes, convertir formatos)
-          const processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          // Procesar archivo para iOS (comprimir imágenes, comprimir videos, convertir formatos)
+          let processedFile: File;
+          try {
+            processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          } catch (compressionError) {
+            const errorMsg =
+              compressionError instanceof Error
+                ? compressionError.message
+                : String(compressionError);
+
+            // Si es un error de formato o tamaño, mostrar mensaje claro al usuario
+            if (errorMsg.includes('Unsupported') || errorMsg.includes('too large')) {
+              this.notificationService.error(
+                'Error de archivo',
+                `${fileData.file.name}: ${errorMsg}`
+              );
+            } else {
+              this.notificationService.error(
+                'Error al procesar archivo',
+                `No se pudo procesar ${fileData.file.name}. Por favor, intenta con otro archivo.`
+              );
+            }
+
+            // Registrar error en logs
+            await this.logService.logError(
+              'Error al procesar archivo multimedia',
+              compressionError,
+              {
+                severity: 'medium',
+                description: `Error al procesar archivo: ${fileData.file.name}`,
+                source: 'kitchen-quote-form',
+                metadata: {
+                  component: 'KitchenQuoteFormComponent',
+                  action: 'processAdditionalMediaFiles',
+                  step: 'processMediaFile',
+                  fileName: fileData.file.name,
+                  fileSize: fileData.file.size,
+                  fileType: fileData.file.type,
+                  projectId: this.project._id,
+                  customerId: this.customer._id,
+                },
+              }
+            );
+
+            // Continuar con el siguiente archivo
+            continue;
+          }
 
           const url = await this.s3UploadService.uploadFile(processedFile, (progress) => {
             // Actualizar progreso de este archivo específico
@@ -1626,7 +1777,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           });
           uploadedUrls.push(url);
 
-          // Limpiar preview URL si es imagen
+          // Limpiar preview URL
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
@@ -1643,6 +1794,20 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           if (fileData.preview) {
             URL.revokeObjectURL(fileData.preview);
           }
+
+          // Mostrar mensaje de error claro al usuario
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const isVideo = fileData.file.type.startsWith('video/');
+          const fileTypeLabel = isVideo ? 'video' : 'archivo';
+
+          this.notificationService.error(
+            'Error al subir archivo',
+            `No se pudo subir el ${fileTypeLabel} "${fileData.file.name}". ${
+              errorMsg.includes('Failed')
+                ? 'Por favor, verifica tu conexión e intenta nuevamente.'
+                : 'Por favor, intenta con otro archivo.'
+            }`
+          );
 
           // Registrar error en logs
           await this.logService.logError('Error al subir archivo de medios adicionales', error, {
