@@ -20,14 +20,15 @@ import { ProjectService } from '../../core/services/project/project.service';
 import { QuoteService } from '../../core/services/quote/quote.service';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
-import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 import { ProjectListComponent } from '../../features/projects/ui/project-list/project-list.component';
 import { ProjectFormComponent, type ProjectFormValue } from '../../features/projects/ui/project-form/project-form.component';
 
 @Component({
   selector: 'app-customer-projects-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent, ProjectListComponent, ProjectFormComponent],
+  imports: [CommonModule, ProjectListComponent, ProjectFormComponent],
   templateUrl: './customer-projects.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -41,6 +42,7 @@ export class CustomerProjectsPage {
   private readonly errorService = inject(HttpErrorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificationService = inject(NotificationService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly customerId = signal<string | null>(null);
   protected readonly customer = signal<Customer | null>(null);
@@ -66,6 +68,11 @@ export class CustomerProjectsPage {
   });
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+
     const customerId = this.route.snapshot.paramMap.get('customerId');
     if (customerId) {
       this.customerId.set(customerId);

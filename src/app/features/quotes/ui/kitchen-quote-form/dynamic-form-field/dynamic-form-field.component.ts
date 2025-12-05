@@ -49,11 +49,89 @@ export class DynamicFormFieldComponent implements OnInit {
       const initialValue = ctrl.value;
       this.controlValueSignal.set(initialValue);
       
-      // Si el valor inicial es "yes" y necesita cantidad, mostrar el input
-      if (this.input.element === 'radioButton' && 
-          (this.input.formula === 'UNIT * PRICE' || this.input.formula === 'Selection Price/UNIT * PRICE') &&
-          typeof initialValue === 'string' && initialValue.toLowerCase() === 'yes') {
-        this.showQuantityInput.set(true);
+      // Manejar estado inicial del input de cantidad
+      const quantityControl = this.quantityControl();
+      if (quantityControl && this.input.element === 'radioButton' && 
+          (this.input.formula === 'UNIT * PRICE' || this.input.formula === 'Selection Price/UNIT * PRICE')) {
+        if (typeof initialValue === 'string') {
+          const lowerValue = initialValue.toLowerCase();
+          // Para installCanLight, habilitar cuando sea "4\"" o "6\""
+          if (this.input.name === 'installCanLight') {
+            if (lowerValue === '4"' || lowerValue === '6"') {
+              this.showQuantityInput.set(true);
+              quantityControl.enable();
+            } else {
+              // Si es "none" u otro valor, deshabilitar
+              this.showQuantityInput.set(false);
+              quantityControl.disable();
+              quantityControl.setValue(null);
+            }
+          } else if (this.input.name === 'smoothCeilings') {
+            // Para smoothCeilings, habilitar cuando NO sea "none"
+            if (lowerValue !== 'none') {
+              this.showQuantityInput.set(true);
+              quantityControl.enable();
+            } else {
+              // Si es "none", deshabilitar
+              this.showQuantityInput.set(false);
+              quantityControl.disable();
+              quantityControl.setValue(null);
+            }
+          } else if (this.input.name === 'gasPipes') {
+            // Para gasPipes, habilitar cuando se seleccione cualquier opción
+            if (initialValue && initialValue.trim() !== '') {
+              this.showQuantityInput.set(true);
+              quantityControl.enable();
+            } else {
+              this.showQuantityInput.set(false);
+              quantityControl.disable();
+              quantityControl.setValue(null);
+            }
+          } else if (this.input.name === 'fireblockingIERockwool') {
+            // Para fireblockingIERockwool, habilitar cuando se seleccione cualquier opción
+            if (initialValue && initialValue.trim() !== '') {
+              this.showQuantityInput.set(true);
+              quantityControl.enable();
+            } else {
+              this.showQuantityInput.set(false);
+              quantityControl.disable();
+              quantityControl.setValue(null);
+            }
+          } else if (this.input.name === 'droppedCeilingTiles') {
+            // Para droppedCeilingTiles, habilitar cuando se seleccione cualquier opción
+            if (initialValue && initialValue.trim() !== '') {
+              this.showQuantityInput.set(true);
+              quantityControl.enable();
+            } else {
+              this.showQuantityInput.set(false);
+              quantityControl.disable();
+              quantityControl.setValue(null);
+            }
+          } else if (this.input.name === 'primed42InchBaluster5060' || this.input.name === 'metalBaluster42Inch') {
+            // Para primed42InchBaluster5060 y metalBaluster42Inch, habilitar cuando se seleccione cualquier opción
+            if (initialValue && initialValue.trim() !== '') {
+              this.showQuantityInput.set(true);
+              quantityControl.enable();
+            } else {
+              this.showQuantityInput.set(false);
+              quantityControl.disable();
+              quantityControl.setValue(null);
+            }
+          } else if (lowerValue === 'yes') {
+            // Para otros campos, habilitar cuando sea "yes"
+            this.showQuantityInput.set(true);
+            quantityControl.enable();
+          } else {
+            // Si es "no" u otro valor, deshabilitar
+            this.showQuantityInput.set(false);
+            quantityControl.disable();
+            quantityControl.setValue(null);
+          }
+        } else {
+          // Si no hay valor inicial, deshabilitar
+          this.showQuantityInput.set(false);
+          quantityControl.disable();
+        }
       }
       
       // Suscribirse a los cambios del control para actualizar el signal
@@ -87,7 +165,33 @@ export class DynamicFormFieldComponent implements OnInit {
       // Usar controlValueSignal para que reaccione a los cambios
       const value = this.controlValueSignal();
       if (typeof value === 'string') {
-        return value.toLowerCase() === 'yes';
+        const lowerValue = value.toLowerCase();
+        // Para installCanLight, mostrar input cuando sea "4\"" o "6\"", no "none"
+        if (this.input.name === 'installCanLight') {
+          return lowerValue === '4"' || lowerValue === '6"';
+        }
+        // Para smoothCeilings, mostrar input cuando NO sea "none"
+        if (this.input.name === 'smoothCeilings') {
+          return lowerValue !== 'none';
+        }
+        // Para gasPipes, mostrar input cuando se seleccione cualquier opción
+        if (this.input.name === 'gasPipes') {
+          return value.trim() !== '';
+        }
+        // Para fireblockingIERockwool, mostrar input cuando se seleccione cualquier opción
+        if (this.input.name === 'fireblockingIERockwool') {
+          return value.trim() !== '';
+        }
+        // Para droppedCeilingTiles, mostrar input cuando se seleccione cualquier opción
+        if (this.input.name === 'droppedCeilingTiles') {
+          return value.trim() !== '';
+        }
+        // Para primed42InchBaluster5060 y metalBaluster42Inch, mostrar input cuando se seleccione cualquier opción
+        if (this.input.name === 'primed42InchBaluster5060' || this.input.name === 'metalBaluster42Inch') {
+          return value.trim() !== '';
+        }
+        // Para otros campos, mostrar cuando sea "yes"
+        return lowerValue === 'yes';
       }
       return false;
     }
@@ -128,21 +232,22 @@ export class DynamicFormFieldComponent implements OnInit {
       }
     }
 
-    // Si es "yes" y necesita cantidad, mostrar el input de cantidad
-    if (this.needsQuantityInput() && value.toLowerCase() === 'yes') {
-      this.showQuantityInput.set(true);
-      const quantityControl = this.quantityControl();
-      if (quantityControl && !quantityControl.value) {
-        quantityControl.setValue(1);
-      }
-    } else {
-      this.showQuantityInput.set(false);
-    }
-
-    // Si es "no", limpiar cantidad
-    if (value.toLowerCase() === 'no') {
-      const quantityControl = this.quantityControl();
-      if (quantityControl) {
+    // Manejar input de cantidad: habilitar/deshabilitar según la selección
+    const quantityControl = this.quantityControl();
+    if (quantityControl) {
+      const lowerValue = value.toLowerCase();
+      
+      // Si necesita cantidad (yes, 4", 6", smoothCeilings opciones, gasPipes, fireblockingIERockwool, droppedCeilingTiles, primed42InchBaluster5060, metalBaluster42Inch, etc.), habilitar el control
+      if (this.needsQuantityInput()) {
+        this.showQuantityInput.set(true);
+        quantityControl.enable();
+        if (!quantityControl.value) {
+          quantityControl.setValue(1);
+        }
+      } else {
+        // Si es "no" o "none", deshabilitar y limpiar cantidad
+        this.showQuantityInput.set(false);
+        quantityControl.disable();
         quantityControl.setValue(null);
       }
     }
@@ -215,6 +320,16 @@ export class DynamicFormFieldComponent implements OnInit {
 
     const sizeIndex = this.kitchenSize === 'small' ? 0 : this.kitchenSize === 'medium' ? 1 : 2;
     return this.input.price[sizeIndex] ?? this.input.price[0] ?? 0;
+  }
+
+  /**
+   * Capitaliza la primera letra de un string
+   */
+  protected capitalizeFirstLetter(text: string | null | undefined): string {
+    if (!text || text.length === 0) {
+      return '';
+    }
+    return text.charAt(0).toUpperCase() + text.slice(1);
   }
 }
 

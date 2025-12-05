@@ -17,7 +17,8 @@ import {
 } from '@angular/core';
 import type { FormControl, FormGroup } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -121,12 +122,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   // Quote original para obtener versionNumber
   private originalQuote: Quote | null = null;
 
+  // Flag para controlar si ya se cargaron los datos guardados
+  private hasLoadedSavedData = false;
+
   // Estados para la sección de estimación
   protected readonly showBudgetDetails = signal<boolean>(false);
   protected readonly showSummary = signal<boolean>(false);
 
-  // Estados para el modal de destinatarios y pantalla de confirmación
-  protected readonly showRecipientsModal = signal<boolean>(false);
+  // Estados para la vista de destinatarios y pantalla de confirmación
+  protected readonly showRecipientsView = signal<boolean>(false);
   protected readonly showConfirmationScreen = signal<boolean>(false);
   protected readonly selectedRecipients = signal<string[]>([]);
   protected readonly submittedQuote = signal<Quote | null>(null);
@@ -196,7 +200,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     type: ['small' as string | null],
     countertopsFiles: [null as string[] | null],
     backsplashFiles: [null as string[] | null],
-    audioNotes: [null as { url: string; transcription?: string; summary?: string } | null],
+    audioNotes: [null as { url: string; transcription?: string; summary?: string }[] | null],
     sketchFiles: [null as string[] | null],
     additionalComments: this.fb.group({
       comment: [null as string | null],
@@ -216,6 +220,16 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const inputs = this.inputsService.inputs();
       if (inputs.length > 0) {
         this.generateDynamicFormFields(inputs);
+        
+        // Cargar datos guardados después de generar los campos dinámicos
+        // Cargar siempre desde localStorage primero para preservar sketches nuevos
+        if (!this.hasLoadedSavedData) {
+          // Usar setTimeout para asegurar que los campos estén completamente generados
+          setTimeout(() => {
+            this.loadSavedFormData();
+            this.hasLoadedSavedData = true;
+          }, 0);
+        }
       }
     });
   }
@@ -241,16 +255,27 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     // Establecer el tamaño en el signal
     this.kitchenSize.set(size);
 
+    // Nota: Los datos guardados se cargan en el effect() después de generar los campos dinámicos
+    // para asegurar que todos los campos estén disponibles antes de restaurar valores
+
     // Si hay un quoteId, cargar los datos del quote para crear una nueva versión
+    // Esperar a que los datos guardados se hayan cargado primero (en el effect)
     if (this.quoteId) {
-      this.loadQuoteForEdit(this.quoteId);
+      // Usar setTimeout para asegurar que loadSavedFormData se ejecute primero
+      setTimeout(() => {
+        if (this.quoteId) {
+          this.loadQuoteForEdit(this.quoteId);
+        }
+      }, 100);
     }
 
-    // Suscribirse a los cambios del formulario para recalcular el costo en tiempo real
+    // Suscribirse a los cambios del formulario para recalcular el costo en tiempo real y guardar
     this.form.valueChanges
-      .pipe(debounceTime(100), takeUntilDestroyed(this.destroyRef))
+      .pipe(debounceTime(500), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.formChangeTrigger.update((val) => val + 1);
+        // Guardar automáticamente en localStorage
+        this.saveFormData();
       });
 
     // También escuchar cambios en statusChanges
@@ -262,6 +287,105 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Forzar un cálculo inicial
     this.formChangeTrigger.update((val) => val + 1);
+
+    // Escuchar eventos de navegación para procesar resultados del canvas cuando se regresa
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((event) => {
+        const navEnd = event as NavigationEnd;
+        console.log('[KitchenQuote] NavigationEnd - URL:', navEnd.url);
+        console.log('[KitchenQuote] NavigationEnd - Verificando resultado pendiente');
+        
+        // Procesar resultado del canvas si hay uno pendiente después de navegar
+        setTimeout(() => {
+          this.processPendingCanvasResult();
+        }, 100);
+      });
+  }
+
+  /**
+   * Procesa el resultado pendiente del canvas
+   */
+  private processPendingCanvasResult(): void {
+    console.log('[KitchenQuote] processPendingCanvasResult - Verificando resultado pendiente');
+    const hasPending = this.drawingCanvasService.hasPendingResult();
+    console.log('[KitchenQuote] processPendingCanvasResult - hasPendingResult:', hasPending);
+    
+    if (hasPending) {
+      const resultStr = sessionStorage.getItem('drawingCanvasResult');
+      console.log('[KitchenQuote] processPendingCanvasResult - resultStr existe:', !!resultStr);
+      
+      if (resultStr) {
+        const result = JSON.parse(resultStr);
+        console.log('[KitchenQuote] processPendingCanvasResult - result.action:', result.action);
+        console.log('[KitchenQuote] processPendingCanvasResult - result.dataUrl existe:', !!result.dataUrl);
+        
+        if (result.action === 'save' && result.dataUrl) {
+          // Limpiar el resultado ANTES de procesarlo para evitar procesamiento duplicado
+          console.log('[KitchenQuote] processPendingCanvasResult - Limpiando sessionStorage antes de procesar');
+          sessionStorage.removeItem('drawingCanvasResult');
+          sessionStorage.removeItem('drawingCanvasCallback');
+          
+          // Si hay un resultado de guardado, procesarlo directamente
+          console.log('[KitchenQuote] processPendingCanvasResult - Llamando a onSketchSaved');
+          void this.onSketchSaved(result.dataUrl).then(() => {
+            // Restaurar scroll después de procesar el sketch
+            this.restoreScrollPosition();
+          });
+        } else {
+          // Para otros casos, usar el servicio
+          console.log('[KitchenQuote] processPendingCanvasResult - Usando servicio processResult');
+          void this.drawingCanvasService.processResult();
+        }
+      } else {
+        console.log('[KitchenQuote] processPendingCanvasResult - No hay resultStr, usando servicio');
+        void this.drawingCanvasService.processResult();
+      }
+    } else {
+      console.log('[KitchenQuote] processPendingCanvasResult - No hay resultado pendiente');
+      // Aún así restaurar scroll si no hay resultado pendiente
+      this.restoreScrollPosition();
+    }
+  }
+
+  /**
+   * Restaura la posición de scroll guardada
+   */
+  private restoreScrollPosition(): void {
+    const scrollYStr = sessionStorage.getItem('drawingCanvasScrollY');
+    console.log('[KitchenQuote] restoreScrollPosition - scrollYStr:', scrollYStr);
+    
+    if (!scrollYStr) {
+      console.log('[KitchenQuote] restoreScrollPosition - No hay scrollY guardado');
+      return;
+    }
+
+    const scrollY = parseInt(scrollYStr, 10);
+    console.log('[KitchenQuote] restoreScrollPosition - scrollY parseado:', scrollY);
+    console.log('[KitchenQuote] restoreScrollPosition - scrollY actual de window:', window.scrollY);
+    
+    // Esperar a que el DOM esté completamente renderizado antes de restaurar el scroll
+    setTimeout(() => {
+      console.log('[KitchenQuote] restoreScrollPosition - Intentando restaurar scroll a:', scrollY);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: 'smooth' });
+        console.log('[KitchenQuote] restoreScrollPosition - Primer scrollTo ejecutado, scrollY actual:', window.scrollY);
+        
+        // Segundo intento después de un pequeño delay para asegurar que funcione
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: 'smooth' });
+            console.log('[KitchenQuote] restoreScrollPosition - Segundo scrollTo ejecutado, scrollY actual:', window.scrollY);
+            // Limpiar el scrollY solo después de restaurarlo exitosamente
+            sessionStorage.removeItem('drawingCanvasScrollY');
+            console.log('[KitchenQuote] restoreScrollPosition - scrollY eliminado de sessionStorage');
+          });
+        }, 200);
+      });
+    }, 500);
   }
 
   ngAfterViewInit(): void {
@@ -270,6 +394,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       this.setupMaterialsSync();
     }, 0);
+
+    // Procesar resultado del canvas si hay uno pendiente al inicializar
+    // Usar setTimeout para asegurar que el DOM esté completamente renderizado
+    setTimeout(() => {
+      this.processPendingCanvasResult();
+    }, 100);
   }
 
   /**
@@ -307,7 +437,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       } else if (input.element === 'numberInput') {
         defaultValue = null;
       } else if (input.element === 'radioButton' || input.element === 'select') {
-        defaultValue = null;
+        // Para installCanLight, upgradePanel y smoothCeilings, inicializar con "none" por defecto
+        if (input.name === 'installCanLight' || input.name === 'upgradePanel' || input.name === 'smoothCeilings') {
+          defaultValue = 'none';
+        } else {
+          defaultValue = null;
+        }
       }
 
       // Si el control ya existe, no lo recreamos
@@ -324,7 +459,10 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       ) {
         const quantityFieldName = `${input.name}Quantity`;
         if (!this.form.get(quantityFieldName)) {
-          this.form.addControl(quantityFieldName, this.fb.control<number | null>(null));
+          // Crear el control deshabilitado por defecto (se habilitará cuando sea "yes" o "4\""/"6\"")
+          const quantityControl = this.fb.control<number | null>(null);
+          quantityControl.disable();
+          this.form.addControl(quantityFieldName, quantityControl);
         }
       }
 
@@ -501,6 +639,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           const countertopsFiles = kitchenInfo['countertopsFiles'] as string[] | undefined;
           const backsplashFiles = kitchenInfo['backsplashFiles'] as string[] | undefined;
           const audioNotes = kitchenInfo['audioNotes'] as
+            | { url: string; transcription?: string; summary?: string }[]
             | { url: string; transcription?: string; summary?: string }
             | undefined;
           const sketchFiles = kitchenInfo['sketchFiles'] as string[] | undefined;
@@ -516,12 +655,31 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             this.form.controls.backsplashFiles.setValue(backsplashFiles, { emitEvent: true });
           }
           if (audioNotes) {
-            this.form.controls.audioNotes.setValue(audioNotes, { emitEvent: true });
+            // Convertir a array si viene como objeto único (compatibilidad hacia atrás)
+            const audioArray = Array.isArray(audioNotes) 
+              ? audioNotes 
+              : [audioNotes];
+            this.form.controls.audioNotes.setValue(audioArray, { emitEvent: true });
           }
+          // Hacer merge de sketchFiles: combinar los existentes con los del quote (sin duplicados)
+          const existingSketches = this.form.controls.sketchFiles.value ?? [];
+          let quoteSketches: string[] = [];
+          
           if (sketchFiles && sketchFiles.length > 0) {
-            this.form.controls.sketchFiles.setValue(sketchFiles, { emitEvent: true });
+            quoteSketches = sketchFiles;
           } else if (sketchFile) {
-            this.form.controls.sketchFiles.setValue([sketchFile], { emitEvent: true });
+            quoteSketches = [sketchFile];
+          }
+          
+          // Combinar ambos arrays sin duplicados
+          const mergedSketches = [...new Set([...existingSketches, ...quoteSketches])];
+          console.log('[KitchenQuote] loadQuoteForEdit - Merging sketches');
+          console.log('[KitchenQuote] loadQuoteForEdit - Existing sketches:', existingSketches);
+          console.log('[KitchenQuote] loadQuoteForEdit - Quote sketches:', quoteSketches);
+          console.log('[KitchenQuote] loadQuoteForEdit - Merged sketches:', mergedSketches);
+          
+          if (mergedSketches.length > 0) {
+            this.form.controls.sketchFiles.setValue(mergedSketches, { emitEvent: true });
           }
           if (additionalComments) {
             this.form.controls.additionalComments.patchValue(additionalComments, {
@@ -786,6 +944,12 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     // Siempre usar createQuote, incluso para nuevas versiones
     this.quoteService.createQuote(quotePayload).subscribe({
       next: (quote) => {
+        // Limpiar datos guardados después de enviar exitosamente
+        this.clearSavedFormData();
+        
+        // Cerrar la vista de recipients
+        this.showRecipientsView.set(false);
+        
         // Guardar el quote creado para mostrar en la pantalla de confirmación
         this.submittedQuote.set(quote);
         // Mostrar pantalla de confirmación
@@ -794,8 +958,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       error: (error) => {
         const message = this.errorService.handle(error);
         this.notificationService.error('Error', message);
-        // Volver al resumen en caso de error
-        this.showSummary.set(true);
+        // Volver a la vista de recipients en caso de error (no al resumen)
+        this.showRecipientsView.set(true);
       },
     });
   }
@@ -940,7 +1104,27 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         // 4. No false (para checkboxes y radio buttons con "No")
         if (processedValue === false) continue;
 
-        // 5. Si es un campo custom (termina en "Custom"), debe ser número
+        // 5. Si es un campo Quantity, verificar que el campo principal no sea "none"
+        if (key.endsWith('Quantity')) {
+          const baseFieldName = key.replace('Quantity', '');
+          const baseFieldValue = formValue[baseFieldName];
+          // Si el campo base es "none", no incluir la cantidad
+          if (typeof baseFieldValue === 'string' && baseFieldValue.toLowerCase() === 'none') {
+            continue;
+          }
+          // Si tiene valor numérico, incluirlo
+          if (typeof processedValue === 'number') {
+            kitchenInfo[key] = processedValue;
+          } else if (typeof processedValue === 'string') {
+            const numValue = parseFloat(processedValue);
+            if (!isNaN(numValue)) {
+              kitchenInfo[key] = numValue;
+            }
+          }
+          continue;
+        }
+
+        // 6. Si es un campo custom (termina en "Custom"), debe ser número
         if (key.endsWith('Custom')) {
           if (typeof processedValue === 'number') {
             kitchenInfo[key] = processedValue;
@@ -953,7 +1137,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           continue;
         }
 
-        // 6. Si el campo tiene custom: true y el valor es "custom", usar el valor custom en su lugar
+        // 7. Si el campo tiene custom: true y el valor es "custom", usar el valor custom en su lugar
         const input = inputs.find((inp) => inp.name === key);
         if (
           input?.custom &&
@@ -976,7 +1160,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           continue;
         }
 
-        // 7. Para campos radioButton con valores numéricos como strings ("8", "9", "10"),
+        // 8. Para campos radioButton con valores numéricos como strings ("8", "9", "10"),
         // convertirlos a números si el backend los espera como números
         // Esto es para campos como ceilingHeight que vienen del backend como números
         if (input?.element === 'radioButton' && typeof processedValue === 'string') {
@@ -993,7 +1177,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           }
         }
 
-        // 7. Si es un string que representa un número puro (sin letras), convertirlo a número
+        // 9. Si es un string que representa un número puro (sin letras), convertirlo a número
         if (typeof processedValue === 'string') {
           // Verificar si es un número válido (puede tener decimales)
           const numValue = parseFloat(processedValue);
@@ -1007,7 +1191,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           }
         }
 
-        // 8. Si pasa todas las reglas, incluir el valor procesado
+        // 10. Si pasa todas las reglas, incluir el valor procesado
         kitchenInfo[key] = processedValue;
       }
     }
@@ -1503,16 +1687,21 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
       this.audioService.summarizeAudio(file).subscribe({
         next: (response) => {
+          const currentAudios = this.form.controls.audioNotes.value || [];
+          const newAudio = response.success
+            ? {
+                url,
+                transcription: response.data.transcription,
+                summary: response.data.summary,
+              }
+            : { url };
+          
+          // Agregar el nuevo audio al array
+          this.form.controls.audioNotes.setValue([...currentAudios, newAudio], { emitEvent: true });
+          
           if (response.success) {
-            this.form.controls.audioNotes.setValue({
-              url,
-              transcription: response.data.transcription,
-              summary: response.data.summary,
-            });
             this.notificationService.success('Success', 'Audio processed successfully');
           } else {
-            // Si falla el resumen, guardamos solo la URL
-            this.form.controls.audioNotes.setValue({ url });
             this.notificationService.info(
               'Warning',
               'Audio saved, but summary could not be generated'
@@ -1535,7 +1724,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         },
         error: (error) => {
           // Si falla el resumen, guardamos solo la URL
-          this.form.controls.audioNotes.setValue({ url });
+          const currentAudios = this.form.controls.audioNotes.value || [];
+          this.form.controls.audioNotes.setValue([...currentAudios, { url }], { emitEvent: true });
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
           this.isProcessingAudio.set(false);
 
@@ -1579,41 +1769,35 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     }
   }
 
-  protected deleteAudioNote(): void {
-    this.form.controls.audioNotes.setValue(null);
+  protected deleteAudioNote(index: number): void {
+    const currentAudios = this.form.controls.audioNotes.value || [];
+    const updatedAudios = currentAudios.filter((_, i) => i !== index);
+    this.form.controls.audioNotes.setValue(updatedAudios.length > 0 ? updatedAudios : null, { emitEvent: true });
   }
 
   /**
    * Abre el modal de dibujo
    */
   protected openDrawingCanvas(event?: Event): void {
-    // Calcular posición primero
-    let position: { top: number; left: number };
-
-    if (event && event.target) {
-      const button = event.target as HTMLElement;
-      const rect = button.getBoundingClientRect();
-      // Calcular el offset desde el centro horizontal y la parte inferior de la pantalla hasta el centro del botón
-      const centerX = window.innerWidth / 2;
-      const bottomY = window.innerHeight; // Parte inferior de la pantalla
-      const buttonCenterX = rect.left + rect.width / 2;
-      const buttonCenterY = rect.top + rect.height / 2;
-      const offsetX = buttonCenterX - centerX;
-      const offsetY = buttonCenterY - bottomY; // Offset desde la parte inferior
-      position = { top: offsetY, left: offsetX };
-    } else {
-      // Si no hay evento, usar offset 0 (centro horizontal, parte inferior)
-      position = { top: 0, left: 0 };
-    }
-
-    // Abrir el canvas usando el servicio
-    this.drawingCanvasService.openCanvas(position, (dataUrl) => this.onSketchSaved(dataUrl));
+    console.log('[KitchenQuote] openDrawingCanvas - Iniciando');
+    const currentSketches = this.form.controls.sketchFiles.value ?? [];
+    console.log('[KitchenQuote] openDrawingCanvas - Sketches actuales:', currentSketches.length, currentSketches);
+    
+    // Obtener la URL actual para regresar después
+    const currentUrl = this.router.url;
+    console.log('[KitchenQuote] openDrawingCanvas - URL actual:', currentUrl);
+    
+    // Abrir el canvas navegando a la nueva página
+    this.drawingCanvasService.openCanvas(currentUrl, (dataUrl) => this.onSketchSaved(dataUrl));
   }
 
   /**
    * Maneja el guardado del dibujo (múltiples dibujos)
    */
   protected async onSketchSaved(dataUrl: string): Promise<void> {
+    console.log('[KitchenQuote] onSketchSaved - Iniciando guardado de sketch');
+    console.log('[KitchenQuote] onSketchSaved - dataUrl recibido:', dataUrl.substring(0, 50) + '...');
+    
     this.isUploadingSketch.set(true);
 
     try {
@@ -1621,16 +1805,52 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       let file = new File([blob], `sketch-${Date.now()}.png`, { type: 'image/png' });
+      console.log('[KitchenQuote] onSketchSaved - Archivo creado:', file.name, file.size, 'bytes');
 
       // Procesar para iOS si es necesario
       file = await this.iosMediaService.processMediaFile(file);
+      console.log('[KitchenQuote] onSketchSaved - Archivo procesado:', file.name, file.size, 'bytes');
 
       // Upload to S3
+      console.log('[KitchenQuote] onSketchSaved - Subiendo a S3...');
       const url = await this.s3UploadService.uploadFile(file);
+      console.log('[KitchenQuote] onSketchSaved - URL obtenida de S3:', url);
 
       // Agregar a la lista de dibujos (múltiples)
+      // Asegurarse de que no se duplique si ya existe
       const currentSketches = this.form.controls.sketchFiles.value ?? [];
-      this.form.controls.sketchFiles.setValue([...currentSketches, url]);
+      console.log('[KitchenQuote] onSketchSaved - Sketches actuales ANTES de agregar:', currentSketches.length, currentSketches);
+      console.log('[KitchenQuote] onSketchSaved - URL ya existe?', currentSketches.includes(url));
+      
+      if (!currentSketches.includes(url)) {
+        const newSketches = [...currentSketches, url];
+        console.log('[KitchenQuote] onSketchSaved - Nuevos sketches:', newSketches.length, newSketches);
+        this.form.controls.sketchFiles.setValue(newSketches, { emitEvent: true });
+        
+        // Verificar inmediatamente después de setValue
+        const afterSetValue = this.form.controls.sketchFiles.value ?? [];
+        console.log('[KitchenQuote] onSketchSaved - Sketches DESPUÉS de setValue:', afterSetValue.length, afterSetValue);
+
+        // Forzar detección de cambios para mostrar el sketch inmediatamente
+        this.cdr.markForCheck();
+
+        // Guardar el estado del formulario después de agregar el sketch
+        // Usar setTimeout para asegurar que el cambio se haya propagado completamente
+        setTimeout(() => {
+          const beforeSave = this.form.controls.sketchFiles.value ?? [];
+          console.log('[KitchenQuote] onSketchSaved - Sketches ANTES de saveFormData:', beforeSave.length, beforeSave);
+          this.saveFormData();
+          
+          // Verificar después de guardar
+          const afterSave = this.form.controls.sketchFiles.value ?? [];
+          console.log('[KitchenQuote] onSketchSaved - Sketches DESPUÉS de saveFormData:', afterSave.length, afterSave);
+          
+          // Forzar otra vez la detección de cambios después de guardar
+          this.cdr.markForCheck();
+        }, 100);
+      } else {
+        console.warn('[KitchenQuote] onSketchSaved - URL ya existe, no se agregará:', url);
+      }
 
       this.notificationService.success('Success', 'Sketch saved successfully');
     } catch (error) {
@@ -1812,10 +2032,9 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
           this.notificationService.error(
             'Error al subir archivo',
-            `No se pudo subir el ${fileTypeLabel} "${fileData.file.name}". ${
-              errorMsg.includes('Failed')
-                ? 'Por favor, verifica tu conexión e intenta nuevamente.'
-                : 'Por favor, intenta con otro archivo.'
+            `No se pudo subir el ${fileTypeLabel} "${fileData.file.name}". ${errorMsg.includes('Failed')
+              ? 'Por favor, verifica tu conexión e intenta nuevamente.'
+              : 'Por favor, intenta con otro archivo.'
             }`
           );
 
@@ -1928,25 +2147,28 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    */
   protected confirmSubmit(): void {
     this.showSummary.set(false);
-    // Mostrar modal de destinatarios antes de enviar
-    this.showRecipientsModal.set(true);
+    // Mostrar vista de destinatarios antes de enviar
+    this.showRecipientsView.set(true);
   }
 
   /**
-   * Maneja la selección de destinatarios
+   * Maneja la selección de destinatarios y procede con el envío
    */
-  protected onRecipientsSelected(recipients: string[]): void {
-    this.selectedRecipients.set(recipients);
-    this.showRecipientsModal.set(false);
+  protected onRecipientsSelected(): void {
+    const recipients = this.selectedRecipients();
+    if (recipients.length === 0) {
+      this.notificationService.error('Error', 'Please select at least one recipient');
+      return;
+    }
     // Proceder con el envío
     this.actuallySubmit();
   }
 
   /**
-   * Cancela la selección de destinatarios
+   * Cancela la selección de destinatarios y vuelve al resumen
    */
   protected cancelRecipientsSelection(): void {
-    this.showRecipientsModal.set(false);
+    this.showRecipientsView.set(false);
     this.showSummary.set(true); // Volver al resumen
   }
 
@@ -1973,7 +2195,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Verifica si hay audio subido
    */
   protected hasAudio(): boolean {
-    return this.form.controls.audioNotes.value !== null;
+    const audioNotes = this.form.controls.audioNotes.value;
+    return audioNotes !== null && Array.isArray(audioNotes) && audioNotes.length > 0;
   }
 
   /**
@@ -2015,5 +2238,133 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    */
   protected toNumber(value: number | null | undefined): number {
     return value ?? 0;
+  }
+
+  /**
+   * Obtiene las opciones de locationKitchen desde inputs.json
+   */
+  protected getLocationKitchenOptions(): { value: string; label: string }[] {
+    const inputs = this.inputsService.inputs();
+    const locationInputs = inputs.filter((input) => input.category === 'locationKitchen');
+
+    return locationInputs.map((input) => ({
+      value: input.name,
+      label: input.label,
+    }));
+  }
+
+  /**
+   * Selecciona/deselecciona una opción de locationKitchen
+   */
+  protected selectLocationKitchen(location: string): void {
+    const control = this.form.get(location) as FormControl<boolean | null>;
+    if (control) {
+      control.setValue(!control.value);
+    }
+  }
+
+  /**
+   * Genera una clave única para guardar el estado del formulario
+   */
+  private getFormStorageKey(): string {
+    const parts = [
+      'kitchen-quote-form',
+      this.project._id,
+      this.customer._id,
+      this.companyId,
+      this.quoteId || 'new'
+    ];
+    return parts.join('::');
+  }
+
+  /**
+   * Guarda el estado del formulario en localStorage
+   */
+  private saveFormData(): void {
+    try {
+      const formValue = this.form.getRawValue();
+      const storageKey = this.getFormStorageKey();
+      const sketchFiles = formValue.sketchFiles ?? [];
+      console.log('[KitchenQuote] saveFormData - Guardando formulario');
+      console.log('[KitchenQuote] saveFormData - sketchFiles en formValue:', sketchFiles.length, sketchFiles);
+      console.log('[KitchenQuote] saveFormData - storageKey:', storageKey);
+      
+      localStorage.setItem(storageKey, JSON.stringify(formValue));
+      
+      // Verificar que se guardó correctamente
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const savedValue = JSON.parse(saved);
+        const savedSketches = savedValue.sketchFiles ?? [];
+        console.log('[KitchenQuote] saveFormData - Verificación: sketchFiles guardados:', savedSketches.length, savedSketches);
+      } else {
+        console.error('[KitchenQuote] saveFormData - ERROR: No se pudo guardar en localStorage');
+      }
+    } catch (error) {
+      console.error('[KitchenQuote] saveFormData - Error saving form data:', error);
+    }
+  }
+
+  /**
+   * Carga el estado del formulario desde localStorage
+   */
+  private loadSavedFormData(): void {
+    try {
+      const storageKey = this.getFormStorageKey();
+      console.log('[KitchenQuote] loadSavedFormData - storageKey:', storageKey);
+      const savedData = localStorage.getItem(storageKey);
+      console.log('[KitchenQuote] loadSavedFormData - savedData existe:', !!savedData);
+      
+      if (savedData) {
+        const formValue = JSON.parse(savedData);
+        const savedSketches = formValue.sketchFiles ?? [];
+        console.log('[KitchenQuote] loadSavedFormData - sketchFiles en datos guardados:', savedSketches.length, savedSketches);
+        
+        // Restaurar valores del formulario, pero mantener los valores iniciales si no hay guardados
+        this.form.patchValue(formValue, { emitEvent: false });
+        
+        // Verificar después de patchValue
+        const afterPatch = this.form.controls.sketchFiles.value ?? [];
+        console.log('[KitchenQuote] loadSavedFormData - sketchFiles DESPUÉS de patchValue:', afterPatch.length, afterPatch);
+        
+        // Restaurar signals si es necesario
+        if (formValue.type) {
+          this.kitchenSize.set(formValue.type as 'small' | 'medium' | 'large');
+        }
+        if (formValue.experience) {
+          this.selectedKitchenTypeValue.set(formValue.experience);
+        }
+
+        // Actualizar trigger para recalcular el costo total
+        this.formChangeTrigger.update((val) => val + 1);
+        
+        // Forzar detección de cambios para actualizar la UI
+        this.cdr.markForCheck();
+      } else {
+        console.log('[KitchenQuote] loadSavedFormData - No hay datos guardados');
+      }
+    } catch (error) {
+      console.error('[KitchenQuote] loadSavedFormData - Error loading saved form data:', error);
+    }
+  }
+
+  /**
+   * Limpia el estado guardado del formulario
+   */
+  private clearSavedFormData(): void {
+    try {
+      const storageKey = this.getFormStorageKey();
+      localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.error('Error clearing saved form data:', error);
+    }
+  }
+
+  /**
+   * Verifica si una opción de locationKitchen está seleccionada
+   */
+  protected isLocationKitchenSelected(location: string): boolean {
+    const control = this.form.get(location) as FormControl<boolean | null>;
+    return control?.value === true;
   }
 }

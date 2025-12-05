@@ -1,5 +1,253 @@
 <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
-  <!-- Header with Back Button and Project Information -->
+  <!-- Recipients Selection View - Replaces form -->
+  @if (showRecipientsView()) {
+    <div class="space-y-6">
+      <!-- Header -->
+      <div class="mb-6">
+        <div class="mb-4 flex items-center gap-3">
+          <button
+            type="button"
+            class="flex h-10 w-10 items-center justify-center rounded-full text-slate transition hover:bg-fog/40 hover:text-charcoal"
+            (click)="cancelRecipientsSelection()"
+            aria-label="Back"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Final Step</p>
+            <h2 class="mt-1 font-display text-2xl text-charcoal">Select Recipients</h2>
+          </div>
+        </div>
+        <p class="text-sm text-slate">Choose who will receive the PDF report with all details, photos, videos, and audio.</p>
+      </div>
+
+      <!-- Recipients Selection -->
+      <div class="rounded-2xl border border-fog/60 bg-white p-6 shadow-raised">
+        <div class="space-y-3">
+          @for (recipient of ['Baldemar', 'Fila', 'Office']; track recipient) {
+            <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-fog/60 bg-white p-4 transition hover:bg-fog/10 hover:border-pine/40">
+              <input
+                type="checkbox"
+                [checked]="selectedRecipients().includes(recipient)"
+                (change)="toggleRecipient(recipient)"
+                class="h-5 w-5 rounded border-fog/60 text-pine focus:ring-2 focus:ring-pine"
+              />
+              <span class="text-sm font-medium text-charcoal">{{ recipient }}</span>
+            </label>
+          }
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 border-t border-fog/40 pt-6">
+        <button
+          type="button"
+          class="flex-1 rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-fog/20"
+          (click)="cancelRecipientsSelection()"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+          (click)="onRecipientsSelected()"
+          [disabled]="selectedRecipients().length === 0 || isSubmitting"
+        >
+          @if (isSubmitting) {
+            <span class="flex items-center justify-center gap-2">
+              <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Submitting...
+            </span>
+          } @else {
+            Submit
+          }
+        </button>
+      </div>
+    </div>
+  } @else if (showConfirmationScreen()) {
+    <div class="space-y-6">
+      <!-- Success Message -->
+      <div class="mb-6 rounded-2xl border-2 border-green-500 bg-green-50 p-6 text-center">
+        <div class="mb-4 flex justify-center">
+          <svg class="h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="mb-2 text-2xl font-bold text-green-700">Application submitted successfully.</h2>
+        <p class="text-sm text-green-600">The estimate has been created and sent to the selected recipients.</p>
+      </div>
+
+      <!-- Complete Summary -->
+      <div class="rounded-2xl border border-fog/60 bg-white p-6 shadow-raised">
+        <h3 class="mb-6 text-xl font-bold text-charcoal">Complete Summary</h3>
+
+        <div class="space-y-6">
+          <!-- Project Information -->
+          <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Project Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Client</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.customer.controls.name.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Project Name</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.projectName.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Status</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.status.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Category</span>
+                <p class="text-sm font-medium text-charcoal">{{ getCategoryDisplayName(category) }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Total Price</span>
+                <p class="text-lg font-bold text-pine">${{ totalCost() | number:'1.2-2' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget Information -->
+          <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Budget Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Rough Quote</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ toNumber(form.controls.roughQuote.value) | number:'1.2-2' }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Client Budget</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ toNumber(form.controls.clientBudget.value) | number:'1.2-2' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Status -->
+          <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Media Status</h4>
+            <div class="space-y-3">
+              <!-- Audio Status -->
+              <div class="rounded-lg border border-fog/40 bg-white p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Audio</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasAudio()"
+                    [class.text-green-700]="hasAudio()"
+                    [class.bg-red-100]="!hasAudio()"
+                    [class.text-red-700]="!hasAudio()"
+                  >
+                    {{ hasAudio() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Sketches Status -->
+              <div class="rounded-lg border border-fog/40 bg-white p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Sketches</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasSketches()"
+                    [class.text-green-700]="hasSketches()"
+                    [class.bg-red-100]="!hasSketches()"
+                    [class.text-red-700]="!hasSketches()"
+                  >
+                    {{ hasSketches() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Media Files Status -->
+              <div class="rounded-lg border border-fog/40 bg-white p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Media Files</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasMediaFiles()"
+                    [class.text-green-700]="hasMediaFiles()"
+                    [class.bg-red-100]="!hasMediaFiles()"
+                    [class.text-red-700]="!hasMediaFiles()"
+                  >
+                    {{ hasMediaFiles() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recipients -->
+          @if (selectedRecipients().length > 0) {
+            <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+              <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Recipients</h4>
+              <div class="flex flex-wrap gap-2">
+                @for (recipient of selectedRecipients(); track recipient) {
+                  <span class="rounded-full bg-pine/10 px-3 py-1 text-xs font-semibold text-pine">
+                    {{ recipient }}
+                  </span>
+                }
+              </div>
+              <p class="mt-2 text-xs text-slate">The PDF report with all details, photos, videos, and audio has been sent to the selected recipients.</p>
+            </div>
+          }
+
+          <!-- Notes -->
+          @if (form.controls.notes.value) {
+            <div class="rounded-xl border border-fog/60 bg-fog/5 p-4">
+              <h4 class="mb-2 text-sm font-semibold uppercase tracking-wide text-clay">Notes</h4>
+              <p class="text-sm text-charcoal">{{ form.controls.notes.value }}</p>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3">
+        <button
+          type="button"
+          class="flex-1 rounded-2xl bg-pine px-5 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark"
+          (click)="goToProject()"
+        >
+          Go to Project
+        </button>
+        <button
+          type="button"
+          class="rounded-2xl border border-fog/60 bg-white px-5 py-3 text-base font-semibold text-charcoal transition hover:bg-fog/20"
+          (click)="closeConfirmationScreen()"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  } @else {
+    <!-- Form - Only shown when confirmation screen is not visible -->
+    <!-- Header with Back Button and Project Information -->
   <div class="mb-6">
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -138,6 +386,580 @@
       <app-materials-tab />
     }
 
+    <!-- Voice Recording Notes Section -->
+    <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+      <h3 class="mb-4 text-lg font-bold text-charcoal">Voice Recording Notes</h3>
+
+      <div class="flex flex-col gap-6">
+        <!-- Record Button -->
+        <div class="flex items-center gap-4">
+          <button
+            type="button"
+            class="group relative flex h-16 w-16 items-center justify-center rounded-full shadow-lg transition-all hover:scale-105 active:scale-95"
+            [class.bg-red-500]="isRecording()"
+            [class.bg-pine]="!isRecording()"
+            (click)="toggleRecording()"
+            [disabled]="isUploadingAudio() || isProcessingAudio()"
+          >
+            <!-- Icono Micrófono -->
+            <svg
+              class="h-8 w-8 text-white transition-transform"
+              [class.scale-110]="isRecording()"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              @if (isRecording()) {
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+              } @else {
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              }
+            </svg>
+
+            <!-- Pulse animation when recording -->
+            @if (isRecording()) {
+              <span class="absolute -inset-1 animate-ping rounded-full bg-red-500 opacity-75"></span>
+            }
+          </button>
+
+          <div class="flex flex-col">
+            <span class="font-semibold text-charcoal">
+              @if (isRecording()) {
+                Recording...
+              } @else if (isUploadingAudio()) {
+                Uploading...
+              } @else if (isProcessingAudio()) {
+                Processing...
+              } @else {
+                Tap to record
+              }
+            </span>
+            <span class="text-xs text-slate">
+              @if (isRecording()) {
+                Tap again to stop
+              } @else {
+                Record voice notes for this estimate
+              }
+            </span>
+          </div>
+        </div>
+
+        <!-- Audio Players & Summary -->
+        @if (form.controls.audioNotes.value && form.controls.audioNotes.value.length > 0) {
+          <div class="space-y-4">
+            @for (audioNote of form.controls.audioNotes.value; track audioNote.url; let i = $index) {
+              <div class="rounded-xl border border-fog/60 bg-white p-4">
+                <div class="mb-4 flex items-center justify-between">
+                  <h4 class="text-sm font-semibold text-charcoal">Recorded Note {{ i + 1 }}</h4>
+                  <button
+                    type="button"
+                    class="rounded-full p-2 text-red-500 hover:bg-red-50"
+                    (click)="deleteAudioNote(i)"
+                    title="Delete recording"
+                  >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Audio Player with Speed Control -->
+                <div class="mb-4">
+                  <audio 
+                    #audioPlayer
+                    class="w-full mb-2" 
+                    [src]="audioNote.url"
+                    controls
+                  ></audio>
+                  <div class="flex items-center gap-3">
+                    <label class="text-xs font-medium text-slate">Playback Speed:</label>
+                    <select 
+                      (change)="audioPlayer.playbackRate = +$any($event.target).value"
+                      class="rounded-lg border border-fog/60 bg-white px-2 py-1 text-xs text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
+                    >
+                      <option value="0.5">0.5x</option>
+                      <option value="0.75">0.75x</option>
+                      <option value="1" selected>1x</option>
+                      <option value="1.25">1.25x</option>
+                      <option value="1.5">1.5x</option>
+                      <option value="1.75">1.75x</option>
+                      <option value="2">2x</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Summary & Transcription -->
+                @if (audioNote.summary || audioNote.transcription) {
+                  <div class="space-y-3">
+                    @if (audioNote.summary) {
+                      <div>
+                        <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-pine">Summary</h5>
+                        <p class="text-sm text-charcoal">{{ audioNote.summary }}</p>
+                      </div>
+                    }
+
+                    @if (audioNote.transcription) {
+                      <div>
+                        <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-clay">Transcription</h5>
+                        <p class="text-xs text-slate italic">{{ audioNote.transcription }}</p>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Notes & Sketch Section -->
+    <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+      <h3 class="mb-4 text-lg font-bold text-charcoal">Write or add your notes here</h3>
+
+      <div class="space-y-6">
+        <!-- Text Notes -->
+        <div>
+          <label class="mb-2 block text-sm font-medium text-charcoal">Additional Notes</label>
+          <textarea
+            formControlName="notes"
+            rows="4"
+            class="w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            placeholder="Add any other details about the project..."
+          ></textarea>
+        </div>
+
+        <!-- Sketch Area (Múltiples dibujos) -->
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <label class="text-sm font-medium text-charcoal">Sketch / Drawing</label>
+            <button
+              type="button"
+              class="inline-flex items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-semibold text-white shadow-raised transition hover:bg-pine-dark"
+              (click)="openDrawingCanvas($event)"
+            >
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              Add Sketch
+            </button>
+          </div>
+
+          <!-- Sketches Grid (Múltiples dibujos) -->
+          @if (form.controls.sketchFiles.value && form.controls.sketchFiles.value.length > 0) {
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              @for (sketchUrl of form.controls.sketchFiles.value; track sketchUrl; let i = $index) {
+                <div class="relative overflow-hidden rounded-xl border border-fog/60 bg-white group cursor-pointer"
+                     (click)="openMediaPreview(sketchUrl, $event)">
+                  <img
+                    [src]="sketchUrl"
+                    [alt]="'Sketch ' + (i + 1)"
+                    class="w-full h-48 object-contain bg-white"
+                  >
+
+                  <!-- Actions Overlay -->
+                  <div class="absolute inset-0 flex items-center justify-center gap-3 bg-charcoal/0 transition group-hover:bg-charcoal/40 pointer-events-none group-hover:pointer-events-auto">
+                    <button
+                      type="button"
+                      class="rounded-full bg-white p-2 text-pine opacity-0 shadow-lg transition hover:text-pine-dark group-hover:opacity-100"
+                      (click)="openMediaPreview(sketchUrl, $event); $event.stopPropagation()"
+                      title="Preview"
+                      aria-label="Preview sketch"
+                    >
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="rounded-full bg-white p-2 text-red-500 opacity-0 shadow-lg transition hover:text-red-700 group-hover:opacity-100"
+                      (click)="deleteSketch(i); $event.stopPropagation()"
+                      title="Delete sketch"
+                      aria-label="Delete sketch"
+                    >
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          @if (isUploadingSketch()) {
+            <div class="mt-4 flex items-center gap-2 text-sm text-pine">
+              <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving sketch...
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Comments Section -->
+    <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+      <h3 class="mb-4 text-lg font-bold text-charcoal">Additional Comments & Media</h3>
+
+      <div class="space-y-6">
+        <!-- Comment Text Area -->
+        <div>
+          <label class="mb-2 block text-sm font-medium text-charcoal">Comments</label>
+          <textarea
+            [formControl]="$any(form.controls.additionalComments.get('comment'))"
+            rows="4"
+            class="w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 text-base text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+            placeholder="Add any additional comments or notes..."
+          ></textarea>
+        </div>
+
+        <!-- Media Upload -->
+        <div>
+          <label class="mb-2 block text-sm font-medium text-charcoal">Photos & Videos</label>
+          <button
+            type="button"
+            (click)="onAdditionalMediaSelected()"
+            class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
+          >
+            <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span class="text-sm font-medium text-charcoal">Select photos or videos</span>
+          </button>
+
+          <!-- Uploading Files -->
+          @if (uploadingAdditionalMedia().size > 0) {
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              @for (fileData of uploadingAdditionalMedia().values(); track $index) {
+                <div class="relative overflow-hidden rounded-xl border border-fog/60 bg-white">
+                  @if (fileData.preview) {
+                    <img
+                      [src]="fileData.preview"
+                      alt="Uploading"
+                      class="h-32 w-full object-cover"
+                    />
+                  } @else {
+                    <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                      <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  }
+                  <div class="absolute inset-0 flex items-center justify-center bg-charcoal/60">
+                    <div class="text-center text-white">
+                      <svg class="mx-auto h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <p class="mt-2 text-xs">{{ fileData.progress }}%</p>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Uploaded Files List -->
+          @if (form.controls.additionalComments.value && form.controls.additionalComments.value.mediaFiles && form.controls.additionalComments.value.mediaFiles.length > 0) {
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              @for (fileUrl of form.controls.additionalComments.value.mediaFiles; track fileUrl; let i = $index) {
+                <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-white cursor-pointer"
+                     (click)="openMediaPreview(fileUrl, $event)">
+                  @if (isImageUrl(fileUrl)) {
+                    <img
+                      [src]="fileUrl"
+                      [alt]="fileUrl.split('/').pop()"
+                      class="h-32 w-full object-cover"
+                    />
+                  } @else if (isVideoUrl(fileUrl)) {
+                    <div class="flex h-32 w-full items-center justify-center bg-fog/20">
+                      <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  }
+
+                  <!-- Overlay con botones -->
+                  <div class="absolute inset-0 flex items-center justify-center gap-2 bg-charcoal/0 transition group-hover:bg-charcoal/60">
+                    <!-- Botón previsualizar -->
+                    <button
+                      type="button"
+                      class="rounded-full bg-white p-2 text-pine opacity-0 shadow-lg transition hover:text-pine-dark group-hover:opacity-100"
+                      (click)="openMediaPreview(fileUrl, $event)"
+                      title="Preview"
+                      aria-label="Preview file"
+                    >
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                    <!-- Botón eliminar -->
+                    <button
+                      type="button"
+                      class="rounded-full bg-white p-2 text-red-500 opacity-0 shadow-lg transition hover:text-red-700 group-hover:opacity-100"
+                      (click)="removeAdditionalMediaFile(i); $event.stopPropagation()"
+                      title="Remove file"
+                      aria-label="Remove file"
+                    >
+                      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Budget Estimation Section -->
+    @if (isFormReady) {
+      <div class="rounded-2xl border border-fog/60 bg-fog/5 p-6">
+        <h3 class="mb-4 text-lg font-bold text-charcoal">Budget Estimation</h3>
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <!-- Rough Quote -->
+          <div class="rounded-2xl bg-charcoal p-4 shadow-raised">
+            <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/80">
+              Rough Quote
+            </label>
+            <input
+              type="number"
+              formControlName="roughQuote"
+              class="w-full rounded-xl border-0 bg-white/10 px-4 py-3 text-lg font-bold text-white placeholder:text-white/50 focus:bg-white/20 focus:ring-2 focus:ring-white/50"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+            />
+            <p class="mt-2 text-xs text-white/70">
+              Internal estimated budget for the work
+            </p>
+          </div>
+
+          <!-- Client Budget -->
+          <div class="rounded-2xl border border-fog/60 bg-white p-4">
+            <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-clay">
+              Client Budget
+            </label>
+            <input
+              type="number"
+              formControlName="clientBudget"
+              class="w-full rounded-xl border border-fog/60 bg-white px-4 py-3 text-lg font-bold text-charcoal placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+            />
+            <p class="mt-2 text-xs text-slate">
+              Budget the client says they have
+            </p>
+          </div>
+        </div>
+
+        <!-- Click to view - Budget Details -->
+        <div class="mt-4">
+          <button
+            type="button"
+            class="flex w-full items-center justify-between rounded-2xl border border-fog/60 bg-white px-6 py-4 transition hover:bg-fog/10"
+            (click)="toggleBudgetDetails()"
+          >
+            <span class="text-sm font-semibold text-charcoal">Click to view</span>
+            <svg
+              class="h-5 w-5 text-clay transition-transform"
+              [class.rotate-180]="showBudgetDetails()"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- Budget Details (Expandable) - Below Budget Estimation -->
+    @if (isFormReady && showBudgetDetails()) {
+      <div class="rounded-2xl border border-fog/60 bg-white p-6">
+        <div class="space-y-4">
+          <!-- Total Calculated -->
+          <div class="flex items-center justify-between border-b border-fog/40 pb-4">
+            <span class="text-sm font-semibold text-clay">Final Calculated Total</span>
+            <span class="text-xl font-bold text-pine">${{ totalCost() | number:'1.2-2' }}</span>
+          </div>
+
+          <!-- Comparison -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-charcoal">Rough Quote</span>
+              <span class="text-base font-semibold text-charcoal">
+                ${{ toNumber(form.controls.roughQuote.value) | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-charcoal">Client Budget</span>
+              <span class="text-base font-semibold text-charcoal">
+                ${{ toNumber(form.controls.clientBudget.value) | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between border-t border-fog/40 pt-3">
+              <span class="text-sm font-semibold text-charcoal">Budget vs Client Budget</span>
+              <span
+                class="text-base font-bold"
+                [class.text-green-600]="getBudgetDifference() >= 0"
+                [class.text-red-600]="getBudgetDifference() < 0"
+              >
+                {{ getBudgetDifference() >= 0 ? '+' : '' }}${{ getBudgetDifference() | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Summary Section (Read-only, Expandable) -->
+    @if (showSummary()) {
+      <div class="mb-6 rounded-2xl border-2 border-pine/40 bg-pine/5 p-6">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-lg font-bold text-charcoal">Estimate Summary</h3>
+          <button
+            type="button"
+            class="rounded-full p-2 text-clay transition hover:bg-white/50"
+            (click)="closeSummary()"
+            aria-label="Close summary"
+          >
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Project Information -->
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Project Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Client</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.customer.controls.name.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Project Name</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.projectName.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Status</span>
+                <p class="text-sm font-medium text-charcoal">{{ form.controls.status.value || '—' }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Category</span>
+                <p class="text-sm font-medium text-charcoal">{{ getCategoryDisplayName(category) }}</p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Total Price</span>
+                <p class="text-lg font-bold text-pine">${{ totalCost() | number:'1.2-2' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Budget Information -->
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Budget Information</h4>
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <span class="text-xs text-slate">Rough Quote</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ toNumber(form.controls.roughQuote.value) | number:'1.2-2' }}
+                </p>
+              </div>
+              <div>
+                <span class="text-xs text-slate">Client Budget</span>
+                <p class="text-sm font-medium text-charcoal">
+                  ${{ toNumber(form.controls.clientBudget.value) | number:'1.2-2' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media Status -->
+          <div class="rounded-xl border border-fog/60 bg-white p-4">
+            <h4 class="mb-3 text-sm font-semibold uppercase tracking-wide text-clay">Media Status</h4>
+            <div class="space-y-3">
+              <!-- Audio Status -->
+              <div class="rounded-lg border border-fog/40 bg-fog/5 p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Audio</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasAudio()"
+                    [class.text-green-700]="hasAudio()"
+                    [class.bg-red-100]="!hasAudio()"
+                    [class.text-red-700]="!hasAudio()"
+                  >
+                    {{ hasAudio() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Sketches Status -->
+              <div class="rounded-lg border border-fog/40 bg-fog/5 p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Sketches</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasSketches()"
+                    [class.text-green-700]="hasSketches()"
+                    [class.bg-red-100]="!hasSketches()"
+                    [class.text-red-700]="!hasSketches()"
+                  >
+                    {{ hasSketches() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Media Files Status -->
+              <div class="rounded-lg border border-fog/40 bg-fog/5 p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm font-semibold text-charcoal">Media Files</span>
+                  </div>
+                  <span
+                    class="rounded-full px-3 py-1 text-xs font-semibold"
+                    [class.bg-green-100]="hasMediaFiles()"
+                    [class.text-green-700]="hasMediaFiles()"
+                    [class.bg-red-100]="!hasMediaFiles()"
+                    [class.text-red-700]="!hasMediaFiles()"
+                  >
+                    {{ hasMediaFiles() ? 'Uploaded' : 'Not Uploaded' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
     <!-- Form Actions -->
     <div class="flex flex-col gap-4 border-t border-fog/40 pt-6 sm:flex-row sm:justify-end">
       <button
@@ -155,27 +977,48 @@
       >
         Save as Draft
       </button>
-      <button
-        type="submit"
-        class="rounded-2xl bg-pine px-6 py-3 font-semibold text-white shadow-raised transition hover:bg-pine/90 disabled:opacity-50"
-        [disabled]="isSubmitting || form.invalid"
-      >
-        @if (isSubmitting) {
-          <span class="flex items-center justify-center gap-2">
-            <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Saving...
-          </span>
-        } @else {
-          @if (quoteId) {
-            Create New Version
+      @if (showSummary()) {
+        <button
+          type="button"
+          class="rounded-2xl bg-pine px-6 py-3 font-semibold text-white shadow-raised transition hover:bg-pine/90 disabled:opacity-50"
+          (click)="confirmSubmit()"
+          [disabled]="isSubmitting"
+        >
+          Confirm & Submit
+        </button>
+      } @else {
+        <button
+          type="submit"
+          class="rounded-2xl bg-pine px-6 py-3 font-semibold text-white shadow-raised transition hover:bg-pine/90 disabled:opacity-50"
+          [disabled]="isSubmitting || form.invalid"
+        >
+          @if (isSubmitting) {
+            <span class="flex items-center justify-center gap-2">
+              <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Saving...
+            </span>
           } @else {
-            Create Estimate
+            @if (quoteId) {
+              Create New Version
+            } @else {
+              Create Estimate
+            }
           }
-        }
-      </button>
+        </button>
+      }
     </div>
   </form>
+  }
+
+  <!-- Modals - Always available, positioned outside normal flow -->
+  @if (previewMediaUrl(); as url) {
+    <app-media-preview-modal
+      [url]="url"
+      [alt]="url.split('/').pop() || 'Media preview'"
+      (close)="closeMediaPreview()"
+    />
+  }
 </section>

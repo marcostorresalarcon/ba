@@ -1,18 +1,16 @@
-<app-page-layout [breadcrumbs]="breadcrumbs()">
-  <section class="mt-5">
-    <div class="mb-6 flex items-center justify-between">
-      <div>
-        <h2 class="font-display text-3xl text-charcoal">Projects</h2>
-        <p class="text-slate mt-1">Manage all projects for {{ selectedCompany()?.name }}</p>
-      </div>
+<section class="mt-5">
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h2 class="font-display text-3xl text-charcoal">Projects</h2>
+      <p class="text-slate mt-1">Manage all projects for {{ selectedCompany()?.name }}</p>
     </div>
+  </div>
 
-    <app-project-list
-      [projects]="projects()"
-      [isLoading]="isLoading()"
-      (editProject)="editProject($event)"
-      (deleteProject)="deleteProject($event)"
-    />
-  </section>
-</app-page-layout>
+  <app-project-list
+    [projects]="projects()"
+    [isLoading]="isLoading()"
+    (editProject)="editProject($event)"
+    (deleteProject)="deleteProject($event)"
+  />
+</section>
 

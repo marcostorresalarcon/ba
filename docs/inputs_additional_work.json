@@ -365,8 +365,8 @@
   {
     "name": "gasPipes",
     "label": "Gas pipes",
-    "category": "additionalWorks",
-    "element": "selectCustomInputText",
+    "category": "hvac",
+    "element": "radioButton",
     "selections": [
       "simple run (accesible crawl space,or basement)",
       "moderate (trough walls or attic)",
@@ -375,12 +375,12 @@
     "unit": "LF",
     "price": [35, 50, 80],
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "bathDryerVent",
     "label": "Bath/dryer Vent",
-    "category": "additionalWorks",
+    "category": "hvac",
     "element": "radioButton",
     "selections": ["yes", "no"],
     "unit": "LF",
@@ -414,12 +414,12 @@
     "name": "fireblockingIERockwool",
     "label": "Fireblocking-IE Rockwool",
     "category": "insulation",
-    "element": "selectCustomInputText",
+    "element": "radioButton",
     "selections": ["wall 2x6 (R23)", "wall 2x4 (R15)"],
     "unit": "SF",
     "price": [4.25, 3.25],
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "blowInsulationOnAtticR38",
@@ -469,12 +469,12 @@
     "name": "droppedCeilingTiles",
     "label": "Dropped Ceiling Tiles",
     "category": "drywallAdditional",
-    "element": "selectCustomInputText",
+    "element": "radioButton",
     "selections": ["basic", "decorative"],
     "unit": "SF",
     "price": [7.0, 12.0],
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "crown4To6InchMdf",
@@ -612,23 +612,23 @@
     "name": "primed42InchBaluster5060",
     "label": "5060 Primed 42\" Baluster (include material and labor)",
     "category": "stairsParts",
-    "element": "selectCustomInputText",
+    "element": "radioButton",
     "selections": ["basic", "premium"],
     "unit": "EA",
     "price": [60, 75],
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "metalBaluster42Inch",
     "label": "42\" metal baluster (include material and labor)",
     "category": "stairsParts",
-    "element": "selectCustomInputText",
+    "element": "radioButton",
     "selections": ["basic", "premium"],
     "unit": "EA",
     "price": [50, 65],
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "oakColHandrail6010",

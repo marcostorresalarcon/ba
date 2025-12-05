@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { AuthService } from '../../core/services/auth/auth.service';
 import { QuoteService } from '../../core/services/quote/quote.service';
 import { InvoiceService } from '../../core/services/invoice/invoice.service';
-import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 import { MediaPreviewModalComponent } from '../../shared/ui/media-preview-modal/media-preview-modal.component';
 import type { Quote, QuoteCustomer, Materials, MaterialItem } from '../../core/models/quote.model';
 import type { Invoice } from '../../core/models/invoice.model';
@@ -18,7 +19,7 @@ import { PdfService } from '../../core/services/pdf/pdf.service';
 @Component({
   selector: 'app-quote-detail-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent, MediaPreviewModalComponent],
+  imports: [CommonModule, MediaPreviewModalComponent],
   templateUrl: './quote-detail.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -32,6 +33,7 @@ export class QuoteDetailPage {
   private readonly notificationService = inject(NotificationService);
   private readonly inputsService = inject(KitchenInputsService);
   private readonly pdfService = inject(PdfService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly isLoading = signal(true);
   protected readonly quote = signal<Quote | null>(null);
@@ -69,6 +71,11 @@ export class QuoteDetailPage {
   });
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+
     const quoteId = this.route.snapshot.paramMap.get('quoteId');
     if (quoteId) {
       this.loadQuote(quoteId);

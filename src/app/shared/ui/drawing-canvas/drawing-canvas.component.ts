@@ -9,7 +9,7 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="w-full h-screen bg-white flex flex-col overflow-hidden min-h-0">
+    <div class="w-full h-full bg-white flex flex-col min-h-0" style="height: 100%; max-height: 100vh; overflow: hidden;">
       <!-- Toolbar -->
       <div class="flex flex-col border-b border-fog/60 bg-white shadow-sm">
         <!-- Top Bar: Actions -->
@@ -216,7 +216,7 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
       </div>
 
       <!-- Canvas Area -->
-      <div class="flex-1 relative bg-fog/5 overflow-hidden touch-none h-screen">
+      <div class="flex-1 relative bg-fog/5 touch-none" style="min-height: 0; flex: 1 1 0%; overflow: hidden; overflow-y: hidden;">
         <canvas #canvas class="w-full h-full"></canvas>
       </div>
     </div>
@@ -228,6 +228,8 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
   @Output() cancel = new EventEmitter<void>();
 
   private canvas!: Canvas;
+  private resizeObserver: ResizeObserver | null = null;
+  private windowResizeHandler: (() => void) | null = null;
   currentTool: 'pencil' | 'rect' | 'circle' | 'line' | 'polyline' | 'select' = 'pencil';
   currentColor = '#332F28';
   currentWidth = 3;
@@ -261,7 +263,22 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.canvas.dispose();
+    // Limpiar ResizeObserver
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+
+    // Limpiar event listener de window
+    if (this.windowResizeHandler) {
+      window.removeEventListener('resize', this.windowResizeHandler);
+      this.windowResizeHandler = null;
+    }
+
+    // Dispose del canvas solo si está inicializado
+    if (this.canvas) {
+      this.canvas.dispose();
+    }
   }
 
   private initCanvas() {
@@ -310,33 +327,48 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   private setupResize() {
-    const resizeObserver = new ResizeObserver(() => {
-      const parent = this.canvasEl.nativeElement.parentElement;
-      if (parent && this.canvas) {
-        this.canvas.setDimensions({
-          width: parent.clientWidth,
-          height: parent.clientHeight
-        });
-        this.canvas.renderAll();
+    // Función helper para actualizar dimensiones de forma segura
+    const updateDimensions = () => {
+      const parent = this.canvasEl?.nativeElement?.parentElement;
+      if (!parent || !this.canvas) {
+        return;
       }
+
+      // Verificar que el canvas esté completamente inicializado
+      // Verificando que el canvas tenga las propiedades necesarias
+      try {
+        const width = parent.clientWidth;
+        const height = parent.clientHeight;
+        
+        // Solo actualizar si las dimensiones son válidas
+        if (width > 0 && height > 0) {
+          this.canvas.setDimensions({
+            width: width,
+            height: height
+          });
+          this.canvas.renderAll();
+        }
+      } catch (error) {
+        // Silenciar errores de fabric.js durante la inicialización
+        console.warn('Error updating canvas dimensions:', error);
+      }
+    };
+
+    // Configurar ResizeObserver
+    this.resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
     });
 
     const parent = this.canvasEl.nativeElement.parentElement;
     if (parent) {
-      resizeObserver.observe(parent);
+      this.resizeObserver.observe(parent);
     }
 
     // También escuchar resize de ventana como fallback
-    window.addEventListener('resize', () => {
-      const parent = this.canvasEl.nativeElement.parentElement;
-      if (parent && this.canvas) {
-        this.canvas.setDimensions({
-          width: parent.clientWidth,
-          height: parent.clientHeight
-        });
-        this.canvas.renderAll();
-      }
-    });
+    this.windowResizeHandler = () => {
+      updateDimensions();
+    };
+    window.addEventListener('resize', this.windowResizeHandler);
   }
 
   setTool(tool: 'pencil' | 'rect' | 'circle' | 'line' | 'polyline' | 'select') {

@@ -1,27 +1,4 @@
 <section class="min-h-screen bg-sand text-charcoal">
   <router-outlet />
   <app-notification-center />
-
-  @if (drawingCanvasService.showCanvas()) { @if (drawingCanvasService.canvasPosition(); as position)
-  {
-  <div
-    class="fixed inset-0 z-50 bg-charcoal/80 backdrop-blur-sm transition-opacity duration-300 animate-fadeIn"
-    (click)="onCanvasCancel()"
-    role="dialog"
-    aria-modal="true"
-  >
-    <div
-      class="fixed w-full max-w-7xl h-screen bg-white flex flex-col overflow-hidden rounded-t-[2.5rem] shadow-2xl"
-      [style.left.%]="50"
-      [style.bottom]="0"
-      [style.transform]="'translateX(-50%)'"
-      [style.--offset-x.px]="position.left"
-      [style.--offset-y.px]="position.top"
-      [class.animate-canvasFromClick]="true"
-      (click)="$event.stopPropagation()"
-    >
-      <app-drawing-canvas (save)="onCanvasSave($event)" (cancel)="onCanvasCancel()" />
-    </div>
-  </div>
-  } }
 </section>

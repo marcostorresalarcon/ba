@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { FormControl, FormGroup } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import type { LoginPayload } from '../../../../core/models/auth.model';
 
@@ -36,10 +37,32 @@ export class LoginFormComponent {
   });
 
   protected readonly showPassword = signal(false);
+  private readonly errorMessageSignal = signal<string | null>(null);
 
   @Input({ required: true }) isSubmitting = false;
+  
+  @Input() 
+  set errorMessage(value: string | null) {
+    this.errorMessageSignal.set(value);
+  }
+  
+  get errorMessage(): string | null {
+    return this.errorMessageSignal();
+  }
 
   @Output() readonly submitCredentials = new EventEmitter<LoginPayload>();
+  @Output() readonly clearError = new EventEmitter<void>();
+
+  constructor() {
+    // Limpiar el error cuando el usuario empiece a escribir
+    this.form.valueChanges
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (this.errorMessageSignal()) {
+          this.clearError.emit();
+        }
+      });
+  }
 
   protected togglePasswordVisibility(): void {
     this.showPassword.set(!this.showPassword());

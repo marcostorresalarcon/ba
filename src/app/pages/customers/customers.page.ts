@@ -23,13 +23,13 @@ import { CustomerListComponent } from '../../features/customers/ui/customer-list
 import { CustomerFormComponent } from '../../features/customers/ui/customer-form/customer-form.component';
 import type { CustomerFormValue } from '../../features/customers/ui/customer-form/customer-form.component';
 import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 
 @Component({
   selector: 'app-customers-page',
   standalone: true,
   imports: [
     CommonModule,
-    PageLayoutComponent,
     CustomerSearchComponent,
     CustomerListComponent,
     CustomerFormComponent
@@ -45,6 +45,7 @@ export class CustomersPage {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificationService = inject(NotificationService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly selectedCompanySignal = this.companyContext.selectedCompany;
   protected readonly companyId = computed(() => this.selectedCompanySignal()?. _id ?? null);
@@ -101,6 +102,11 @@ export class CustomersPage {
   protected readonly isDeleting = signal(false);
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+
     effect(() => {
       const id = this.companyId();
       if (!id) {

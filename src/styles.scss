@@ -120,11 +120,13 @@ html {
 @keyframes canvasFromClick {
   from {
     opacity: 0;
-    transform: translate(calc(-50% + var(--offset-x, 0px)), var(--offset-y, 0px)) scale(0.3);
+    transform: translate(var(--offset-x, 0px), var(--offset-y, 0px)) scale(0.3);
+    transform-origin: center center;
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) scale(1);
+    transform: translate(0, 0) scale(1);
+    transform-origin: center center;
   }
 }
 

@@ -362,8 +362,8 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "label": "Install Can Light",
     "category": "electrical",
     "element": "radioButton",
-    "selections": ["4\"", "6\""],
-    "unit": "EA",
+    "selections": ["none", "4\"", "6\""],
+    "unit": "LF",
     "price": 200.0,
     "formula": "UNIT * PRICE",
     "custom": false
@@ -630,7 +630,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "unit": "EA",
     "price": 0.0,
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "addNewSwitch",
@@ -641,7 +641,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "unit": "EA",
     "price": 200.0,
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "addNewDimmer",
@@ -652,7 +652,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "unit": "EA",
     "price": 100.0,
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "keepSwitchOnWall",
@@ -692,9 +692,9 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "label": "Upgrade Panel",
     "category": "electrical",
     "element": "radioButton",
-    "selections": ["noDisconnect", "withDisconnect"],
+    "selections": ["none", "No Disconnect", "With Disconnect"],
     "unit": "",
-    "price": [14000.0, 10000.0],
+    "price": [0.0, 14000.0, 10000.0],
     "formula": "Selection Price",
     "custom": false
   },
@@ -926,6 +926,28 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "selections": ["Yes", "no"],
     "unit": "EA",
     "price": 1300.0,
+    "formula": "UNIT * PRICE",
+    "custom": false
+  },
+  {
+    "name": "widePocketDoors36to42",
+    "label": "Wide Pocket Doors 36 to 42",
+    "category": "cabinets",
+    "element": "radioButton",
+    "selections": ["Yes", "no"],
+    "unit": "EA",
+    "price": 4500.0,
+    "formula": "UNIT * PRICE",
+    "custom": false
+  },
+  {
+    "name": "glassDoors",
+    "label": "Glass Doors",
+    "category": "cabinets",
+    "element": "numberInput",
+    "selections": [],
+    "unit": "EA",
+    "price": 150.0,
     "formula": "UNIT * PRICE",
     "custom": false
   },
@@ -1176,7 +1198,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "12stackers",
+    "name": "stackersTwelveWithGlass",
     "label": "12 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithGlass",
@@ -1188,7 +1210,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "15stackers",
+    "name": "stackersFifteenWithGlass",
     "label": "15 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithGlass",
@@ -1200,7 +1222,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "18stackers",
+    "name": "stackersEighteenWithGlass",
     "label": "18 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithGlass",
@@ -1212,7 +1234,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "12stackers",
+    "name": "stackersTwelveWithoutGlass",
     "label": "12 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithoutGlass",
@@ -1224,7 +1246,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "15stackers",
+    "name": "stackersFifteenWithoutGlass",
     "label": "15 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithoutGlass",
@@ -1236,7 +1258,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "18stackers",
+    "name": "stackersEighteenWithoutGlass",
     "label": "18 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithoutGlass",
@@ -1248,31 +1270,10 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "custom": false
   },
   {
-    "name": "widePocketDoors36to42",
-    "label": "Wide Pocket Doors 36 to 42",
-    "category": "cabinets",
-    "element": "radioButton",
-    "selections": ["Yes", "no"],
-    "unit": "EA",
-    "price": 4500.0,
-    "formula": "UNIT * PRICE",
-    "custom": false
-  },
-  {
-    "name": "glassDoors",
-    "label": "Glass Doors",
-    "category": "cabinets",
-    "element": "numberInput",
-    "selections": [],
-    "unit": "EA",
-    "price": 150.0,
-    "formula": "UNIT * PRICE",
-    "custom": false
-  },
-  {
     "name": "hardwareInstallation",
     "label": "Hardware Installation",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "checkbox",
     "size": true,
     "selections": [],
@@ -1285,6 +1286,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "name": "paintingCabinetsExistingPaintColor",
     "label": "Painting Cabinets Existing Paint Color",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "numberInput",
     "selections": [],
     "unit": "LF",
@@ -1296,6 +1298,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "name": "paintingCabinetsExistingStainColor",
     "label": "Painting Cabinets Existing Stain Color",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "numberInput",
     "selections": [],
     "unit": "LF",
@@ -1307,6 +1310,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "name": "hardwareInstallationExistingHoles",
     "label": "Hardware Installation Existing Holes",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "checkbox",
     "selections": [],
     "unit": "",
@@ -1318,6 +1322,7 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "name": "hardwareInstallationPuttyExistingAndDrillNewHoles",
     "label": "Hardware Installation Putty Existing And Drill New Holes",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "checkbox",
     "selections": [],
     "unit": "",
@@ -1894,9 +1899,9 @@ export const KITCHEN_INPUTS: KitchenInput[] = [
     "label": "Smooth Ceilings",
     "category": "drywall",
     "element": "radioButton",
-    "selections": ["Popcorn", "Stomped", "Orange Peel"],
+    "selections": ["none", "Popcorn", "Stomped", "Orange Peel"],
     "unit": "SF",
-    "price": [7.0, 8.0, 8.0],
+    "price": [0.0, 7.0, 8.0, 8.0],
     "formula": "Selection Price/UNIT * PRICE",
     "custom": false
   },

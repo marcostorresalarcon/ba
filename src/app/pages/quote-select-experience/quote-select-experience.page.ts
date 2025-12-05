@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   signal
 } from '@angular/core';
@@ -10,12 +11,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { CompanyContextService } from '../../core/services/company/company-context.service';
 import { ProjectService } from '../../core/services/project/project.service';
-import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 
 @Component({
   selector: 'app-quote-select-experience-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent],
+  imports: [CommonModule],
   templateUrl: './quote-select-experience.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -24,6 +26,7 @@ export class QuoteSelectExperiencePage {
   private readonly router = inject(Router);
   private readonly projectService = inject(ProjectService);
   private readonly companyContext = inject(CompanyContextService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly projectId = signal<string | null>(null);
   protected readonly projectType = signal<string | null>(null);
@@ -50,6 +53,11 @@ export class QuoteSelectExperiencePage {
   });
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+
     const projectId = this.route.snapshot.paramMap.get('projectId');
     const quoteId = this.route.snapshot.queryParamMap.get('quoteId');
     

@@ -360,8 +360,8 @@
     "label": "Install Can Light",
     "category": "electrical",
     "element": "radioButton",
-    "selections": ["4\"", "6\""],
-    "unit": "EA",
+    "selections": ["none", "4\"", "6\""],
+    "unit": "LF",
     "price": 200.0,
     "formula": "UNIT * PRICE",
     "custom": false
@@ -628,7 +628,7 @@
     "unit": "EA",
     "price": 0.0,
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "addNewSwitch",
@@ -639,7 +639,7 @@
     "unit": "EA",
     "price": 200.0,
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "addNewDimmer",
@@ -650,7 +650,7 @@
     "unit": "EA",
     "price": 100.0,
     "formula": "UNIT * PRICE",
-    "custom": true
+    "custom": false
   },
   {
     "name": "keepSwitchOnWall",
@@ -690,9 +690,9 @@
     "label": "Upgrade Panel",
     "category": "electrical",
     "element": "radioButton",
-    "selections": ["noDisconnect", "withDisconnect"],
+    "selections": ["none", "No Disconnect", "With Disconnect"],
     "unit": "",
-    "price": [14000.0, 10000.0],
+    "price": [0.0, 14000.0, 10000.0],
     "formula": "Selection Price",
     "custom": false
   },
@@ -924,6 +924,28 @@
     "selections": ["Yes", "no"],
     "unit": "EA",
     "price": 1300.0,
+    "formula": "UNIT * PRICE",
+    "custom": false
+  },
+  {
+    "name": "widePocketDoorsThirtySixToFortyTwo",
+    "label": "Wide Pocket Doors 36 to 42",
+    "category": "cabinets",
+    "element": "radioButton",
+    "selections": ["Yes", "no"],
+    "unit": "EA",
+    "price": 4500.0,
+    "formula": "UNIT * PRICE",
+    "custom": false
+  },
+  {
+    "name": "glassDoors",
+    "label": "Glass Doors",
+    "category": "cabinets",
+    "element": "numberInput",
+    "selections": [],
+    "unit": "EA",
+    "price": 150.0,
     "formula": "UNIT * PRICE",
     "custom": false
   },
@@ -1174,7 +1196,7 @@
     "custom": false
   },
   {
-    "name": "stackersTwelve",
+    "name": "stackersTwelveWithGlass",
     "label": "12 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithGlass",
@@ -1186,7 +1208,7 @@
     "custom": false
   },
   {
-    "name": "stackersFifteen",
+    "name": "stackersFifteenWithGlass",
     "label": "15 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithGlass",
@@ -1198,7 +1220,7 @@
     "custom": false
   },
   {
-    "name": "stackersEighteen",
+    "name": "stackersEighteenWithGlass",
     "label": "18 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithGlass",
@@ -1210,7 +1232,7 @@
     "custom": false
   },
   {
-    "name": "stackersTwelve",
+    "name": "stackersTwelveWithoutGlass",
     "label": "12 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithoutGlass",
@@ -1222,7 +1244,7 @@
     "custom": false
   },
   {
-    "name": "stackersFifteen",
+    "name": "stackersFifteenWithoutGlass",
     "label": "15 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithoutGlass",
@@ -1234,7 +1256,7 @@
     "custom": false
   },
   {
-    "name": "stackersEighteen",
+    "name": "stackersEighteenWithoutGlass",
     "label": "18 Stackers",
     "category": "cabinets",
     "subcategory": "stackersWithoutGlass",
@@ -1246,31 +1268,10 @@
     "custom": false
   },
   {
-    "name": "widePocketDoorsThirtySixToFortyTwo",
-    "label": "Wide Pocket Doors 36 to 42",
-    "category": "cabinets",
-    "element": "radioButton",
-    "selections": ["Yes", "no"],
-    "unit": "EA",
-    "price": 4500.0,
-    "formula": "UNIT * PRICE",
-    "custom": false
-  },
-  {
-    "name": "glassDoors",
-    "label": "Glass Doors",
-    "category": "cabinets",
-    "element": "numberInput",
-    "selections": [],
-    "unit": "EA",
-    "price": 150.0,
-    "formula": "UNIT * PRICE",
-    "custom": false
-  },
-  {
     "name": "hardwareInstallation",
     "label": "Hardware Installation",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "checkbox",
     "size": true,
     "selections": [],
@@ -1283,6 +1284,7 @@
     "name": "paintingCabinetsExistingPaintColor",
     "label": "Painting Cabinets Existing Paint Color",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "numberInput",
     "selections": [],
     "unit": "LF",
@@ -1294,6 +1296,7 @@
     "name": "paintingCabinetsExistingStainColor",
     "label": "Painting Cabinets Existing Stain Color",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "numberInput",
     "selections": [],
     "unit": "LF",
@@ -1305,6 +1308,7 @@
     "name": "hardwareInstallationExistingHoles",
     "label": "Hardware Installation Existing Holes",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "checkbox",
     "selections": [],
     "unit": "",
@@ -1316,6 +1320,7 @@
     "name": "hardwareInstallationPuttyExistingAndDrillNewHoles",
     "label": "Hardware Installation Putty Existing And Drill New Holes",
     "category": "cabinets",
+    "subcategory": "stackersWithoutGlass",
     "element": "checkbox",
     "selections": [],
     "unit": "",
@@ -1892,9 +1897,9 @@
     "label": "Smooth Ceilings",
     "category": "drywall",
     "element": "radioButton",
-    "selections": ["Popcorn", "Stomped", "Orange Peel"],
+    "selections": ["none", "Popcorn", "Stomped", "Orange Peel"],
     "unit": "SF",
-    "price": [7.0, 8.0, 8.0],
+    "price": [0.0, 7.0, 8.0, 8.0],
     "formula": "Selection Price/UNIT * PRICE",
     "custom": false
   },

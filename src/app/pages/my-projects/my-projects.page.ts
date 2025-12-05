@@ -11,13 +11,14 @@ import { CompanyContextService } from '../../core/services/company/company-conte
 import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
 import { ProjectListComponent } from '../../features/projects/ui/project-list/project-list.component';
-import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 import type { ProjectWithQuoteCount } from '../../core/models/project.model';
 
 @Component({
   selector: 'app-my-projects-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent, ProjectListComponent],
+  imports: [CommonModule, ProjectListComponent],
   templateUrl: './my-projects.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -30,6 +31,7 @@ export class MyProjectsPage {
   private readonly errorService = inject(HttpErrorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificationService = inject(NotificationService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly projects = signal<ProjectWithQuoteCount[]>([]);
   protected readonly isLoading = signal(true);
@@ -40,6 +42,11 @@ export class MyProjectsPage {
   ];
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs);
+    });
+
     effect(() => {
       const company = this.selectedCompany();
       const user = this.authService.user();

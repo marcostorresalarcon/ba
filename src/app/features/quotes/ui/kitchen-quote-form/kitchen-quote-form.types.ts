@@ -25,12 +25,12 @@ export interface KitchenQuoteFormValue {
   countertopsFiles?: string[] | null;
   backsplashFiles?: string[] | null;
 
-  // Notas de audio
+  // Notas de audio (múltiples)
   audioNotes?: {
     url: string;
     transcription?: string;
     summary?: string;
-  } | null;
+  }[] | null;
 
   // Archivos de dibujo (múltiples)
   sketchFiles?: string[] | null;
@@ -76,7 +76,7 @@ type KitchenQuoteFormControls = {
     url: string;
     transcription?: string;
     summary?: string;
-  } | null>;
+  }[] | null>;
   sketchFiles: FormControl<string[] | null>;
   additionalComments: FormGroup<{
     comment: FormControl<string | null>;

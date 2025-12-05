@@ -1,4 +1,4 @@
-<section class="min-h-screen px-4 py-8 sm:px-8 lg:px-16" [ngClass]="background">
+<section class="min-h-screen px-4 py-8 sm:px-8 lg:px-16" [ngClass]="activeBackground()">
   <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
     <header
       class="flex flex-col gap-6 rounded-[3rem] bg-white/60 p-6 shadow-brand lg:flex-row lg:items-center lg:justify-between"
@@ -42,9 +42,9 @@
         </button>
 
         @if (isUserMenuOpen()) {
-        <div class="fixed inset-0 z-40" (click)="toggleUserMenu()"></div>
+        <div class="fixed inset-0 z-[90]" (click)="toggleUserMenu()"></div>
         <div
-          class="absolute right-0 top-full z-50 mt-2 w-48 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+          class="absolute right-0 top-full z-[95] mt-2 w-48 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
         >
           <button
             (click)="logout()"
@@ -71,20 +71,28 @@
       </div>
     </header>
 
-    @if (breadcrumbs.length) {
+    @if (activeBreadcrumbs().length) {
     <nav class="flex items-center gap-2 text-sm text-slate">
-      @for (crumb of breadcrumbs; track crumb.label) { @if (hasRoute(crumb)) {
+      @for (crumb of activeBreadcrumbs(); track crumb.label) { @if (hasRoute(crumb)) {
       <a [routerLink]="crumb.route" class="text-charcoal underline-offset-4 hover:underline">
         {{ crumb.label }}
       </a>
       } @else {
       <span class="font-semibold text-charcoal">{{ crumb.label }}</span>
-      } @if (crumb !== breadcrumbs[breadcrumbs.length - 1]) {
+      } @if (crumb !== activeBreadcrumbs()[activeBreadcrumbs().length - 1]) {
       <span>/</span>
       } }
     </nav>
     }
 
-    <ng-content />
+    <!-- Contenedor de contenido: router-outlet para rutas hijas, ng-content para compatibilidad -->
+    <!-- router-outlet evita problemas de posicionamiento CSS que tiene ng-content en WebView de iOS -->
+    <div class="relative w-full">
+      @if (hasChildRoutes()) {
+      <router-outlet />
+      } @else {
+      <ng-content />
+      }
+    </div>
   </div>
 </section>

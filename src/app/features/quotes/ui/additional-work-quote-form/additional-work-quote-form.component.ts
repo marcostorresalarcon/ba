@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
@@ -16,7 +17,8 @@ import {
 } from '@angular/core';
 import type { FormControl, FormGroup } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { debounceTime } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -28,8 +30,17 @@ import { HttpErrorService } from '../../../../core/services/error/http-error.ser
 import { NotificationService } from '../../../../core/services/notification/notification.service';
 import { AdditionalWorkCalculationService } from '../../../../core/services/calculation/additional-work-calculation.service';
 import { AdditionalWorkInputsService, type AdditionalWorkInput } from '../../../../core/services/additional-work-inputs/additional-work-inputs.service';
+import { S3UploadService } from '../../../../core/services/upload/s3-upload.service';
+import { AudioRecorderService } from '../../../../core/services/audio/audio-recorder.service';
+import { AudioService } from '../../../../core/services/audio/audio.service';
+import { IosMediaService } from '../../../../core/services/ios/ios-media.service';
+import { PermissionsService } from '../../../../core/services/permissions/permissions.service';
+import { MediaPickerService } from '../../../../core/services/media/media-picker.service';
+import { DrawingCanvasService } from '../../../../core/services/drawing-canvas/drawing-canvas.service';
+import { LogService } from '../../../../core/services/log/log.service';
 import { DynamicFormFieldComponent } from '../kitchen-quote-form/dynamic-form-field/dynamic-form-field.component';
 import { MaterialsTabComponent } from '../kitchen-quote-form/tabs/materials-tab/materials-tab.component';
+import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
 import type { AdditionalWorkQuoteFormValue, AdditionalWorkQuoteFormGroup } from './additional-work-quote-form.types';
 
 @Component({
@@ -39,7 +50,8 @@ import type { AdditionalWorkQuoteFormValue, AdditionalWorkQuoteFormGroup } from 
     CommonModule,
     ReactiveFormsModule,
     DynamicFormFieldComponent,
-    MaterialsTabComponent
+    MaterialsTabComponent,
+    MediaPreviewModalComponent
   ],
   templateUrl: './additional-work-quote-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -52,7 +64,16 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   private readonly notificationService = inject(NotificationService);
   private readonly calculationService = inject(AdditionalWorkCalculationService);
   private readonly inputsService = inject(AdditionalWorkInputsService);
+  private readonly s3UploadService = inject(S3UploadService);
+  private readonly audioRecorderService = inject(AudioRecorderService);
+  private readonly audioService = inject(AudioService);
+  private readonly iosMediaService = inject(IosMediaService);
+  private readonly permissionsService = inject(PermissionsService);
+  private readonly mediaPickerService = inject(MediaPickerService);
+  private readonly drawingCanvasService = inject(DrawingCanvasService);
+  private readonly logService = inject(LogService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   @Input({ required: true }) project!: Project;
   @Input({ required: true }) customer!: Customer;
@@ -72,6 +93,33 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   // Quote original para obtener versionNumber
   private originalQuote: Quote | null = null;
 
+  // Flag para controlar si ya se cargaron los datos guardados
+  private hasLoadedSavedData = false;
+
+  // Estado de grabación de audio
+  protected readonly isRecording = this.audioRecorderService.isRecording;
+  protected readonly isUploadingAudio = signal(false);
+  protected readonly isProcessingAudio = signal(false);
+
+  // Estado de dibujo
+  protected readonly isUploadingSketch = signal(false);
+  protected readonly uploadingAdditionalMedia = signal<
+    Map<string, { file: File; preview: string; progress: number }>
+  >(new Map());
+
+  // Estado de previsualización de media
+  protected readonly previewMediaUrl = signal<string | null>(null);
+
+  // Estados para la sección de estimación
+  protected readonly showBudgetDetails = signal<boolean>(false);
+  protected readonly showSummary = signal<boolean>(false);
+
+  // Estados para la vista de destinatarios y pantalla de confirmación
+  protected readonly showRecipientsView = signal<boolean>(false);
+  protected readonly showConfirmationScreen = signal<boolean>(false);
+  protected readonly selectedRecipients = signal<string[]>([]);
+  protected readonly submittedQuote = signal<Quote | null>(null);
+
   // Signal para forzar recálculo cuando cambie el formulario
   private readonly formChangeTrigger = signal<number>(0);
 
@@ -86,6 +134,11 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     this.formChangeTrigger();
     return this.calculationService.calculateEstimateTotal(this.form);
   });
+
+  // Verificar que el formulario esté listo
+  protected get isFormReady(): boolean {
+    return !!(this.form && this.form.controls.roughQuote && this.form.controls.clientBudget);
+  }
 
   protected readonly statusOptions = ['draft', 'sent', 'approved', 'rejected', 'in_progress', 'completed'];
   protected readonly sourceOptions = ['website', 'referral', 'social_media', 'advertisement', 'other'];
@@ -106,7 +159,18 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     source: [null as string | null],
     address: [null as string | null],
     notes: [null as string | null],
-    materials: [null as Materials | null]
+    materials: [null as Materials | null],
+    audioNotes: [null as { url: string; transcription?: string; summary?: string }[] | null],
+    sketchFiles: [null as string[] | null],
+    additionalComments: this.fb.group({
+      comment: [null as string | null],
+      mediaFiles: [null as string[] | null]
+    }) as FormGroup<{
+      comment: FormControl<string | null>;
+      mediaFiles: FormControl<string[] | null>;
+    }>,
+    roughQuote: [null as number | null],
+    clientBudget: [null as number | null]
   }) as unknown as AdditionalWorkQuoteFormGroup;
 
   constructor() {
@@ -115,6 +179,16 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       const inputs = this.inputsService.inputs();
       if (inputs.length > 0) {
         this.generateDynamicFormFields(inputs);
+        
+        // Cargar datos guardados después de generar los campos dinámicos
+        // Solo si no hay quoteId y aún no se han cargado los datos guardados
+        if (!this.quoteId && !this.hasLoadedSavedData) {
+          // Usar setTimeout para asegurar que los campos estén completamente generados
+          setTimeout(() => {
+            this.loadSavedFormData();
+            this.hasLoadedSavedData = true;
+          }, 0);
+        }
       }
     });
   }
@@ -134,19 +208,24 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       category: this.category
     });
 
+    // Nota: Los datos guardados se cargan en el effect() después de generar los campos dinámicos
+    // para asegurar que todos los campos estén disponibles antes de restaurar valores
+
     // Si hay un quoteId, cargar los datos del quote para crear una nueva versión
     if (this.quoteId) {
       this.loadQuoteForEdit(this.quoteId);
     }
 
-    // Suscribirse a los cambios del formulario para recalcular el costo en tiempo real
+    // Suscribirse a los cambios del formulario para recalcular el costo en tiempo real y guardar
     this.form.valueChanges
       .pipe(
-        debounceTime(100),
+        debounceTime(500),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe(() => {
         this.formChangeTrigger.update(val => val + 1);
+        // Guardar automáticamente en localStorage
+        this.saveFormData();
       });
 
     // También escuchar cambios en statusChanges
@@ -161,6 +240,105 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Forzar un cálculo inicial
     this.formChangeTrigger.update(val => val + 1);
+
+    // Escuchar eventos de navegación para procesar resultados del canvas cuando se regresa
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((event) => {
+        const navEnd = event as NavigationEnd;
+        console.log('[AdditionalWork] NavigationEnd - URL:', navEnd.url);
+        console.log('[AdditionalWork] NavigationEnd - Verificando resultado pendiente');
+        
+        // Procesar resultado del canvas si hay uno pendiente después de navegar
+        setTimeout(() => {
+          this.processPendingCanvasResult();
+        }, 100);
+      });
+  }
+
+  /**
+   * Procesa el resultado pendiente del canvas
+   */
+  private processPendingCanvasResult(): void {
+    console.log('[AdditionalWork] processPendingCanvasResult - Verificando resultado pendiente');
+    const hasPending = this.drawingCanvasService.hasPendingResult();
+    console.log('[AdditionalWork] processPendingCanvasResult - hasPendingResult:', hasPending);
+    
+    if (hasPending) {
+      const resultStr = sessionStorage.getItem('drawingCanvasResult');
+      console.log('[AdditionalWork] processPendingCanvasResult - resultStr existe:', !!resultStr);
+      
+      if (resultStr) {
+        const result = JSON.parse(resultStr);
+        console.log('[AdditionalWork] processPendingCanvasResult - result.action:', result.action);
+        console.log('[AdditionalWork] processPendingCanvasResult - result.dataUrl existe:', !!result.dataUrl);
+        
+        if (result.action === 'save' && result.dataUrl) {
+          // Limpiar el resultado ANTES de procesarlo para evitar procesamiento duplicado
+          console.log('[AdditionalWork] processPendingCanvasResult - Limpiando sessionStorage antes de procesar');
+          sessionStorage.removeItem('drawingCanvasResult');
+          sessionStorage.removeItem('drawingCanvasCallback');
+          
+          // Si hay un resultado de guardado, procesarlo directamente
+          console.log('[AdditionalWork] processPendingCanvasResult - Llamando a onSketchSaved');
+          void this.onSketchSaved(result.dataUrl).then(() => {
+            // Restaurar scroll después de procesar el sketch
+            this.restoreScrollPosition();
+          });
+        } else {
+          // Para otros casos, usar el servicio
+          console.log('[AdditionalWork] processPendingCanvasResult - Usando servicio processResult');
+          void this.drawingCanvasService.processResult();
+        }
+      } else {
+        console.log('[AdditionalWork] processPendingCanvasResult - No hay resultStr, usando servicio');
+        void this.drawingCanvasService.processResult();
+      }
+    } else {
+      console.log('[AdditionalWork] processPendingCanvasResult - No hay resultado pendiente');
+      // Aún así restaurar scroll si no hay resultado pendiente
+      this.restoreScrollPosition();
+    }
+  }
+
+  /**
+   * Restaura la posición de scroll guardada
+   */
+  private restoreScrollPosition(): void {
+    const scrollYStr = sessionStorage.getItem('drawingCanvasScrollY');
+    console.log('[AdditionalWork] restoreScrollPosition - scrollYStr:', scrollYStr);
+    
+    if (!scrollYStr) {
+      console.log('[AdditionalWork] restoreScrollPosition - No hay scrollY guardado');
+      return;
+    }
+
+    const scrollY = parseInt(scrollYStr, 10);
+    console.log('[AdditionalWork] restoreScrollPosition - scrollY parseado:', scrollY);
+    console.log('[AdditionalWork] restoreScrollPosition - scrollY actual de window:', window.scrollY);
+    
+    // Esperar a que el DOM esté completamente renderizado antes de restaurar el scroll
+    setTimeout(() => {
+      console.log('[AdditionalWork] restoreScrollPosition - Intentando restaurar scroll a:', scrollY);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: 'smooth' });
+        console.log('[AdditionalWork] restoreScrollPosition - Primer scrollTo ejecutado, scrollY actual:', window.scrollY);
+        
+        // Segundo intento después de un pequeño delay para asegurar que funcione
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: 'smooth' });
+            console.log('[AdditionalWork] restoreScrollPosition - Segundo scrollTo ejecutado, scrollY actual:', window.scrollY);
+            // Limpiar el scrollY solo después de restaurarlo exitosamente
+            sessionStorage.removeItem('drawingCanvasScrollY');
+            console.log('[AdditionalWork] restoreScrollPosition - scrollY eliminado de sessionStorage');
+          });
+        }, 200);
+      });
+    }, 500);
   }
 
   ngAfterViewInit(): void {
@@ -168,6 +346,12 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       this.setupMaterialsSync();
     }, 0);
+
+    // Procesar resultado del canvas si hay uno pendiente al inicializar
+    // Usar setTimeout para asegurar que el DOM esté completamente renderizado
+    setTimeout(() => {
+      this.processPendingCanvasResult();
+    }, 100);
   }
   
   /**
@@ -220,7 +404,10 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       ) {
         const quantityFieldName = `${input.name}Quantity`;
         if (!this.form.get(quantityFieldName)) {
-          this.form.addControl(quantityFieldName, this.fb.control<number | null>(null));
+          // Crear el control deshabilitado por defecto (se habilitará cuando se seleccione una opción)
+          const quantityControl = this.fb.control<number | null>(null);
+          quantityControl.disable();
+          this.form.addControl(quantityFieldName, quantityControl);
         }
       }
 
@@ -347,6 +534,42 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
           }
         }
 
+        // Cargar audioNotes
+        if (quote.audioNotes) {
+          this.form.controls.audioNotes.setValue(quote.audioNotes, { emitEvent: false });
+        }
+
+        // Hacer merge de sketchFiles: combinar los existentes con los del quote (sin duplicados)
+        const existingSketches = this.form.controls.sketchFiles.value ?? [];
+        const quoteSketches = quote.sketchFiles ?? [];
+        
+        // Combinar ambos arrays sin duplicados
+        const mergedSketches = [...new Set([...existingSketches, ...quoteSketches])];
+        console.log('[AdditionalWork] loadQuoteForEdit - Merging sketches');
+        console.log('[AdditionalWork] loadQuoteForEdit - Existing sketches:', existingSketches);
+        console.log('[AdditionalWork] loadQuoteForEdit - Quote sketches:', quoteSketches);
+        console.log('[AdditionalWork] loadQuoteForEdit - Merged sketches:', mergedSketches);
+        
+        if (mergedSketches.length > 0) {
+          this.form.controls.sketchFiles.setValue(mergedSketches, { emitEvent: false });
+        }
+
+        // Cargar additionalComments
+        if (quote.additionalComments) {
+          this.form.controls.additionalComments.setValue({
+            comment: quote.additionalComments.comment ?? null,
+            mediaFiles: quote.additionalComments.mediaFiles ?? null
+          }, { emitEvent: false });
+        }
+
+        // Cargar roughQuote y clientBudget
+        if (quote.roughQuote !== undefined) {
+          this.form.controls.roughQuote.setValue(quote.roughQuote, { emitEvent: false });
+        }
+        if (quote.clientBudget !== undefined) {
+          this.form.controls.clientBudget.setValue(quote.clientBudget, { emitEvent: false });
+        }
+
         // Actualizar formulario y calcular total
         this.form.updateValueAndValidity({ emitEvent: false });
         this.formChangeTrigger.update(val => val + 1);
@@ -425,6 +648,69 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Mostrar resumen antes de enviar
+    if (!this.showSummary()) {
+      this.showSummary.set(true);
+      return;
+    }
+
+    // Si ya se mostró el resumen, llamar al método real de envío
+    this.actuallySubmit();
+  }
+
+  /**
+   * Cierra el resumen y vuelve al formulario
+   */
+  protected closeSummary(): void {
+    this.showSummary.set(false);
+  }
+
+  /**
+   * Confirma el envío del formulario después de revisar el resumen
+   */
+  protected confirmSubmit(): void {
+    this.showSummary.set(false);
+    // Mostrar vista de destinatarios antes de enviar
+    this.showRecipientsView.set(true);
+  }
+
+  /**
+   * Maneja la selección de destinatarios y procede con el envío
+   */
+  protected onRecipientsSelected(): void {
+    const recipients = this.selectedRecipients();
+    if (recipients.length === 0) {
+      this.notificationService.error('Error', 'Please select at least one recipient');
+      return;
+    }
+    // Proceder con el envío
+    this.actuallySubmit();
+  }
+
+  /**
+   * Cancela la selección de destinatarios y vuelve al resumen
+   */
+  protected cancelRecipientsSelection(): void {
+    this.showRecipientsView.set(false);
+    this.showSummary.set(true); // Volver al resumen
+  }
+
+  /**
+   * Alterna la selección de un destinatario
+   */
+  protected toggleRecipient(recipient: string): void {
+    const current = this.selectedRecipients();
+    if (current.includes(recipient)) {
+      this.selectedRecipients.set(current.filter((r) => r !== recipient));
+    } else {
+      this.selectedRecipients.set([...current, recipient]);
+    }
+  }
+
+  /**
+   * Realiza el envío real del formulario
+   */
+  private actuallySubmit(): void {
     const userId = this.getCurrentUserId();
     if (!userId) {
       this.notificationService.error('Error', 'User ID is required');
@@ -477,21 +763,50 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       quotePayload.materials = materials;
     }
 
+    // Agregar audioNotes si tiene valor
+    if (formValue.audioNotes) {
+      quotePayload.audioNotes = formValue.audioNotes;
+    }
+
+    // Agregar sketchFiles si tiene valor
+    if (formValue.sketchFiles && formValue.sketchFiles.length > 0) {
+      quotePayload.sketchFiles = formValue.sketchFiles;
+    }
+
+    // Agregar additionalComments si tiene valor
+    if (formValue.additionalComments) {
+      quotePayload.additionalComments = formValue.additionalComments;
+    }
+
+    // Agregar roughQuote y clientBudget si tienen valor
+    if (formValue.roughQuote !== null && formValue.roughQuote !== undefined) {
+      quotePayload.roughQuote = formValue.roughQuote;
+    }
+    if (formValue.clientBudget !== null && formValue.clientBudget !== undefined) {
+      quotePayload.clientBudget = formValue.clientBudget;
+    }
+
     // Siempre usar createQuote, incluso para nuevas versiones
     this.quoteService
       .createQuote(quotePayload)
       .subscribe({
-        next: () => {
-          const categoryName = this.getCategoryDisplayName(this.category);
-          const message = this.quoteId
-            ? 'New version created successfully'
-            : `${categoryName} estimate created successfully`;
-          this.notificationService.success('Success', message);
-          void this.router.navigateByUrl(`/projects/${this.project._id}`);
+        next: (quote) => {
+          // Limpiar datos guardados después de enviar exitosamente
+          this.clearSavedFormData();
+          
+          // Cerrar la vista de recipients
+          this.showRecipientsView.set(false);
+          
+          // Guardar el quote creado para mostrar en la pantalla de confirmación
+          this.submittedQuote.set(quote);
+          // Mostrar pantalla de confirmación
+          this.showConfirmationScreen.set(true);
         },
         error: (error) => {
           const message = this.errorService.handle(error);
           this.notificationService.error('Error', message);
+          // Volver a la vista de recipients en caso de error
+          this.showRecipientsView.set(true);
         }
       });
   }
@@ -544,7 +859,12 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       'source',
       'address',
       'notes',
-      'materials'
+      'materials',
+      'audioNotes',
+      'sketchFiles',
+      'additionalComments',
+      'roughQuote',
+      'clientBudget'
     ]);
 
     // Obtener todos los nombres de campos válidos desde inputs_additional_work.json
@@ -583,5 +903,732 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     }
 
     return additionalWorkInfo;
+  }
+
+  /**
+   * Verifica si una URL es una imagen
+   */
+  protected isImageUrl(url: string): boolean {
+    return /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
+  }
+
+  /**
+   * Verifica si una URL es un video
+   */
+  protected isVideoUrl(url: string): boolean {
+    return /\.(mp4|mov|avi|mkv|webm|heic)$/i.test(url);
+  }
+
+  /**
+   * Crea un thumbnail de un video para mostrar como preview
+   */
+  private async createVideoThumbnail(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const videoUrl = URL.createObjectURL(file);
+
+      if (!ctx) {
+        URL.revokeObjectURL(videoUrl);
+        resolve('');
+        return;
+      }
+
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+
+      const cleanup = () => {
+        video.src = '';
+        canvas.width = 0;
+        canvas.height = 0;
+        URL.revokeObjectURL(videoUrl);
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve('');
+      }, 5000);
+
+      video.onloadedmetadata = () => {
+        try {
+          const maxWidth = 320;
+          const maxHeight = 240;
+          let width = video.videoWidth;
+          let height = video.videoHeight;
+
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const seekTime = video.duration > 1 ? 1 : video.duration / 2;
+          video.currentTime = Math.max(0.1, seekTime);
+        } catch (error) {
+          clearTimeout(timeout);
+          cleanup();
+          resolve('');
+        }
+      };
+
+      video.onseeked = () => {
+        try {
+          clearTimeout(timeout);
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const thumbnailUrl = URL.createObjectURL(blob);
+                cleanup();
+                resolve(thumbnailUrl);
+              } else {
+                cleanup();
+                resolve('');
+              }
+            },
+            'image/jpeg',
+            0.8
+          );
+        } catch (error) {
+          clearTimeout(timeout);
+          cleanup();
+          resolve('');
+        }
+      };
+
+      video.onerror = () => {
+        clearTimeout(timeout);
+        cleanup();
+        resolve('');
+      };
+
+      video.src = videoUrl;
+    });
+  }
+
+  /**
+   * Toggle grabación de audio
+   */
+  protected async toggleRecording(): Promise<void> {
+    if (this.isRecording()) {
+      await this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  private async startRecording(): Promise<void> {
+    try {
+      await this.audioRecorderService.startRecording();
+    } catch (error) {
+      this.notificationService.error(
+        'Error',
+        'Could not start recording. Please check microphone permissions.'
+      );
+      await this.logService.logError('Error al iniciar grabación de audio', error, {
+        severity: 'medium',
+        description: 'Error al intentar iniciar la grabación de audio en el formulario de additional-work',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'startRecording',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  private async stopRecording(): Promise<void> {
+    try {
+      const audioFile = await this.audioRecorderService.stopRecording();
+      await this.processAudioFile(audioFile);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.notificationService.error('Error', `Error stopping recording: ${errorMsg}`);
+      await this.logService.logError('Error al detener grabación de audio', error, {
+        severity: 'medium',
+        description: 'Error al intentar detener la grabación de audio en el formulario de additional-work',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'stopRecording',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  private async processAudioFile(file: File): Promise<void> {
+    this.isUploadingAudio.set(true);
+    this.isProcessingAudio.set(true);
+
+    try {
+      const url = await this.s3UploadService.uploadFile(file);
+      this.isUploadingAudio.set(false);
+
+      this.notificationService.info('Processing', 'Generating audio summary...');
+
+      this.audioService.summarizeAudio(file).subscribe({
+        next: (response) => {
+          const currentAudios = this.form.controls.audioNotes.value || [];
+          const newAudio = response.success
+            ? {
+                url,
+                transcription: response.data.transcription,
+                summary: response.data.summary,
+              }
+            : { url };
+          
+          // Agregar el nuevo audio al array
+          this.form.controls.audioNotes.setValue([...currentAudios, newAudio], { emitEvent: true });
+          
+          if (response.success) {
+            this.notificationService.success('Success', 'Audio processed successfully');
+          } else {
+            this.notificationService.info(
+              'Warning',
+              'Audio saved, but summary could not be generated'
+            );
+            void this.logService.logNotification('Audio guardado pero resumen no generado', {
+              description: 'El audio se subió correctamente pero no se pudo generar el resumen',
+              source: 'additional-work-quote-form',
+              metadata: {
+                component: 'AdditionalWorkQuoteFormComponent',
+                action: 'processAudioFile',
+                audioUrl: url,
+                projectId: this.project._id,
+                customerId: this.customer._id,
+              },
+            });
+          }
+          this.isProcessingAudio.set(false);
+        },
+        error: (error) => {
+          const currentAudios = this.form.controls.audioNotes.value || [];
+          this.form.controls.audioNotes.setValue([...currentAudios, { url }], { emitEvent: true });
+          this.notificationService.info('Warning', 'Audio saved, but text processing failed');
+          this.isProcessingAudio.set(false);
+          void this.logService.logError('Error al procesar audio con API', error, {
+            severity: 'medium',
+            description:
+              'Error al procesar el audio con la API de resumen, pero el archivo se guardó correctamente',
+            source: 'additional-work-quote-form',
+            metadata: {
+              component: 'AdditionalWorkQuoteFormComponent',
+              action: 'summarizeAudio',
+              audioUrl: url,
+              projectId: this.project._id,
+              customerId: this.customer._id,
+            },
+          });
+        },
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
+      this.isUploadingAudio.set(false);
+      this.isProcessingAudio.set(false);
+      await this.logService.logError('Error al subir archivo de audio', error, {
+        severity: 'high',
+        description: 'Error al subir el archivo de audio a S3',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'processAudioFile',
+          fileName: file.name,
+          fileSize: file.size,
+          fileType: file.type,
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  protected deleteAudioNote(index: number): void {
+    const currentAudios = this.form.controls.audioNotes.value || [];
+    const updatedAudios = currentAudios.filter((_, i) => i !== index);
+    this.form.controls.audioNotes.setValue(updatedAudios.length > 0 ? updatedAudios : null, { emitEvent: true });
+  }
+
+  /**
+   * Abre la página de dibujo
+   */
+  protected openDrawingCanvas(event?: Event): void {
+    console.log('[AdditionalWork] openDrawingCanvas - Iniciando');
+    const currentSketches = this.form.controls.sketchFiles.value ?? [];
+    console.log('[AdditionalWork] openDrawingCanvas - Sketches actuales:', currentSketches.length, currentSketches);
+    
+    // Obtener la URL actual para regresar después
+    const currentUrl = this.router.url;
+    console.log('[AdditionalWork] openDrawingCanvas - URL actual:', currentUrl);
+    
+    // Abrir el canvas navegando a la nueva página
+    this.drawingCanvasService.openCanvas(currentUrl, (dataUrl) => this.onSketchSaved(dataUrl));
+  }
+
+  /**
+   * Maneja el guardado del dibujo
+   */
+  protected async onSketchSaved(dataUrl: string): Promise<void> {
+    console.log('[AdditionalWork] onSketchSaved - Iniciando guardado de sketch');
+    console.log('[AdditionalWork] onSketchSaved - dataUrl recibido:', dataUrl.substring(0, 50) + '...');
+    
+    this.isUploadingSketch.set(true);
+
+    try {
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      let file = new File([blob], `sketch-${Date.now()}.png`, { type: 'image/png' });
+      console.log('[AdditionalWork] onSketchSaved - Archivo creado:', file.name, file.size, 'bytes');
+
+      file = await this.iosMediaService.processMediaFile(file);
+      console.log('[AdditionalWork] onSketchSaved - Archivo procesado:', file.name, file.size, 'bytes');
+
+      console.log('[AdditionalWork] onSketchSaved - Subiendo a S3...');
+      const url = await this.s3UploadService.uploadFile(file);
+      console.log('[AdditionalWork] onSketchSaved - URL obtenida de S3:', url);
+
+      // Agregar a la lista de dibujos (múltiples)
+      // Asegurarse de que no se duplique si ya existe
+      const currentSketches = this.form.controls.sketchFiles.value ?? [];
+      console.log('[AdditionalWork] onSketchSaved - Sketches actuales ANTES de agregar:', currentSketches.length, currentSketches);
+      console.log('[AdditionalWork] onSketchSaved - URL ya existe?', currentSketches.includes(url));
+      
+      if (!currentSketches.includes(url)) {
+        const newSketches = [...currentSketches, url];
+        console.log('[AdditionalWork] onSketchSaved - Nuevos sketches:', newSketches.length, newSketches);
+        this.form.controls.sketchFiles.setValue(newSketches, { emitEvent: true });
+        
+        // Verificar inmediatamente después de setValue
+        const afterSetValue = this.form.controls.sketchFiles.value ?? [];
+        console.log('[AdditionalWork] onSketchSaved - Sketches DESPUÉS de setValue:', afterSetValue.length, afterSetValue);
+
+        // Forzar detección de cambios para mostrar el sketch inmediatamente
+        this.cdr.markForCheck();
+
+        // Guardar el estado del formulario después de agregar el sketch
+        // Usar setTimeout para asegurar que el cambio se haya propagado completamente
+        setTimeout(() => {
+          const beforeSave = this.form.controls.sketchFiles.value ?? [];
+          console.log('[AdditionalWork] onSketchSaved - Sketches ANTES de saveFormData:', beforeSave.length, beforeSave);
+          this.saveFormData();
+          
+          // Verificar después de guardar
+          const afterSave = this.form.controls.sketchFiles.value ?? [];
+          console.log('[AdditionalWork] onSketchSaved - Sketches DESPUÉS de saveFormData:', afterSave.length, afterSave);
+          
+          // Forzar otra vez la detección de cambios después de guardar
+          this.cdr.markForCheck();
+        }, 100);
+      } else {
+        console.warn('[AdditionalWork] onSketchSaved - URL ya existe, no se agregará:', url);
+      }
+
+      this.notificationService.success('Success', 'Sketch saved successfully');
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not save sketch');
+      await this.logService.logError('Error al guardar sketch', error, {
+        severity: 'high',
+        description: 'Error al subir el sketch (dibujo) a S3',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'onSketchSaved',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    } finally {
+      this.isUploadingSketch.set(false);
+    }
+  }
+
+  protected deleteSketch(index: number): void {
+    const currentSketches = this.form.controls.sketchFiles.value ?? [];
+    const updatedSketches = currentSketches.filter((_, i) => i !== index);
+    this.form.controls.sketchFiles.setValue(updatedSketches.length > 0 ? updatedSketches : null);
+  }
+
+  /**
+   * Maneja la subida de archivos para comentarios adicionales
+   */
+  protected async onAdditionalMediaSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permisos requeridos',
+          'Se necesita acceso a la cámara y galería para seleccionar imágenes. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickMultipleMedia(10);
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
+      await this.logService.logError('Error al seleccionar archivos de medios adicionales', error, {
+        severity: 'medium',
+        description:
+          'Error al seleccionar archivos de medios adicionales en el formulario de additional-work',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'onAdditionalMediaSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Procesa los archivos de medios adicionales
+   */
+  private async processAdditionalMediaFiles(fileArray: File[]): Promise<void> {
+    const currentComments = this.form.controls.additionalComments.value;
+    const currentFiles = currentComments?.mediaFiles ?? [];
+    const uploadingMap = new Map<string, { file: File; preview: string; progress: number }>();
+
+    for (const file of fileArray) {
+      const fileId = `${Date.now()}-${Math.random()}-${file.name}`;
+      let preview = '';
+      if (file.type.startsWith('image/')) {
+        preview = URL.createObjectURL(file);
+      } else if (file.type.startsWith('video/')) {
+        preview = await this.createVideoThumbnail(file);
+      }
+      uploadingMap.set(fileId, { file, preview, progress: 0 });
+    }
+
+    this.uploadingAdditionalMedia.set(uploadingMap);
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const [fileId, fileData] of uploadingMap.entries()) {
+        try {
+          let processedFile: File;
+          try {
+            processedFile = await this.iosMediaService.processMediaFile(fileData.file);
+          } catch (compressionError) {
+            const errorMsg =
+              compressionError instanceof Error
+                ? compressionError.message
+                : String(compressionError);
+
+            if (errorMsg.includes('Unsupported') || errorMsg.includes('too large')) {
+              this.notificationService.error(
+                'Error de archivo',
+                `${fileData.file.name}: ${errorMsg}`
+              );
+            } else {
+              this.notificationService.error(
+                'Error al procesar archivo',
+                `No se pudo procesar ${fileData.file.name}. Por favor, intenta con otro archivo.`
+              );
+            }
+
+            await this.logService.logError(
+              'Error al procesar archivo multimedia',
+              compressionError,
+              {
+                severity: 'medium',
+                description: `Error al procesar archivo: ${fileData.file.name}`,
+                source: 'additional-work-quote-form',
+                metadata: {
+                  component: 'AdditionalWorkQuoteFormComponent',
+                  action: 'processAdditionalMediaFiles',
+                  step: 'processMediaFile',
+                  fileName: fileData.file.name,
+                  fileSize: fileData.file.size,
+                  fileType: fileData.file.type,
+                  projectId: this.project._id,
+                  customerId: this.customer._id,
+                },
+              }
+            );
+
+            continue;
+          }
+
+          const url = await this.s3UploadService.uploadFile(processedFile, (progress) => {
+            const updatedMap = new Map(this.uploadingAdditionalMedia());
+            const existing = updatedMap.get(fileId);
+            if (existing) {
+              updatedMap.set(fileId, { ...existing, progress: progress.percentage });
+              this.uploadingAdditionalMedia.set(updatedMap);
+            }
+          });
+          uploadedUrls.push(url);
+
+          if (fileData.preview) {
+            URL.revokeObjectURL(fileData.preview);
+          }
+
+          const updatedMap = new Map(this.uploadingAdditionalMedia());
+          updatedMap.delete(fileId);
+          this.uploadingAdditionalMedia.set(updatedMap);
+        } catch (error) {
+          const updatedMap = new Map(this.uploadingAdditionalMedia());
+          updatedMap.delete(fileId);
+          this.uploadingAdditionalMedia.set(updatedMap);
+          if (fileData.preview) {
+            URL.revokeObjectURL(fileData.preview);
+          }
+
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          const isVideo = fileData.file.type.startsWith('video/');
+          const fileTypeLabel = isVideo ? 'video' : 'archivo';
+
+          this.notificationService.error(
+            'Error al subir archivo',
+            `No se pudo subir el ${fileTypeLabel} "${fileData.file.name}". ${errorMsg.includes('Failed')
+              ? 'Por favor, verifica tu conexión e intenta nuevamente.'
+              : 'Por favor, intenta con otro archivo.'
+            }`
+          );
+
+          await this.logService.logError('Error al subir archivo de medios adicionales', error, {
+            severity: 'high',
+            description: `Error al subir archivo de medios adicionales: ${fileData.file.name}`,
+            source: 'additional-work-quote-form',
+            metadata: {
+              component: 'AdditionalWorkQuoteFormComponent',
+              action: 'processAdditionalMediaFiles',
+              fileName: fileData.file.name,
+              fileSize: fileData.file.size,
+              fileType: fileData.file.type,
+              projectId: this.project._id,
+              customerId: this.customer._id,
+            },
+          });
+        }
+      }
+
+      const updatedFiles = [...currentFiles, ...uploadedUrls];
+      const currentComment = currentComments?.comment ?? null;
+      this.form.controls.additionalComments.setValue({
+        comment: currentComment,
+        mediaFiles: updatedFiles,
+      });
+    } catch (error) {
+      this.notificationService.error('Error', 'No se pudieron subir los archivos');
+      await this.logService.logError(
+        'Error general al procesar archivos de medios adicionales',
+        error,
+        {
+          severity: 'high',
+          description: 'Error general al procesar y subir archivos de medios adicionales',
+          source: 'additional-work-quote-form',
+          metadata: {
+            component: 'AdditionalWorkQuoteFormComponent',
+            action: 'processAdditionalMediaFiles',
+            filesCount: fileArray.length,
+            projectId: this.project._id,
+            customerId: this.customer._id,
+          },
+        }
+      );
+
+      for (const fileData of uploadingMap.values()) {
+        if (fileData.preview) {
+          URL.revokeObjectURL(fileData.preview);
+        }
+      }
+      this.uploadingAdditionalMedia.set(new Map());
+    }
+  }
+
+  /**
+   * Elimina un archivo de comentarios adicionales
+   */
+  protected removeAdditionalMediaFile(index: number): void {
+    const currentComments = this.form.controls.additionalComments.value;
+    const currentFiles = currentComments?.mediaFiles ?? [];
+    const updatedFiles = currentFiles.filter((_, i) => i !== index);
+    const currentComment = currentComments?.comment ?? null;
+    this.form.controls.additionalComments.setValue({
+      comment: currentComment,
+      mediaFiles: updatedFiles.length > 0 ? updatedFiles : null,
+    });
+  }
+
+  /**
+   * Abre el modal de previsualización de media
+   */
+  protected openMediaPreview(url: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    this.previewMediaUrl.set(url);
+  }
+
+  /**
+   * Cierra el modal de previsualización
+   */
+  protected closeMediaPreview(): void {
+    this.previewMediaUrl.set(null);
+  }
+
+  /**
+   * Toggle para mostrar/ocultar detalles del budget
+   */
+  protected toggleBudgetDetails(): void {
+    this.showBudgetDetails.update((val) => !val);
+  }
+
+  /**
+   * Calcula la diferencia entre el budget calculado y el client budget
+   */
+  protected getBudgetDifference(): number {
+    const total = this.totalCost();
+    const clientBudget = this.form.controls.clientBudget.value ?? 0;
+    return total - clientBudget;
+  }
+
+  /**
+   * Verifica si hay fotos/videos subidos
+   */
+  protected hasMediaFiles(): boolean {
+    const additional = this.form.controls.additionalComments.value?.mediaFiles?.length ?? 0;
+    return additional > 0;
+  }
+
+  /**
+   * Verifica si hay audio subido
+   */
+  protected hasAudio(): boolean {
+    const audioNotes = this.form.controls.audioNotes.value;
+    return audioNotes !== null && Array.isArray(audioNotes) && audioNotes.length > 0;
+  }
+
+  /**
+   * Verifica si hay sketches subidos
+   */
+  protected hasSketches(): boolean {
+    return (this.form.controls.sketchFiles.value?.length ?? 0) > 0;
+  }
+
+  /**
+   * Convierte un valor a número para usar en el pipe number
+   */
+  protected toNumber(value: number | null | undefined): number {
+    return value ?? 0;
+  }
+
+  /**
+   * Genera una clave única para guardar el estado del formulario
+   */
+  private getFormStorageKey(): string {
+    const parts = [
+      'additional-work-quote-form',
+      this.project._id,
+      this.customer._id,
+      this.companyId,
+      this.category,
+      this.quoteId || 'new'
+    ];
+    return parts.join('::');
+  }
+
+  /**
+   * Guarda el estado del formulario en localStorage
+   */
+  private saveFormData(): void {
+    try {
+      const formValue = this.form.getRawValue();
+      const storageKey = this.getFormStorageKey();
+      const sketchFiles = formValue.sketchFiles ?? [];
+      console.log('[AdditionalWork] saveFormData - Guardando formulario');
+      console.log('[AdditionalWork] saveFormData - sketchFiles en formValue:', sketchFiles.length, sketchFiles);
+      console.log('[AdditionalWork] saveFormData - storageKey:', storageKey);
+      
+      localStorage.setItem(storageKey, JSON.stringify(formValue));
+      
+      // Verificar que se guardó correctamente
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const savedValue = JSON.parse(saved);
+        const savedSketches = savedValue.sketchFiles ?? [];
+        console.log('[AdditionalWork] saveFormData - Verificación: sketchFiles guardados:', savedSketches.length, savedSketches);
+      } else {
+        console.error('[AdditionalWork] saveFormData - ERROR: No se pudo guardar en localStorage');
+      }
+    } catch (error) {
+      console.error('[AdditionalWork] saveFormData - Error saving form data:', error);
+    }
+  }
+
+  /**
+   * Carga el estado del formulario desde localStorage
+   */
+  private loadSavedFormData(): void {
+    try {
+      const storageKey = this.getFormStorageKey();
+      console.log('[AdditionalWork] loadSavedFormData - storageKey:', storageKey);
+      const savedData = localStorage.getItem(storageKey);
+      console.log('[AdditionalWork] loadSavedFormData - savedData existe:', !!savedData);
+      
+      if (savedData) {
+        const formValue = JSON.parse(savedData);
+        const savedSketches = formValue.sketchFiles ?? [];
+        console.log('[AdditionalWork] loadSavedFormData - sketchFiles en datos guardados:', savedSketches.length, savedSketches);
+        
+        // Restaurar valores del formulario, pero mantener los valores iniciales si no hay guardados
+        this.form.patchValue(formValue, { emitEvent: false });
+        
+        // Verificar después de patchValue
+        const afterPatch = this.form.controls.sketchFiles.value ?? [];
+        console.log('[AdditionalWork] loadSavedFormData - sketchFiles DESPUÉS de patchValue:', afterPatch.length, afterPatch);
+
+        // Actualizar trigger para recalcular el costo total
+        this.formChangeTrigger.update((val) => val + 1);
+        
+        // Forzar detección de cambios para actualizar la UI
+        this.cdr.markForCheck();
+      } else {
+        console.log('[AdditionalWork] loadSavedFormData - No hay datos guardados');
+      }
+    } catch (error) {
+      console.error('[AdditionalWork] loadSavedFormData - Error loading saved form data:', error);
+    }
+  }
+
+  /**
+   * Limpia el estado guardado del formulario
+   */
+  private clearSavedFormData(): void {
+    try {
+      const storageKey = this.getFormStorageKey();
+      localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.error('Error clearing saved form data:', error);
+    }
+  }
+
+  /**
+   * Navega al proyecto después de la confirmación
+   */
+  protected goToProject(): void {
+    void this.router.navigateByUrl(`/projects/${this.project._id}`);
+  }
+
+  /**
+   * Cierra la pantalla de confirmación
+   */
+  protected closeConfirmationScreen(): void {
+    this.showConfirmationScreen.set(false);
+    void this.router.navigateByUrl(`/projects/${this.project._id}`);
   }
 }

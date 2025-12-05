@@ -4,6 +4,7 @@ import {
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   signal
 } from '@angular/core';
@@ -18,13 +19,14 @@ import { CustomerService } from '../../core/services/customer/customer.service';
 import { CompanyContextService } from '../../core/services/company/company-context.service';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
-import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 import { KitchenQuoteFormComponent } from '../../features/quotes/ui/kitchen-quote-form/kitchen-quote-form.component';
 
 @Component({
   selector: 'app-quote-create-kitchen-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent, KitchenQuoteFormComponent],
+  imports: [CommonModule, KitchenQuoteFormComponent],
   templateUrl: './quote-create-kitchen.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -37,6 +39,7 @@ export class QuoteCreateKitchenPage {
   private readonly errorService = inject(HttpErrorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificationService = inject(NotificationService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly projectId = signal<string | null>(null);
   protected readonly project = signal<Project | null>(null);
@@ -63,6 +66,11 @@ export class QuoteCreateKitchenPage {
   });
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+
     const projectId = this.route.snapshot.paramMap.get('projectId');
     const experience = this.route.snapshot.queryParamMap.get('experience');
     const quoteId = this.route.snapshot.queryParamMap.get('quoteId');

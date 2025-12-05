@@ -91,12 +91,23 @@ export class AdditionalWorkCalculationService {
 
     // Si la fórmula es "UNIT * PRICE"
     if (input.formula === 'UNIT * PRICE') {
+      // Obtener el precio según la selección si hay un array de precios
+      let selectionPrice = price;
+      if (Array.isArray(input.price) && input.selections.length > 0) {
+        const selectionIndex = input.selections.findIndex(selection => 
+          selection.toLowerCase() === normalizedValue.toLowerCase()
+        );
+        if (selectionIndex >= 0 && selectionIndex < input.price.length) {
+          selectionPrice = input.price[selectionIndex];
+        }
+      }
+
       // Buscar el campo de cantidad (puede ser el mismo nombre + "Quantity" o un campo relacionado)
       const quantityControl = form.get(`${input.name}Quantity`);
       const quantity = quantityControl?.value as number ?? 0;
 
       if (quantity <= 0) return 0;
-      return price * quantity;
+      return selectionPrice * quantity;
     }
 
     return 0;

@@ -37,10 +37,24 @@ export class KitchenInputsService {
 
   /**
    * Obtiene todos los inputs filtrados por experiencia
+   * Para la categoría 'cabinets', solo muestra campos con la experiencia seleccionada
+   * EXCEPTO las subcategorías 'stackersWithGlass' y 'stackersWithoutGlass' que siempre se muestran
    */
   getInputsByExperience(experience: string): KitchenInput[] {
     const inputs = this.inputsSignal();
-    return inputs.filter(input => !input.experience || input.experience === experience);
+    return inputs.filter(input => {
+      // Para cabinets, solo mostrar campos con la experiencia seleccionada
+      if (input.category === 'cabinets') {
+        // Las subcategorías stackersWithGlass y stackersWithoutGlass siempre se muestran
+        if (input.subcategory === 'stackersWithGlass' || input.subcategory === 'stackersWithoutGlass') {
+          return true;
+        }
+        // Para otros campos de cabinets, solo mostrar si tienen la experiencia seleccionada
+        return input.experience === experience;
+      }
+      // Para otras categorías, mostrar campos sin experience o con la experiencia coincidente
+      return !input.experience || input.experience === experience;
+    });
   }
 
   /**

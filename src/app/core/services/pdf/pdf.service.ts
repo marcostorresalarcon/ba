@@ -465,7 +465,7 @@ export class PdfService {
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 20; // Aumentado para mejor espaciado
     const contentWidth = pageWidth - margin * 2;
     let yPosition = margin;
 
@@ -479,6 +479,158 @@ export class PdfService {
     const lightBgR = 234;
     const lightBgG = 209;
     const lightBgB = 186; // #EAD1BA (sand)
+
+    const addPageIfNeeded = (expectedHeight: number) => {
+      if (yPosition + expectedHeight > pageHeight - margin - 15) {
+        doc.addPage();
+        yPosition = margin;
+        return true;
+      }
+      return false;
+    };
+
+    const drawBorderedBox = (x: number, y: number, width: number, height: number, title?: string, titleBgColor?: number[]) => {
+      // Borde principal más visible
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(x, y, width, height, 3, 3, 'S');
+      
+      // Si hay título, dibujar header con fondo
+      if (title && titleBgColor) {
+        const headerHeight = 8;
+        doc.setFillColor(titleBgColor[0], titleBgColor[1], titleBgColor[2]);
+        doc.roundedRect(x, y, width, headerHeight, 3, 3, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(title.toUpperCase(), x + 5, y + 5.5);
+        
+        // Línea separadora debajo del header
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(x, y + headerHeight, x + width, y + headerHeight);
+      }
+    };
+
+    const drawSectionTitle = (title: string) => {
+      addPageIfNeeded(20);
+      
+      // Fondo de sección con borde
+      const sectionHeight = 12;
+      doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
+      doc.roundedRect(margin, yPosition, contentWidth, sectionHeight, 2, 2, 'F');
+      
+      // Borde más visible
+      doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
+      doc.setLineWidth(0.8);
+      doc.roundedRect(margin, yPosition, contentWidth, sectionHeight, 2, 2, 'S');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title.toUpperCase(), margin + 8, yPosition + 8);
+      yPosition += sectionHeight + 8; // Más espacio después del título
+    };
+
+    const renderLink = (label: string, url: string) => {
+      doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.textWithLink(label, margin + 4, yPosition, { url });
+      yPosition += 6;
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    };
+
+    const fileNameFromUrl = (url: string): string => {
+      try {
+        const clean = decodeURIComponent(url);
+        const parts = clean.split('/');
+        return parts.pop() || clean;
+      } catch {
+        return url;
+      }
+    };
+
+    const renderFullWidthImage = async (url: string, label?: string) => {
+      try {
+        console.log('[PDF] Attempting to load image:', url);
+        const imgDataUrl = await this.getImageFromUrl(url);
+        
+        if (!imgDataUrl || !imgDataUrl.startsWith('data:')) {
+          throw new Error('Invalid image data URL');
+        }
+        
+        console.log('[PDF] Image loaded, getting properties...');
+        const imgProps = doc.getImageProperties(imgDataUrl);
+        console.log('[PDF] Image properties:', imgProps);
+        const ratio = imgProps.width / imgProps.height;
+        
+        // Calcular dimensiones para ancho completo - ocupar todo el ancho disponible
+        const imgWidth = contentWidth; // Ancho completo sin márgenes adicionales
+        let imgHeight = imgWidth / ratio;
+        
+        // Limitar altura máxima para que quepa en la página (dejar espacio para label si existe)
+        const spaceForLabel = label ? 8 : 0;
+        const maxHeight = pageHeight - margin - yPosition - spaceForLabel - 10;
+        
+        if (imgHeight > maxHeight) {
+          // Si es muy alta, ajustar para que quepa pero mantener proporción
+          imgHeight = maxHeight;
+          const adjustedWidth = imgHeight * ratio;
+          const xOffset = (contentWidth - adjustedWidth) / 2;
+          addPageIfNeeded(imgHeight + spaceForLabel + 15);
+          
+          // Borde alrededor de la imagen
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(margin + xOffset - 1, yPosition - 1, adjustedWidth + 2, imgHeight + 2, 2, 2, 'S');
+          
+          console.log('[PDF] Adding image (adjusted size):', adjustedWidth, 'x', imgHeight);
+          doc.addImage(imgDataUrl, 'JPEG', margin + xOffset, yPosition, adjustedWidth, imgHeight);
+          yPosition += imgHeight + 6;
+        } else {
+          addPageIfNeeded(imgHeight + spaceForLabel + 15);
+          
+          // Borde alrededor de la imagen - ancho completo
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(margin - 1, yPosition - 1, imgWidth + 2, imgHeight + 2, 2, 2, 'S');
+          
+          console.log('[PDF] Adding image (full width):', imgWidth, 'x', imgHeight);
+          // Imagen ocupando todo el ancho disponible
+          doc.addImage(imgDataUrl, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+          yPosition += imgHeight + 6;
+        }
+        
+        console.log('[PDF] Image added successfully');
+        
+        // Si hay label, mostrarlo debajo
+        if (label) {
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'italic');
+          doc.text(label, margin, yPosition);
+          yPosition += 6;
+        }
+      } catch (error) {
+        console.error('Error rendering image in PDF:', error);
+        // Fallback a link con mejor formato
+        addPageIfNeeded(10);
+        doc.setFillColor(245, 245, 245);
+        doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'S');
+        
+        const label = fileNameFromUrl(url);
+        doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.textWithLink(label, margin + 4, yPosition + 5.5, { url });
+        yPosition += 12;
+      }
+    };
 
     // Header con logo y título
     // Fondo completo del header
@@ -517,159 +669,123 @@ export class PdfService {
     yPosition += 14; // Espacio aumentado
 
     // Información del Cliente y Proyecto
-    const infoBoxHeight = 35;
-    const boxWidth = (contentWidth - 5) / 2;
+    const infoBoxHeight = 40;
+    const boxWidth = (contentWidth - 8) / 2;
 
-    // Box Cliente - Diseño limpio sin fondo gris
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.2);
-    doc.roundedRect(margin, yPosition, boxWidth, infoBoxHeight, 2, 2, 'S');
-    
-    // Título de sección con fondo verde sutil
-    doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-    // Header del box
-    doc.path([
-      { op: 'm', c: [margin, yPosition + 8] }, // Inicio abajo izq del header
-      { op: 'l', c: [margin, yPosition + 2] }, // Arriba izq (antes de curva)
-      { op: 'c', c: [margin, yPosition, margin, yPosition, margin + 2, yPosition] }, // Curva esq sup izq
-      { op: 'l', c: [margin + boxWidth - 2, yPosition] }, // Arriba der (antes de curva)
-      { op: 'c', c: [margin + boxWidth, yPosition, margin + boxWidth, yPosition, margin + boxWidth, yPosition + 2] }, // Curva esq sup der
-      { op: 'l', c: [margin + boxWidth, yPosition + 8] }, // Abajo der del header
-      { op: 'l', c: [margin, yPosition + 8] } // Cerrar
-    ], 'F');
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CUSTOMER INFORMATION', margin + 4, yPosition + 5);
+    // Box Cliente - Con bordes visibles
+    drawBorderedBox(margin, yPosition, boxWidth, infoBoxHeight, 'CUSTOMER INFORMATION', [primaryColorR, primaryColorG, primaryColorB]);
 
     if (customer) {
       doc.setTextColor(darkColorR, darkColorG, darkColorB);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       
+      let infoY = yPosition + 12;
+      
       // Name
       doc.setFont('helvetica', 'bold');
-      doc.text('Name:', margin + 4, yPosition + 14);
+      doc.text('Name:', margin + 5, infoY);
       doc.setFont('helvetica', 'normal');
-      doc.text(customer.name, margin + 20, yPosition + 14);
+      doc.text(customer.name, margin + 22, infoY);
+      infoY += 7;
       
       // Email
       if (customer.email) {
         doc.setFont('helvetica', 'bold');
-        doc.text('Email:', margin + 4, yPosition + 20);
+        doc.text('Email:', margin + 5, infoY);
         doc.setFont('helvetica', 'normal');
-        doc.text(customer.email, margin + 20, yPosition + 20);
+        doc.text(customer.email, margin + 22, infoY);
+        infoY += 7;
       }
       
       // Phone
       if (customer.phone) {
         doc.setFont('helvetica', 'bold');
-        doc.text('Phone:', margin + 4, yPosition + 26);
+        doc.text('Phone:', margin + 5, infoY);
         doc.setFont('helvetica', 'normal');
-        doc.text(customer.phone, margin + 20, yPosition + 26);
+        doc.text(customer.phone, margin + 22, infoY);
       }
     } else {
       doc.setTextColor(darkColorR, darkColorG, darkColorB);
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(9);
-      doc.text('No customer information', margin + 4, yPosition + 14);
+      doc.text('No customer information', margin + 5, yPosition + 12);
     }
 
-    // Box Proyecto - Diseño limpio
-    doc.setDrawColor(200, 200, 200);
-    doc.roundedRect(margin + boxWidth + 5, yPosition, boxWidth, infoBoxHeight, 2, 2, 'S');
-    
-    // Header del box proyecto
-    doc.setFillColor(darkColorR, darkColorG, darkColorB);
-    const projX = margin + boxWidth + 5;
-    doc.path([
-      { op: 'm', c: [projX, yPosition + 8] },
-      { op: 'l', c: [projX, yPosition + 2] },
-      { op: 'c', c: [projX, yPosition, projX, yPosition, projX + 2, yPosition] },
-      { op: 'l', c: [projX + boxWidth - 2, yPosition] },
-      { op: 'c', c: [projX + boxWidth, yPosition, projX + boxWidth, yPosition, projX + boxWidth, yPosition + 2] },
-      { op: 'l', c: [projX + boxWidth, yPosition + 8] },
-      { op: 'l', c: [projX, yPosition + 8] }
-    ], 'F');
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PROJECT DETAILS', projX + 4, yPosition + 5);
+    // Box Proyecto - Con bordes visibles
+    const projX = margin + boxWidth + 8;
+    drawBorderedBox(projX, yPosition, boxWidth, infoBoxHeight, 'PROJECT DETAILS', [darkColorR, darkColorG, darkColorB]);
 
     doc.setTextColor(darkColorR, darkColorG, darkColorB);
     doc.setFontSize(9);
     
+    let projY = yPosition + 12;
+    
     // Experience
     doc.setFont('helvetica', 'bold');
-    doc.text('Experience:', projX + 4, yPosition + 14);
+    doc.text('Experience:', projX + 5, projY);
     doc.setFont('helvetica', 'normal');
-    doc.text(quote.experience, projX + 25, yPosition + 14);
+    doc.text(quote.experience, projX + 28, projY);
+    projY += 7;
     
     // Status
     doc.setFont('helvetica', 'bold');
-    doc.text('Status:', projX + 4, yPosition + 20);
+    doc.text('Status:', projX + 5, projY);
     doc.setFont('helvetica', 'normal');
-    doc.text(quote.status.toUpperCase(), projX + 25, yPosition + 20);
+    doc.text(quote.status.toUpperCase(), projX + 28, projY);
+    projY += 7;
     
     // Date
     doc.setFont('helvetica', 'bold');
-    doc.text('Date:', projX + 4, yPosition + 26);
+    doc.text('Date:', projX + 5, projY);
     doc.setFont('helvetica', 'normal');
-    doc.text(this.formatDate(quote.createdAt), projX + 25, yPosition + 26);
+    doc.text(this.formatDate(quote.createdAt), projX + 28, projY);
 
-    yPosition += infoBoxHeight + 10;
+    yPosition += infoBoxHeight + 12;
 
-    // Total Price destacado
-    // Fondo con gradiente simulado (verde oscuro)
+    // Total Price destacado con borde
     doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-    doc.rect(margin, yPosition, contentWidth, 16, 'F'); // Rectángulo completo
+    doc.roundedRect(margin, yPosition, contentWidth, 18, 3, 3, 'F');
+    
+    // Borde más visible
+    doc.setDrawColor(primaryColorR - 30, primaryColorG - 30, primaryColorB - 30);
+    doc.setLineWidth(0.8);
+    doc.roundedRect(margin, yPosition, contentWidth, 18, 3, 3, 'S');
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.text('TOTAL ESTIMATE', margin + 6, yPosition + 7);
+    doc.text('TOTAL ESTIMATE', margin + 8, yPosition + 8);
     
-    doc.setFontSize(22);
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.text(
       `$${(quote.totalPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      margin + 6,
-      yPosition + 14 // Alineado abajo
+      margin + 8,
+      yPosition + 16
     );
 
-    yPosition += 22; // Espacio aumentado
+    yPosition += 26;
 
-    // Notas si existen
+    // Notas si existen - Con borde
     if (quote.notes) {
-      const notesTitle = 'NOTES';
-      const notesTitleWidth = doc.getTextWidth(notesTitle);
+      addPageIfNeeded(30);
       
-      // Línea superior decorativa
-      doc.setDrawColor(primaryColorR, primaryColorG, primaryColorB);
-      doc.setLineWidth(0.5);
-      doc.line(margin, yPosition + 2, margin + contentWidth, yPosition + 2);
-      
-      doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(notesTitle, margin, yPosition);
-      
-      yPosition += 6;
+      const notesHeight = 25;
+      drawBorderedBox(margin, yPosition, contentWidth, notesHeight, 'NOTES', [primaryColorR, primaryColorG, primaryColorB]);
       
       doc.setTextColor(darkColorR, darkColorG, darkColorB);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       
-      const notesLines = doc.splitTextToSize(quote.notes, contentWidth);
-      doc.text(notesLines, margin, yPosition);
+      const notesLines = doc.splitTextToSize(quote.notes, contentWidth - 10);
+      doc.text(notesLines, margin + 5, yPosition + 14);
       
-      // Altura dinámica basada en líneas
-      const notesHeight = (notesLines.length * 4) + 8;
-      yPosition += notesHeight;
+      const actualHeight = Math.max(notesHeight, (notesLines.length * 4) + 18);
+      yPosition += actualHeight + 8;
     }
 
-    // Información de Kitchen
+    // === SECCIÓN 1: Kitchen Information (campos dinámicos) ===
     if (quote.kitchenInformation) {
       for (const categoryGroup of groupedInputs) {
         // Verificar si la categoría tiene datos
@@ -734,7 +850,7 @@ export class PdfService {
             yPosition += 5;
           }
 
-          // Items de la subcategoría - Diseño limpio y minimalista
+          // Items de la subcategoría - Con bordes y mejor espaciado
           
           for (const input of subcategoryGroup.inputs) {
             const value = quote.kitchenInformation?.[input.name];
@@ -742,26 +858,25 @@ export class PdfService {
               continue;
             }
 
-            // Verificar si necesitamos nueva página
-            if (yPosition > pageHeight - 15) {
-              doc.addPage();
-              yPosition = margin;
-            }
+            addPageIfNeeded(12);
 
-            // Línea separadora muy sutil
-            doc.setDrawColor(240, 240, 240);
-            doc.setLineWidth(0.1);
-            doc.line(margin, yPosition + 7, margin + contentWidth, yPosition + 7);
+            // Fondo sutil para cada fila
+            doc.setFillColor(250, 250, 250);
+            doc.roundedRect(margin, yPosition, contentWidth, 10, 1, 1, 'F');
+            
+            // Borde de la fila
+            doc.setDrawColor(220, 220, 220);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(margin, yPosition, contentWidth, 10, 1, 1, 'S');
 
             // Label
-            doc.setTextColor(100, 100, 100); // Gris oscuro para label
+            doc.setTextColor(100, 100, 100);
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             
-            // Truncar label si es muy largo
             const labelWidth = contentWidth * 0.65;
             const labelLines = doc.splitTextToSize(input.label, labelWidth);
-            doc.text(labelLines, margin + 2, yPosition + 5);
+            doc.text(labelLines, margin + 4, yPosition + 6.5);
 
             // Valor
             doc.setFont('helvetica', 'bold');
@@ -771,6 +886,7 @@ export class PdfService {
               doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
             } else if (value === false) {
               displayValue = 'No';
+              doc.setTextColor(150, 150, 150);
             } else {
               displayValue = String(value);
               if (input.unit) {
@@ -779,13 +895,11 @@ export class PdfService {
               doc.setTextColor(darkColorR, darkColorG, darkColorB);
             }
             
-            // Alinear el valor a la derecha
             const valueWidth = doc.getTextWidth(displayValue);
-            doc.text(displayValue, margin + contentWidth - valueWidth - 2, yPosition + 5);
+            doc.text(displayValue, margin + contentWidth - valueWidth - 4, yPosition + 6.5);
 
-            // Ajustar altura si el label ocupó varias líneas
-            const rowHeight = Math.max(8, labelLines.length * 4 + 4);
-            yPosition += rowHeight;
+            const rowHeight = Math.max(10, labelLines.length * 4 + 6);
+            yPosition += rowHeight + 2; // Espacio entre filas
           }
         }
 
@@ -793,120 +907,271 @@ export class PdfService {
       }
     }
 
-    // Materials Section
+    // === SECCIÓN 2: Countertops Files ===
+    // === SECCIÓN 3: Backsplash Files ===
+    // === SECCIÓN 4: Audio Notes ===
+    // === SECCIÓN 5: Sketches ===
+    // === SECCIÓN 6: Additional Comments & Media ===
+    // === SECCIÓN 7: Materials ===
+    
+    // Preparar datos de media (orden del formulario)
+    const kitchenInfo = quote.kitchenInformation || {};
+    
+    // Countertops Files
+    let countertopsFiles: string[] = [];
+    if (kitchenInfo['countertopsFiles'] && Array.isArray(kitchenInfo['countertopsFiles']) && kitchenInfo['countertopsFiles'].length > 0) {
+      countertopsFiles = kitchenInfo['countertopsFiles'] as string[];
+    }
+    
+    // Backsplash Files
+    let backsplashFiles: string[] = [];
+    if (kitchenInfo['backsplashFiles'] && Array.isArray(kitchenInfo['backsplashFiles']) && kitchenInfo['backsplashFiles'].length > 0) {
+      backsplashFiles = kitchenInfo['backsplashFiles'] as string[];
+    }
+    
+    // Audio Notes (ahora es array)
+    let audioNotesArray: { url: string; transcription?: string; summary?: string }[] = [];
+    const audioNotesData = kitchenInfo['audioNotes'] || quote.audioNotes;
+    if (audioNotesData) {
+      if (Array.isArray(audioNotesData)) {
+        audioNotesArray = audioNotesData;
+      } else if (typeof audioNotesData === 'object' && 'url' in audioNotesData) {
+        // Compatibilidad: convertir objeto único a array
+        audioNotesArray = [audioNotesData as { url: string; transcription?: string; summary?: string }];
+      }
+    }
+    
+    // Sketches: pueden estar en quote.sketchFiles o en kitchenInformation
+    let sketches: string[] = [];
+    if (quote.sketchFiles && Array.isArray(quote.sketchFiles) && quote.sketchFiles.length > 0) {
+      sketches = quote.sketchFiles;
+    } else if (kitchenInfo['sketchFiles'] && Array.isArray(kitchenInfo['sketchFiles']) && kitchenInfo['sketchFiles'].length > 0) {
+      sketches = kitchenInfo['sketchFiles'] as string[];
+    } else if (kitchenInfo['sketchFile'] && typeof kitchenInfo['sketchFile'] === 'string') {
+      sketches = [kitchenInfo['sketchFile'] as string];
+    }
+    
+    // Additional Comments Media
+    const additionalComments = (kitchenInfo['additionalComments'] || quote.additionalComments || {}) as Record<string, unknown>;
+    let additionalMedia: string[] = [];
+    const mediaFiles = additionalComments['mediaFiles'] || (additionalComments as any).mediaFiles;
+    if (mediaFiles && Array.isArray(mediaFiles)) {
+      additionalMedia = mediaFiles as string[];
+    }
+    const additionalCommentText = additionalComments['comment'] || (additionalComments as any).comment;
+
+    console.log('[PDF] Media data check:');
+    console.log('[PDF] - countertopsFiles:', countertopsFiles);
+    console.log('[PDF] - backsplashFiles:', backsplashFiles);
+    console.log('[PDF] - audioNotesArray:', audioNotesArray);
+    console.log('[PDF] - sketches:', sketches);
+    console.log('[PDF] - additionalMedia:', additionalMedia);
+    console.log('[PDF] - additionalCommentText:', additionalCommentText);
+
+    // === SECCIÓN 2: Countertops Files ===
+    if (countertopsFiles && countertopsFiles.length > 0) {
+      drawSectionTitle('Countertops Files');
+      
+      console.log('[PDF] Rendering countertops files, count:', countertopsFiles.length);
+      
+      for (let i = 0; i < countertopsFiles.length; i++) {
+
+        const file = countertopsFiles[i];
+        if (!file) continue;
+        
+        console.log(`[PDF] Processing countertop file ${i + 1}:`, file);
+        const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file);
+        const isVideo = /\.(mp4|mov|mkv|avi|webm)$/i.test(file);
+        
+        if (isImage) {
+          try {
+            const label = countertopsFiles.length > 1 ? `Countertop ${i + 1} of ${countertopsFiles.length}` : 'Countertop';
+            await renderFullWidthImage(file, label);
+            yPosition += 4;
+          } catch (error) {
+            console.error('[PDF] Error rendering countertop image:', error);
+          }
+        } else {
+          addPageIfNeeded(16);
+          const label = fileNameFromUrl(file) || 'Countertop File';
+          const mediaType = isVideo ? 'Video' : 'File';
+          
+          // Box con borde para el link
+          doc.setFillColor(245, 245, 245);
+          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
+          
+          // Texto y link
+          doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          
+          const typeLabel = `${mediaType}: `;
+          const typeLabelWidth = doc.getTextWidth(typeLabel);
+          doc.text(typeLabel, margin + 4, yPosition + 7.5);
+          
+          // Link clicable
+          doc.setTextColor(0, 0, 255);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
+            url: file,
+            color: [0, 0, 255]
+          });
+          
+          // Mostrar también la URL completa debajo
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'italic');
+          const urlText = file.length > 80 ? file.substring(0, 80) + '...' : file;
+          doc.text(urlText, margin + 4, yPosition + 10.5);
+          
+          yPosition += 16;
+        }
+      }
+      
+      yPosition += 4;
+    }
+
+    // === SECCIÓN 3: Backsplash Files ===
+    if (backsplashFiles && backsplashFiles.length > 0) {
+      console.log('[PDF] Rendering backsplash files, count:', backsplashFiles.length);
+      drawSectionTitle('Backsplash Files');
+
+      for (let i = 0; i < backsplashFiles.length; i++) {
+        const file = backsplashFiles[i];
+        if (!file) continue;
+        
+        console.log(`[PDF] Processing backsplash file ${i + 1}:`, file);
+        const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file);
+        const isVideo = /\.(mp4|mov|mkv|avi|webm)$/i.test(file);
+        
+        if (isImage) {
+          try {
+            const label = backsplashFiles.length > 1 ? `Backsplash ${i + 1} of ${backsplashFiles.length}` : 'Backsplash';
+            await renderFullWidthImage(file, label);
+            yPosition += 4;
+          } catch (error) {
+            console.error('[PDF] Error rendering backsplash image:', error);
+          }
+        } else {
+          addPageIfNeeded(16);
+          const label = fileNameFromUrl(file) || 'Backsplash File';
+          const mediaType = isVideo ? 'Video' : 'File';
+          
+          // Box con borde para el link
+          doc.setFillColor(245, 245, 245);
+          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
+          
+          // Texto y link
+          doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          
+          const typeLabel = `${mediaType}: `;
+          const typeLabelWidth = doc.getTextWidth(typeLabel);
+          doc.text(typeLabel, margin + 4, yPosition + 7.5);
+          
+          // Link clicable
+          doc.setTextColor(0, 0, 255);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
+            url: file,
+            color: [0, 0, 255]
+          });
+          
+          // Mostrar también la URL completa debajo
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'italic');
+          const urlText = file.length > 80 ? file.substring(0, 80) + '...' : file;
+          doc.text(urlText, margin + 4, yPosition + 10.5);
+          
+          yPosition += 16;
+        }
+      }
+      
+      yPosition += 4;
+    }
+
+    // === SECCIÓN 7: Materials ===
     if (quote.materials) {
       const materials = quote.materials as Materials;
       const hasMaterialsFile = !!materials.file;
       const hasMaterialsItems = !!(materials.items && materials.items.length > 0);
 
       if (hasMaterialsFile || hasMaterialsItems) {
-        // Verificar si necesitamos nueva página
-        if (yPosition > pageHeight - 60) {
-          doc.addPage();
-          yPosition = margin;
-        }
-
-        // Título de sección Materials
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(margin, yPosition + 8, margin + contentWidth, yPosition + 8);
-        
-        doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-        doc.path([
-          { op: 'm', c: [margin, yPosition + 8] },
-          { op: 'l', c: [margin, yPosition + 2] },
-          { op: 'c', c: [margin, yPosition, margin, yPosition, margin + 2, yPosition] },
-          { op: 'l', c: [margin + contentWidth/2, yPosition] },
-          { op: 'l', c: [margin + contentWidth/2 + 5, yPosition + 8] },
-          { op: 'l', c: [margin, yPosition + 8] }
-        ], 'F');
-        
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('MATERIALS LIST', margin + 6, yPosition + 6);
-        yPosition += 14;
+        drawSectionTitle('Materials List');
 
         // Materials File
         if (hasMaterialsFile && materials.file) {
-          if (yPosition > pageHeight - 30) {
-            doc.addPage();
-            yPosition = margin;
-          }
-
           doc.setTextColor(darkColorR, darkColorG, darkColorB);
           doc.setFontSize(10);
           doc.setFont('helvetica', 'bold');
-          doc.text('Materials File:', margin + 2, yPosition);
+          doc.text('Materials File', margin + 2, yPosition);
           yPosition += 6;
 
-          // Intentar agregar imagen si es una URL de imagen
           const fileUrl = materials.file;
-          const isImage = /\.(jpg|jpeg|png|webp)$/i.test(fileUrl);
+          const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(fileUrl);
 
           if (isImage) {
-            try {
-              const imgData = await this.getImageFromUrl(fileUrl);
-              const imgProps = doc.getImageProperties(imgData);
-              const imgRatio = imgProps.width / imgProps.height;
-              
-              // Calcular dimensiones ajustadas
-              const maxWidth = contentWidth - 10;
-              const maxHeight = 100; // Altura máxima permitida
-              let imgWidth = maxWidth;
-              let imgHeight = imgWidth / imgRatio;
-
-              if (imgHeight > maxHeight) {
-                imgHeight = maxHeight;
-                imgWidth = imgHeight * imgRatio;
-              }
-
-              // Verificar espacio
-              if (yPosition + imgHeight > pageHeight - margin) {
-                doc.addPage();
-                yPosition = margin;
-              }
-
-              doc.addImage(imgData, 'JPEG', margin + 5, yPosition, imgWidth, imgHeight);
-              yPosition += imgHeight + 5;
-            } catch (error) {
-              console.error('Error adding image to PDF:', error);
-              // Fallback a mostrar solo el link si falla la imagen
-              doc.setFont('helvetica', 'normal');
-              doc.setFontSize(9);
-              doc.setTextColor(100, 100, 100);
-              const fileName = fileUrl.split('/').pop() || fileUrl;
-              const fileUrlLines = doc.splitTextToSize(fileName, contentWidth - 4);
-              doc.text(fileUrlLines, margin + 4, yPosition);
-              yPosition += (fileUrlLines.length * 4) + 8;
-            }
+            await renderFullWidthImage(fileUrl);
           } else {
-            // Si no es imagen, mostrar el link
+            const label = fileNameFromUrl(fileUrl);
+            addPageIfNeeded(16);
+            const mediaType = 'File';
+            
+            // Box con borde para el link
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
+            
+            // Texto y link
+            doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            
+            const typeLabel = `${mediaType}: `;
+            const typeLabelWidth = doc.getTextWidth(typeLabel);
+            doc.text(typeLabel, margin + 4, yPosition + 7.5);
+            
+            // Link clicable
+            doc.setTextColor(0, 0, 255);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
+            doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
+              url: fileUrl,
+              color: [0, 0, 255]
+            });
+            
+            // Mostrar también la URL completa debajo
             doc.setTextColor(100, 100, 100);
-            const fileName = fileUrl.split('/').pop() || fileUrl;
-            const fileUrlLines = doc.splitTextToSize(fileName, contentWidth - 4);
-            doc.text(fileUrlLines, margin + 4, yPosition);
-            yPosition += (fileUrlLines.length * 4) + 8;
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'italic');
+            const urlText = fileUrl.length > 80 ? fileUrl.substring(0, 80) + '...' : fileUrl;
+            doc.text(urlText, margin + 4, yPosition + 10.5);
+            
+            yPosition += 16;
           }
         }
 
         // Materials Items
         if (hasMaterialsItems && materials.items) {
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = margin;
-          }
-
+          addPageIfNeeded(18);
           doc.setTextColor(darkColorR, darkColorG, darkColorB);
           doc.setFontSize(10);
           doc.setFont('helvetica', 'bold');
-          doc.text('Materials Items:', margin + 2, yPosition);
+          doc.text('Materials Items', margin + 2, yPosition);
           yPosition += 8;
 
-          // Tabla de items
-          const tableStartY = yPosition;
           const rowHeight = 8;
           const col1Width = contentWidth * 0.25; // Quantity
           const col2Width = contentWidth * 0.75; // Description
@@ -922,25 +1187,19 @@ export class PdfService {
           doc.text('Description', margin + col1Width + 4, yPosition);
           yPosition += rowHeight + 2;
 
-          // Items
           for (const item of materials.items) {
-            if (yPosition > pageHeight - 20) {
-              doc.addPage();
-              yPosition = margin + 10;
-            }
+            addPageIfNeeded(15);
 
             // Línea separadora
             doc.setDrawColor(240, 240, 240);
             doc.setLineWidth(0.1);
             doc.line(margin + 2, yPosition - 2, margin + contentWidth - 2, yPosition - 2);
 
-            // Quantity
             doc.setTextColor(darkColorR, darkColorG, darkColorB);
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
             doc.text(String(item.quantity), margin + 4, yPosition);
 
-            // Description
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(100, 100, 100);
             const descLines = doc.splitTextToSize(item.description, col2Width - 8);
@@ -950,8 +1209,214 @@ export class PdfService {
             yPosition += itemHeight;
           }
 
-          yPosition += 5;
+          yPosition += 6;
         }
+      }
+    }
+
+    // === SECCIÓN 4: Audio Notes ===
+    if (audioNotesArray && audioNotesArray.length > 0) {
+      console.log('[PDF] Rendering audio notes, count:', audioNotesArray.length);
+      drawSectionTitle('Audio Notes');
+
+      for (let i = 0; i < audioNotesArray.length; i++) {
+        const audioNote = audioNotesArray[i];
+        if (!audioNote || !audioNote.url) continue;
+        
+        console.log(`[PDF] Rendering audio note ${i + 1}:`, audioNote.url);
+        addPageIfNeeded(20);
+        
+        // Título del audio individual
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        const audioTitle = audioNotesArray.length > 1 ? `Audio Note ${i + 1} of ${audioNotesArray.length}` : 'Audio Note';
+        doc.text(audioTitle, margin + 2, yPosition);
+        yPosition += 6;
+
+        const label = fileNameFromUrl(audioNote.url) || 'Audio File';
+        
+        // Box con borde para el audio
+        doc.setFillColor(245, 245, 245);
+        doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
+        
+        // Texto y link en la misma línea
+        doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        
+        const audioLabel = 'Audio: ';
+        const audioLabelWidth = doc.getTextWidth(audioLabel);
+        doc.text(audioLabel, margin + 4, yPosition + 7.5);
+        
+        // Link clicable
+        doc.setTextColor(0, 0, 255);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.textWithLink(label, margin + 4 + audioLabelWidth, yPosition + 7.5, { 
+          url: audioNote.url,
+          color: [0, 0, 255]
+        });
+        
+        // Mostrar también la URL completa debajo
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'italic');
+        const urlText = audioNote.url.length > 80 ? audioNote.url.substring(0, 80) + '...' : audioNote.url;
+        doc.text(urlText, margin + 4, yPosition + 10.5);
+        
+        yPosition += 16;
+        
+        // Mostrar summary y transcription si existen
+        if (audioNote.summary || audioNote.transcription) {
+          addPageIfNeeded(25);
+          
+          if (audioNote.summary) {
+            doc.setTextColor(darkColorR, darkColorG, darkColorB);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Summary:', margin + 4, yPosition);
+            yPosition += 5;
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            const summaryLines = doc.splitTextToSize(audioNote.summary, contentWidth - 8);
+            doc.text(summaryLines, margin + 4, yPosition);
+            yPosition += (summaryLines.length * 4) + 4;
+          }
+          
+          if (audioNote.transcription) {
+            doc.setTextColor(darkColorR, darkColorG, darkColorB);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Transcription:', margin + 4, yPosition);
+            yPosition += 5;
+            
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(7);
+            doc.setTextColor(120, 120, 120);
+            const transcriptionLines = doc.splitTextToSize(audioNote.transcription, contentWidth - 8);
+            doc.text(transcriptionLines, margin + 4, yPosition);
+            yPosition += (transcriptionLines.length * 3.5) + 4;
+          }
+        }
+        
+        yPosition += 4; // Espacio entre audios
+      }
+    }
+
+    // === SECCIÓN 5: Sketches ===
+    if (sketches && sketches.length > 0) {
+      console.log('[PDF] Rendering sketches, count:', sketches.length);
+      drawSectionTitle('Sketches & Drawings');
+      
+      for (let i = 0; i < sketches.length; i++) {
+        const sketch = sketches[i];
+        if (!sketch) continue;
+        
+        console.log(`[PDF] Rendering sketch ${i + 1}:`, sketch);
+        const label = sketches.length > 1 ? `Sketch ${i + 1} of ${sketches.length}` : 'Sketch';
+        try {
+          await renderFullWidthImage(sketch, label);
+          yPosition += 4; // Espacio entre sketches
+        } catch (error) {
+          console.error(`[PDF] Error rendering sketch ${i + 1}:`, error);
+          // Continuar con el siguiente
+        }
+      }
+    }
+
+    // === SECCIÓN 6: Additional Comments & Media ===
+    if (additionalCommentText || (additionalMedia && additionalMedia.length > 0)) {
+      drawSectionTitle('Additional Comments & Media');
+      
+      // Additional Comment Text
+      if (additionalCommentText) {
+        addPageIfNeeded(20);
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Comments', margin + 2, yPosition);
+        yPosition += 6;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        const commentLines = doc.splitTextToSize(String(additionalCommentText), contentWidth - 4);
+        doc.text(commentLines, margin + 2, yPosition);
+        yPosition += (commentLines.length * 4) + 6;
+      }
+      
+      // Additional Media Files
+      if (additionalMedia && additionalMedia.length > 0) {
+        console.log('[PDF] Rendering additional media, count:', additionalMedia.length);
+        addPageIfNeeded(15);
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Photos & Videos', margin + 2, yPosition);
+        yPosition += 8;
+
+        for (const media of additionalMedia) {
+          if (!media) continue;
+          
+          console.log('[PDF] Processing media:', media);
+          const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(media);
+          const isVideo = /\.(mp4|mov|mkv|avi|webm)$/i.test(media);
+          console.log('[PDF] - isImage:', isImage, 'isVideo:', isVideo);
+          
+          if (isImage) {
+            try {
+              await renderFullWidthImage(media);
+            } catch (error) {
+              console.error('[PDF] Error rendering image:', error);
+            }
+          } else {
+            addPageIfNeeded(16);
+            const label = fileNameFromUrl(media) || 'Media File';
+            const mediaType = isVideo ? 'Video' : 'File';
+            
+            // Box con borde para el link
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
+            
+            // Texto y link
+            doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            
+            const typeLabel = `${mediaType}: `;
+            const typeLabelWidth = doc.getTextWidth(typeLabel);
+            doc.text(typeLabel, margin + 4, yPosition + 7.5);
+            
+            // Link clicable
+            doc.setTextColor(0, 0, 255);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
+              url: media,
+              color: [0, 0, 255]
+            });
+            
+            // Mostrar también la URL completa debajo
+            doc.setTextColor(100, 100, 100);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'italic');
+            const urlText = media.length > 80 ? media.substring(0, 80) + '...' : media;
+            doc.text(urlText, margin + 4, yPosition + 10.5);
+            
+            yPosition += 16;
+          }
+        }
+
+        yPosition += 4;
       }
     }
 
@@ -984,58 +1449,75 @@ export class PdfService {
     });
   }
 
-  private getImageFromUrl(url: string): Promise<Uint8Array> {
+  private getImageFromUrl(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
+      console.log('[PDF] Loading image from URL:', url);
+      
+      // Intentar primero con Image object (más compatible)
       const img = new Image();
-      img.crossOrigin = 'Anonymous'; // Intentar evitar CORS
+      img.crossOrigin = 'anonymous';
       
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Could not get canvas context'));
-          return;
+        try {
+          console.log('[PDF] Image loaded successfully, dimensions:', img.width, 'x', img.height);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Could not get canvas context');
+          }
+          
+          ctx.drawImage(img, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+          console.log('[PDF] Image converted to data URL, length:', dataUrl.length);
+          resolve(dataUrl);
+        } catch (error) {
+          console.error('[PDF] Error converting image to canvas:', error);
+          reject(error);
         }
-        
-        ctx.drawImage(img, 0, 0);
-        
-        // Convertir a JPEG base64 y luego a Uint8Array
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        const base64 = dataUrl.split(',')[1];
-        const binaryString = window.atob(base64);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        
-        resolve(bytes);
       };
       
       img.onerror = (error) => {
-        console.warn('Could not load image via Image object:', error);
-        // Fallback a fetch si Image falla (aunque fetch probablemente falle también por CORS si Image falló)
-        this.getImageFromUrlViaFetch(url).then(resolve).catch(reject);
+        console.warn('[PDF] Image object failed, trying fetch:', error);
+        // Fallback a fetch
+        fetch(url, {
+          mode: 'cors',
+          credentials: 'omit',
+          cache: 'no-cache'
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          return new Promise<string>((resolveBlob, rejectBlob) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const result = reader.result as string;
+              console.log('[PDF] Image loaded via fetch, data URL length:', result.length);
+              resolveBlob(result);
+            };
+            reader.onerror = () => rejectBlob(new Error('FileReader error'));
+            reader.readAsDataURL(blob);
+          });
+        })
+        .then(dataUrl => {
+          resolve(dataUrl);
+        })
+        .catch(fetchError => {
+          console.error('[PDF] Both Image and fetch failed:', fetchError);
+          reject(new Error(`Could not load image: ${fetchError.message}`));
+        });
       };
       
-      // Agregar timestamp para evitar caché
-      img.src = url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+      // Agregar timestamp para evitar caché y forzar recarga
+      const separator = url.includes('?') ? '&' : '?';
+      img.src = url + separator + '_t=' + new Date().getTime();
     });
-  }
-
-  private async getImageFromUrlViaFetch(url: string): Promise<Uint8Array> {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch image');
-      const blob = await response.blob();
-      return new Uint8Array(await blob.arrayBuffer());
-    } catch (error) {
-      throw error;
-    }
   }
 }
 

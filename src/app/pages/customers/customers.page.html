@@ -1,36 +1,34 @@
-<app-page-layout [breadcrumbs]="breadcrumbs()">
-  @if (!canManageCustomers()) {
-  <div
-    class="rounded-3xl border border-clay bg-white/80 p-6 text-center text-charcoal shadow-brand"
-  >
-    <p class="font-display text-2xl">Access restricted</p>
-    <p class="text-slate">Only estimator and admin accounts can manage customers.</p>
-  </div>
-  } @else {
-  <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-    <div class="space-y-6">
-      <app-customer-search
-        [query]="searchQuery()"
-        [suggestions]="suggestions()"
-        (queryChange)="handleSearchChange($event)"
-        (suggestionSelected)="handleSuggestionSelected($event)"
-      />
+@if (!canManageCustomers()) {
+<div
+  class="rounded-3xl border border-clay bg-white/80 p-6 text-center text-charcoal shadow-brand"
+>
+  <p class="font-display text-2xl">Access restricted</p>
+  <p class="text-slate">Only estimator and admin accounts can manage customers.</p>
+</div>
+} @else {
+<div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+  <div class="space-y-6">
+    <app-customer-search
+      [query]="searchQuery()"
+      [suggestions]="suggestions()"
+      (queryChange)="handleSearchChange($event)"
+      (suggestionSelected)="handleSuggestionSelected($event)"
+    />
 
-      <app-customer-list
-        [customers]="filteredCustomers()"
-        [activeCustomerId]="selectedCustomer()?._id ?? null"
-        [isBusy]="isDeleting()"
-        (editCustomer)="editCustomer($event)"
-        (deleteCustomer)="deleteCustomer($event)"
-      />
-    </div>
-
-    <app-customer-form
-      [customer]="selectedCustomer()"
-      [isSubmitting]="isSubmitting()"
-      (submitCustomer)="handleSubmit($event)"
-      (cancelEdit)="cancelEdit()"
+    <app-customer-list
+      [customers]="filteredCustomers()"
+      [activeCustomerId]="selectedCustomer()?._id ?? null"
+      [isBusy]="isDeleting()"
+      (editCustomer)="editCustomer($event)"
+      (deleteCustomer)="deleteCustomer($event)"
     />
   </div>
-  }
-</app-page-layout>
+
+  <app-customer-form
+    [customer]="selectedCustomer()"
+    [isSubmitting]="isSubmitting()"
+    (submitCustomer)="handleSubmit($event)"
+    (cancelEdit)="cancelEdit()"
+  />
+</div>
+}

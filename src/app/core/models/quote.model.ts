@@ -38,6 +38,22 @@ export interface Quote {
   userId: string;
   status: QuoteStatus;
   notes?: string;
+  // Notas de audio (múltiples)
+  audioNotes?: {
+    url: string;
+    transcription?: string;
+    summary?: string;
+  }[] | null;
+  // Archivos de dibujo (múltiples)
+  sketchFiles?: string[] | null;
+  // Sección de comentarios adicionales con fotos/videos
+  additionalComments?: {
+    comment?: string | null;
+    mediaFiles?: string[] | null;
+  } | null;
+  // Campos de presupuesto
+  roughQuote?: number | null;
+  clientBudget?: number | null;
   createdAt?: string;
   updatedAt?: string;
 }

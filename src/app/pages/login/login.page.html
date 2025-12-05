@@ -29,7 +29,9 @@
     <div class="flex-1">
       <app-login-form
         [isSubmitting]="isSubmitting()"
+        [errorMessage]="errorMessage()"
         (submitCredentials)="handleSubmit($event)"
+        (clearError)="errorMessage.set(null)"
       />
     </div>
   </div>

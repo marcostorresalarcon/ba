@@ -23,6 +23,26 @@ export interface AdditionalWorkQuoteFormValue {
   // Materiales (objeto con file e items)
   materials?: Materials | null;
   
+  // Notas de audio (múltiples)
+  audioNotes?: {
+    url: string;
+    transcription?: string;
+    summary?: string;
+  }[] | null;
+
+  // Archivos de dibujo (múltiples)
+  sketchFiles?: string[] | null;
+
+  // Sección de comentarios adicionales con fotos/videos
+  additionalComments?: {
+    comment?: string | null;
+    mediaFiles?: string[] | null;
+  } | null;
+
+  // Campos de presupuesto
+  roughQuote?: number | null;
+  clientBudget?: number | null;
+  
   // Campos dinámicos generados desde inputs_additional_work.json
   // Estos se añaden dinámicamente según inputs_additional_work.json
   [key: string]: unknown;
@@ -44,6 +64,18 @@ type AdditionalWorkQuoteFormControls = {
   address: FormControl<string | null>;
   notes: FormControl<string | null>;
   materials: FormControl<Materials | null>;
+  audioNotes: FormControl<{
+    url: string;
+    transcription?: string;
+    summary?: string;
+  }[] | null>;
+  sketchFiles: FormControl<string[] | null>;
+  additionalComments: FormGroup<{
+    comment: FormControl<string | null>;
+    mediaFiles: FormControl<string[] | null>;
+  }>;
+  roughQuote: FormControl<number | null>;
+  clientBudget: FormControl<number | null>;
 } & Record<string, FormControl<unknown> | FormGroup<Record<string, FormControl<unknown>>>>;
 
 /**

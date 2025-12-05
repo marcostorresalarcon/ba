@@ -25,6 +25,7 @@ export class LoginPage {
   private readonly notificationService = inject(NotificationService);
 
   protected readonly isSubmitting = signal(false);
+  protected readonly errorMessage = signal<string | null>(null);
 
   async handleSubmit(payload: LoginPayload): Promise<void> {
     if (this.isSubmitting()) {
@@ -32,6 +33,7 @@ export class LoginPage {
     }
 
     this.isSubmitting.set(true);
+    this.errorMessage.set(null);
 
     try {
       const response = await firstValueFrom(this.authService.login(payload));
@@ -43,6 +45,7 @@ export class LoginPage {
       await this.router.navigateByUrl('/company');
     } catch (error) {
       const message = this.errorService.handle(error);
+      this.errorMessage.set(message);
       this.notificationService.error('Login failed', message);
     } finally {
       this.isSubmitting.set(false);

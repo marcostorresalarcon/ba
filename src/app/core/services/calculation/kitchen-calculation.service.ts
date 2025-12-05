@@ -127,8 +127,8 @@ export class KitchenCalculationService {
           ? 'no'
           : '';
 
-    // Si el valor es "no" o vacío, no calcular
-    if (!normalizedValue || normalizedValue === 'no') return 0;
+    // Si el valor es "no", "none" o vacío, no calcular
+    if (!normalizedValue || normalizedValue === 'no' || normalizedValue === 'none') return 0;
 
     // Si el valor es "custom", verificar si hay un control custom y usar su valor si es necesario
     // Para campos con custom: true pero sin fórmula, el valor custom solo se almacena, no se calcula precio

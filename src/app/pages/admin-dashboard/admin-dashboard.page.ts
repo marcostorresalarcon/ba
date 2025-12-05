@@ -12,7 +12,8 @@ import { QuoteService } from '../../core/services/quote/quote.service';
 import { InvoiceService } from '../../core/services/invoice/invoice.service';
 import { PaymentService } from '../../core/services/payment/payment.service';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
-import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
+import { LayoutService } from '../../core/services/layout/layout.service';
 import type { KpiResponse, InvoiceKpiResponse } from '../../core/models/kpi.model';
 import type { Customer } from '../../core/models/customer.model';
 import type { Project } from '../../core/models/project.model';
@@ -23,7 +24,7 @@ import { Router } from '@angular/router';
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule, PageLayoutComponent],
+  imports: [CommonModule],
   templateUrl: './admin-dashboard.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -38,6 +39,7 @@ export class AdminDashboardPage {
   private readonly errorService = inject(HttpErrorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router = inject(Router);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly kpis = signal<KpiResponse | null>(null);
   protected readonly invoiceKpis = signal<InvoiceKpiResponse | null>(null);
@@ -55,6 +57,11 @@ export class AdminDashboardPage {
   protected readonly breadcrumbs: LayoutBreadcrumb[] = [{ label: 'Admin Dashboard' }];
 
   constructor() {
+    // Actualizar breadcrumbs en el layout service
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs);
+    });
+
     effect(() => {
       const company = this.selectedCompany();
       this.loadDashboardData(company?._id);
