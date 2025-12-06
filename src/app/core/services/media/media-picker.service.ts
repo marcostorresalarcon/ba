@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource, type Photo } from '@capacitor/camera';
+import { FilePicker } from '@capawesome/capacitor-file-picker';
 
 import { LogService } from '../log/log.service';
 
@@ -13,60 +14,94 @@ import { LogService } from '../log/log.service';
 })
 export class MediaPickerService {
   private readonly isNative = Capacitor.isNativePlatform();
+  private readonly platform = Capacitor.getPlatform();
   private readonly logService = inject(LogService);
 
   /**
-   * Selecciona un medio (imagen o video) desde la cámara o galería
+   * Selecciona un medio (imagen, video o archivo) desde la cámara, galería o sistema de archivos
    * @param allowMultiple - Si es true, permite seleccionar múltiples archivos (solo en web)
+   * @param imagesOnly - Si es true, solo permite seleccionar imágenes (deprecated, usar pickMediaWeb directamente)
    * @returns Promise<File[]> - Array de archivos seleccionados
    */
-  async pickMedia(allowMultiple = false): Promise<File[]> {
+  async pickMedia(allowMultiple = false, imagesOnly = false): Promise<File[]> {
     if (!this.isNative) {
       // En web, usar input file como fallback
-      return this.pickMediaWeb(allowMultiple);
+      return this.pickMediaWeb(allowMultiple, imagesOnly);
     }
 
-    // En nativo, usar Capacitor Camera
+    // En iOS, usar FilePicker para permitir videos y archivos
+    // En Android, usar Camera para imágenes o FilePicker para videos/archivos
+    if (this.platform === 'ios') {
+      return this.pickMediaNativeIOS();
+    }
+
+    // En Android, usar Camera para imágenes simples
     return this.pickMediaNative();
   }
 
   /**
-   * Selecciona medios en plataforma nativa (iOS/Android)
-   * Nota: Camera.getPhoto solo permite un archivo a la vez
+   * Selecciona medios en iOS usando FilePicker (permite imágenes, videos y archivos)
    */
-  private async pickMediaNative(): Promise<File[]> {
+  private async pickMediaNativeIOS(): Promise<File[]> {
     try {
-      const photo = await Camera.getPhoto({
-        quality: this.isNative ? 60 : 90, // Calidad reducida para optimizar memoria en móviles
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Prompt,
-        width: 1280, // Limitar resolución nativa para evitar OOM
-        correctOrientation: true,
-        presentationStyle: 'popover' // Mejor experiencia en iPad
+      const result = await FilePicker.pickFiles({
+        types: ['image/*', 'video/*', 'application/*', 'text/*'],
+        readData: true
       });
 
-      // Convertir Photo a File
-      const file = await this.photoToFile(photo);
-      return [file];
+      if (!result.files || result.files.length === 0) {
+        return [];
+      }
+
+      const files: File[] = [];
+      for (const pickedFile of result.files) {
+        if (pickedFile.data) {
+          // Convertir base64 a Blob
+          const base64Data = pickedFile.data;
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
+          
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+            type: pickedFile.mimeType || 'application/octet-stream' 
+          });
+          files.push(file);
+        } else if (pickedFile.path) {
+          // Si no hay data pero hay path, usar fetch
+          const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+            type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+          });
+          files.push(file);
+        }
+      }
+
+      return files;
     } catch (error) {
       // Si el usuario cancela, retornar array vacío
-      if (error && typeof error === 'object' && 'message' in error && error.message === 'User cancelled photos app') {
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled' || error.message === 'User canceled')) {
         return [];
       }
 
       // Registrar error en logs
       void this.logService.logError(
-        'Error al seleccionar medio en plataforma nativa',
+        'Error al seleccionar medio en iOS',
         error,
         {
           severity: 'medium',
-          description: 'Error al seleccionar medio usando Capacitor Camera',
+          description: 'Error al seleccionar medio usando FilePicker en iOS',
           source: 'media-picker-service',
           metadata: {
             service: 'MediaPickerService',
-            method: 'pickMediaNative',
-            platform: this.isNative ? 'native' : 'web'
+            method: 'pickMediaNativeIOS',
+            platform: 'ios'
           }
         }
       );
@@ -76,20 +111,145 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona medios en web usando input file
+   * Selecciona medios en Android usando Camera (para imágenes) o FilePicker (para videos/archivos)
    */
-  private pickMediaWeb(allowMultiple: boolean): Promise<File[]> {
+  private async pickMediaNative(): Promise<File[]> {
+    try {
+      // Intentar primero con Camera para imágenes
+      const photo = await Camera.getPhoto({
+        quality: 60,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Prompt,
+        width: 1280,
+        correctOrientation: true
+      });
+
+      // Convertir Photo a File
+      const file = await this.photoToFile(photo);
+      return [file];
+    } catch (error) {
+      // Si el usuario cancela o es un error de Camera, intentar con FilePicker
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled photos app' || error.message === 'User cancelled')) {
+        // Intentar con FilePicker como fallback
+        try {
+          return await this.pickMediaNativeWithFilePicker();
+        } catch (filePickerError) {
+          return [];
+        }
+      }
+
+      // Si es otro error, intentar con FilePicker
+      try {
+        return await this.pickMediaNativeWithFilePicker();
+      } catch (filePickerError) {
+        // Registrar error en logs
+        void this.logService.logError(
+          'Error al seleccionar medio en Android',
+          error,
+          {
+            severity: 'medium',
+            description: 'Error al seleccionar medio usando Camera o FilePicker en Android',
+            source: 'media-picker-service',
+            metadata: {
+              service: 'MediaPickerService',
+              method: 'pickMediaNative',
+              platform: 'android'
+            }
+          }
+        );
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Selecciona medios usando FilePicker (para videos y archivos)
+   */
+  private async pickMediaNativeWithFilePicker(): Promise<File[]> {
+    try {
+      const result = await FilePicker.pickFiles({
+        types: ['image/*', 'video/*', 'application/*', 'text/*'],
+        readData: true
+      });
+
+      if (!result.files || result.files.length === 0) {
+        return [];
+      }
+
+      const files: File[] = [];
+      for (const pickedFile of result.files) {
+        if (pickedFile.data) {
+          const base64Data = pickedFile.data;
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
+          
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+            type: pickedFile.mimeType || 'application/octet-stream' 
+          });
+          files.push(file);
+        } else if (pickedFile.path) {
+          const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+            type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+          });
+          files.push(file);
+        }
+      }
+
+      return files;
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Selecciona medios en web usando input file
+   * @param allowMultiple - Si es true, permite seleccionar múltiples archivos
+   * @param imagesOnly - Si es true, solo permite seleccionar imágenes
+   */
+  private pickMediaWeb(allowMultiple: boolean, imagesOnly = false): Promise<File[]> {
     return new Promise((resolve, reject) => {
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = allowMultiple;
-      input.accept = 'image/*,video/mp4,video/quicktime,video/x-matroska,video/x-msvideo,video/webm,image/heic,image/heif';
+      
+      // Configurar accept para permitir imágenes, videos y archivos
+      if (imagesOnly) {
+        input.accept = 'image/*,image/heic,image/heif';
+      } else {
+        // Permitir imágenes, videos y archivos comunes
+        input.accept = 'image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*,image/heic,image/heif';
+      }
 
       input.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
         const files = target.files;
         if (files && files.length > 0) {
-          resolve(Array.from(files));
+          const fileArray = Array.from(files);
+          
+          // Validar que solo sean imágenes si imagesOnly es true
+          if (imagesOnly) {
+            const invalidFiles = fileArray.filter(file => !file.type.startsWith('image/'));
+            if (invalidFiles.length > 0) {
+              reject(new Error('Solo se permiten imágenes. Por favor, selecciona solo archivos de imagen.'));
+              return;
+            }
+          }
+          
+          resolve(fileArray);
         } else {
           resolve([]);
         }
@@ -253,16 +413,69 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona múltiples medios (solo funciona en web, en nativo selecciona uno a la vez)
+   * Selecciona múltiples medios (imágenes, videos y archivos)
    * @param maxFiles - Número máximo de archivos a seleccionar
+   * @param imagesOnly - Deprecated: ya no se usa, se permiten todos los tipos
    * @returns Promise<File[]> - Array de archivos seleccionados
    */
-  async pickMultipleMedia(maxFiles = 10): Promise<File[]> {
+  async pickMultipleMedia(maxFiles = 10, imagesOnly = false): Promise<File[]> {
     if (!this.isNative) {
-      return this.pickMediaWeb(true);
+      return this.pickMediaWeb(true, false); // Siempre permitir todos los tipos en web
     }
 
-    // En nativo, permitir seleccionar uno a la vez
+    // En iOS, usar FilePicker que permite múltiples archivos
+    if (this.platform === 'ios') {
+      try {
+        const result = await FilePicker.pickFiles({
+          types: ['image/*', 'video/*', 'application/*', 'text/*'],
+          readData: true
+        });
+
+        if (!result.files || result.files.length === 0) {
+          return [];
+        }
+
+        // Limitar al máximo de archivos
+        const filesToProcess = result.files.slice(0, maxFiles);
+        const files: File[] = [];
+
+        for (const pickedFile of filesToProcess) {
+          if (pickedFile.data) {
+            const base64Data = pickedFile.data;
+            const byteCharacters = atob(base64Data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
+            
+            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+              type: pickedFile.mimeType || 'application/octet-stream' 
+            });
+            files.push(file);
+          } else if (pickedFile.path) {
+            const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+            const response = await fetch(fileUri);
+            const blob = await response.blob();
+            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+              type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+            });
+            files.push(file);
+          }
+        }
+
+        return files;
+      } catch (error) {
+        if (error && typeof error === 'object' && 'message' in error && 
+            (error.message === 'User cancelled' || error.message === 'User canceled')) {
+          return [];
+        }
+        throw error;
+      }
+    }
+
+    // En Android, permitir seleccionar uno a la vez
     const files: File[] = [];
     let continueSelecting = true;
     let count = 0;
@@ -273,13 +486,11 @@ export class MediaPickerService {
         if (selected.length > 0) {
           files.push(...selected);
           count++;
-          // En una implementación real, podrías mostrar un diálogo preguntando si quiere agregar más
-          // Por ahora, solo seleccionamos uno
-          continueSelecting = false;
+          continueSelecting = false; // Por ahora solo uno
         } else {
           continueSelecting = false;
         }
-      } catch {
+      } catch (error) {
         continueSelecting = false;
       }
     }

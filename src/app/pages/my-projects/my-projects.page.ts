@@ -89,11 +89,9 @@ export class MyProjectsPage {
                     this.updateUserWithCustomerInfo(customerByEmail, companyId);
                     this.loadProjects(customerByEmail._id, companyId);
                   } else {
+                    // Si no se encuentra el customer, cargar proyectos sin restricción de customer
                     this.isLoading.set(false);
-                    this.notificationService.error(
-                      'Access issue',
-                      'Could not find a customer profile associated with your account for this company.'
-                    );
+                    this.loadProjectsWithoutCustomer(companyId);
                   }
                 },
                 error: (error) => {
@@ -115,9 +113,9 @@ export class MyProjectsPage {
                   this.updateUserWithCustomerInfo(customerByEmail, companyId);
                   this.loadProjects(customerByEmail._id, companyId);
                 } else {
+                  // Si no se encuentra el customer, cargar proyectos sin restricción de customer
                   this.isLoading.set(false);
-                  const message = this.errorService.handle(error);
-                  this.notificationService.error('Unable to verify customer profile', message);
+                  this.loadProjectsWithoutCustomer(companyId);
                 }
               },
               error: (emailError) => {
@@ -181,6 +179,44 @@ export class MyProjectsPage {
         error: (error) => {
           const message = this.errorService.handle(error);
           this.notificationService.error('Unable to load your projects', message);
+        }
+      });
+  }
+
+  /**
+   * Carga proyectos sin restricción de customer (cuando no se encuentra el perfil de customer)
+   */
+  private loadProjectsWithoutCustomer(companyId: string): void {
+    this.isLoading.set(true);
+
+    // Cargar proyectos solo por companyId, sin filtrar por customerId
+    this.projectService
+      .getProjects({ companyId })
+      .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (projects) => {
+          const projectsWithCounts: ProjectWithQuoteCount[] = projects.map((project) => ({
+            ...project,
+            quoteCount: 0
+          }));
+          this.projects.set(projectsWithCounts);
+
+          projects.forEach((project, index) => {
+            this.quoteService
+              .getQuotesByProject(project._id)
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe({
+                next: (quotes) => {
+                  const updated = [...this.projects()];
+                  updated[index] = { ...updated[index], quoteCount: quotes.length };
+                  this.projects.set(updated);
+                }
+              });
+          });
+        },
+        error: (error) => {
+          const message = this.errorService.handle(error);
+          this.notificationService.error('Unable to load projects', message);
         }
       });
   }

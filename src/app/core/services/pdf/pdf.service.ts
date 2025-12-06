@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { jsPDF } from 'jspdf';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import type { Quote, QuoteCustomer, Materials } from '../../models/quote.model';
 import type { KitchenInput } from '../kitchen-inputs/kitchen-inputs.service';
 import type { Invoice } from '../../models/invoice.model';
@@ -444,7 +447,7 @@ export class PdfService {
 
     // Save
     const fileName = `Invoice_${invoice.number || 'Draft'}_${new Date().getTime()}.pdf`;
-    doc.save(fileName);
+    await this.savePdf(doc, fileName);
   }
 
 
@@ -1437,7 +1440,80 @@ export class PdfService {
 
     // Descargar el PDF
     const fileName = `Estimate_${quote.category}_v${quote.versionNumber}_${new Date().getTime()}.pdf`;
-    doc.save(fileName);
+    await this.savePdf(doc, fileName);
+  }
+
+  /**
+   * Guarda el PDF según la plataforma:
+   * - En web: usa doc.save() (descarga directa)
+   * - En iOS/Android: usa Filesystem para guardar y luego abre el share sheet
+   */
+  private async savePdf(doc: jsPDF, fileName: string): Promise<void> {
+    const isNative = Capacitor.isNativePlatform();
+    const platform = Capacitor.getPlatform();
+    
+    if (isNative) {
+      try {
+        // Convertir PDF a base64
+        const pdfBlob = doc.output('blob');
+        const base64Data = await this.blobToBase64(pdfBlob);
+        
+        // Guardar en el directorio de documentos usando Filesystem
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true
+        });
+        
+        console.log('[PDF] Archivo guardado en:', result.uri);
+        
+        // En iOS, abrir el share sheet para que el usuario pueda compartir/guardar
+        if (platform === 'ios') {
+          try {
+            await Share.share({
+              title: fileName,
+              text: 'Compartir PDF',
+              url: result.uri,
+              dialogTitle: 'Compartir PDF'
+            });
+          } catch (shareError) {
+            // Si el usuario cancela el share, no es un error crítico
+            console.log('[PDF] Usuario canceló el share o no disponible:', shareError);
+          }
+        }
+        
+      } catch (error) {
+        console.error('[PDF] Error al guardar PDF en dispositivo nativo:', error);
+        // Fallback: intentar con save() por si acaso
+        try {
+          doc.save(fileName);
+        } catch (fallbackError) {
+          console.error('[PDF] Error en fallback también:', fallbackError);
+          throw error;
+        }
+      }
+    } else {
+      // En web, usar el método estándar de jsPDF
+      doc.save(fileName);
+    }
+  }
+
+  /**
+   * Convierte un Blob a base64 string
+   */
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        // Remover el prefijo data:application/pdf;base64,
+        const base64 = result.split(',')[1] || result;
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('Error al convertir blob a base64'));
+      reader.readAsDataURL(blob);
+    });
   }
 
   private formatDate(dateString?: string): string {
