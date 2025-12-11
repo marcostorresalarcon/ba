@@ -526,19 +526,46 @@
             <div class="mt-6 border-t border-fog/40 pt-6">
               <h4 class="mb-4 text-sm font-semibold uppercase text-clay">Countertops Files</h4>
               <div class="space-y-4">
-                <!-- File Input -->
-                <button
-                  type="button"
-                  (click)="onCountertopsFilesSelected()"
-                  class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
-                >
-                  <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span class="text-sm font-medium text-charcoal">Select files</span>
-                </button>
+                <!-- Three separate buttons for Images, Videos, and Files -->
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <!-- Images Button -->
+                  <button
+                    type="button"
+                    (click)="onCountertopsImagesSelected()"
+                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+                  >
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm font-medium text-charcoal">Select Images</span>
+                  </button>
 
-                <!-- Uploading Files (Miniaturas con loader) -->
+                  <!-- Videos Button -->
+                  <button
+                    type="button"
+                    (click)="onCountertopsVideosSelected()"
+                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+                  >
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm font-medium text-charcoal">Select Videos</span>
+                  </button>
+
+                  <!-- Files Button -->
+                  <button
+                    type="button"
+                    (click)="onCountertopsFilesSelected()"
+                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+                  >
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="text-sm font-medium text-charcoal">Select Files</span>
+                  </button>
+                </div>
+
+                <!-- Uploading Files (Thumbnails with loader) -->
                 @if (uploadingCountertopsFiles().size > 0) {
                   <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     @for (fileData of uploadingCountertopsFiles().values(); track $index) {
@@ -578,7 +605,7 @@
                   </div>
                 }
 
-                <!-- Uploaded Files List (Grid de miniaturas) -->
+                <!-- Uploaded Files List (Thumbnails grid) -->
                 @if (form.controls.countertopsFiles.value && form.controls.countertopsFiles.value.length > 0) {
                   <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     @for (fileUrl of form.controls.countertopsFiles.value; track fileUrl; let i = $index) {
@@ -607,7 +634,7 @@
 
                         <!-- Overlay con botones -->
                         <div class="absolute inset-0 flex items-center justify-center gap-2 bg-charcoal/0 transition group-hover:bg-charcoal/60">
-                          <!-- Botón previsualizar -->
+                          <!-- Preview button -->
                           <button
                             type="button"
                             class="rounded-full bg-white/90 p-2 text-pine opacity-0 transition hover:bg-white hover:text-pine-dark group-hover:opacity-100"
@@ -620,12 +647,12 @@
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                           </button>
-                          <!-- Botón eliminar -->
+                          <!-- Delete button -->
                           <button
                             type="button"
                             class="rounded-full bg-white/90 p-2 text-red-500 opacity-0 transition hover:bg-white hover:text-red-700 group-hover:opacity-100"
                             (click)="removeCountertopsFile(i); $event.stopPropagation()"
-                            aria-label="Eliminar archivo"
+                            aria-label="Delete file"
                             title="Delete"
                           >
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -653,19 +680,46 @@
             <div class="mt-6 border-t border-fog/40 pt-6">
               <h4 class="mb-4 text-sm font-semibold uppercase text-clay">Backsplash Files</h4>
               <div class="space-y-4">
-                <!-- File Input -->
-                <button
-                  type="button"
-                  (click)="onBacksplashFilesSelected()"
-                  class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
-                >
-                  <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <span class="text-sm font-medium text-charcoal">Seleccionar archivos</span>
-                </button>
+                <!-- Three separate buttons for Images, Videos, and Files -->
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <!-- Images Button -->
+                  <button
+                    type="button"
+                    (click)="onBacksplashImagesSelected()"
+                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+                  >
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm font-medium text-charcoal">Select Images</span>
+                  </button>
 
-                <!-- Uploading Files (Miniaturas con loader) -->
+                  <!-- Videos Button -->
+                  <button
+                    type="button"
+                    (click)="onBacksplashVideosSelected()"
+                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+                  >
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span class="text-sm font-medium text-charcoal">Select Videos</span>
+                  </button>
+
+                  <!-- Files Button -->
+                  <button
+                    type="button"
+                    (click)="onBacksplashFilesSelected()"
+                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+                  >
+                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="text-sm font-medium text-charcoal">Select Files</span>
+                  </button>
+                </div>
+
+                <!-- Uploading Files (Thumbnails with loader) -->
                 @if (uploadingBacksplashFiles().size > 0) {
                   <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     @for (fileData of uploadingBacksplashFiles().values(); track $index) {
@@ -705,7 +759,7 @@
                   </div>
                 }
 
-                <!-- Uploaded Files List (Grid de miniaturas) -->
+                <!-- Uploaded Files List (Thumbnails grid) -->
                 @if (form.controls.backsplashFiles.value && form.controls.backsplashFiles.value.length > 0) {
                   <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                     @for (fileUrl of form.controls.backsplashFiles.value; track fileUrl; let i = $index) {
@@ -734,7 +788,7 @@
 
                         <!-- Overlay con botones -->
                         <div class="absolute inset-0 flex items-center justify-center gap-2 bg-charcoal/0 transition group-hover:bg-charcoal/60">
-                          <!-- Botón previsualizar -->
+                          <!-- Preview button -->
                           <button
                             type="button"
                             class="rounded-full bg-white/90 p-2 text-pine opacity-0 transition hover:bg-white hover:text-pine-dark group-hover:opacity-100"
@@ -747,12 +801,12 @@
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                           </button>
-                          <!-- Botón eliminar -->
+                          <!-- Delete button -->
                           <button
                             type="button"
                             class="rounded-full bg-white/90 p-2 text-red-500 opacity-0 transition hover:bg-white hover:text-red-700 group-hover:opacity-100"
                             (click)="removeBacksplashFile(i); $event.stopPropagation()"
-                            aria-label="Eliminar archivo"
+                            aria-label="Delete file"
                             title="Delete"
                           >
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1014,16 +1068,44 @@
           <!-- Media Upload -->
           <div>
             <label class="mb-2 block text-sm font-medium text-charcoal">Photos & Videos</label>
-            <button
-              type="button"
-              (click)="onAdditionalMediaSelected()"
-              class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-6 py-4 transition hover:border-pine/60 hover:bg-fog/20"
-            >
-              <svg class="h-6 w-6 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <span class="text-sm font-medium text-charcoal">Select photos or videos</span>
-            </button>
+            <!-- Three separate buttons for Images, Videos, and Files -->
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <!-- Images Button -->
+              <button
+                type="button"
+                (click)="onAdditionalImagesSelected()"
+                class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+              >
+                <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-sm font-medium text-charcoal">Select Images</span>
+              </button>
+
+              <!-- Videos Button -->
+              <button
+                type="button"
+                (click)="onAdditionalVideosSelected()"
+                class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+              >
+                <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span class="text-sm font-medium text-charcoal">Select Videos</span>
+              </button>
+
+              <!-- Files Button -->
+              <button
+                type="button"
+                (click)="onAdditionalFilesSelected()"
+                class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+              >
+                <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="text-sm font-medium text-charcoal">Select Files</span>
+              </button>
+            </div>
 
             <!-- Uploading Files -->
             @if (uploadingAdditionalMedia().size > 0) {

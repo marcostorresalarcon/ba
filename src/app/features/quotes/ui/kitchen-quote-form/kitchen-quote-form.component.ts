@@ -1200,32 +1200,96 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Maneja la selección y subida de archivos para countertops
+   * Handles selection and upload of images for countertops
    */
-  protected async onCountertopsFilesSelected(): Promise<void> {
+  protected async onCountertopsImagesSelected(): Promise<void> {
     try {
-      // Verificar permisos antes de abrir el selector
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
-          'Permisos requeridos',
-          'Se necesita acceso a la cámara y galería para seleccionar imágenes. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+          'Permissions Required',
+          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
 
-      // Seleccionar medios usando el servicio nativo
-      const files = await this.mediaPickerService.pickMultipleMedia(10);
+      const files = await this.mediaPickerService.pickImages(true);
       if (files.length === 0) return;
 
       void this.processCountertopsFiles(files);
     } catch (error) {
-      this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-
-      // Registrar error en logs
-      await this.logService.logError('Error al seleccionar archivos de countertops', error, {
+      this.notificationService.error('Error', 'Could not select images');
+      await this.logService.logError('Error selecting countertops images', error, {
         severity: 'medium',
-        description: 'Error al seleccionar archivos de countertops en el formulario de kitchen',
+        description: 'Error selecting countertops images in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onCountertopsImagesSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of videos for countertops
+   */
+  protected async onCountertopsVideosSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickVideos(true);
+      if (files.length === 0) return;
+
+      void this.processCountertopsFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select videos');
+      await this.logService.logError('Error selecting countertops videos', error, {
+        severity: 'medium',
+        description: 'Error selecting countertops videos in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onCountertopsVideosSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of files for countertops
+   */
+  protected async onCountertopsFilesSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'File access is needed to select documents. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickFiles(true);
+      if (files.length === 0) return;
+
+      void this.processCountertopsFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select files');
+      await this.logService.logError('Error selecting countertops files', error, {
+        severity: 'medium',
+        description: 'Error selecting countertops files in kitchen form',
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
@@ -1344,32 +1408,96 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Maneja la selección y subida de archivos para backsplash
+   * Handles selection and upload of images for backsplash
    */
-  protected async onBacksplashFilesSelected(): Promise<void> {
+  protected async onBacksplashImagesSelected(): Promise<void> {
     try {
-      // Verificar permisos antes de abrir el selector
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
-          'Permisos requeridos',
-          'Se necesita acceso a la cámara y galería para seleccionar imágenes. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+          'Permissions Required',
+          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
 
-      // Seleccionar medios usando el servicio nativo
-      const files = await this.mediaPickerService.pickMultipleMedia(10);
+      const files = await this.mediaPickerService.pickImages(true);
       if (files.length === 0) return;
 
       void this.processBacksplashFiles(files);
     } catch (error) {
-      this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-
-      // Registrar error en logs
-      await this.logService.logError('Error al seleccionar archivos de backsplash', error, {
+      this.notificationService.error('Error', 'Could not select images');
+      await this.logService.logError('Error selecting backsplash images', error, {
         severity: 'medium',
-        description: 'Error al seleccionar archivos de backsplash en el formulario de kitchen',
+        description: 'Error selecting backsplash images in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onBacksplashImagesSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of videos for backsplash
+   */
+  protected async onBacksplashVideosSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickVideos(true);
+      if (files.length === 0) return;
+
+      void this.processBacksplashFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select videos');
+      await this.logService.logError('Error selecting backsplash videos', error, {
+        severity: 'medium',
+        description: 'Error selecting backsplash videos in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onBacksplashVideosSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of files for backsplash
+   */
+  protected async onBacksplashFilesSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'File access is needed to select documents. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickFiles(true);
+      if (files.length === 0) return;
+
+      void this.processBacksplashFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select files');
+      await this.logService.logError('Error selecting backsplash files', error, {
+        severity: 'medium',
+        description: 'Error selecting backsplash files in kitchen form',
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
@@ -1880,37 +2008,100 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Maneja la subida de archivos para comentarios adicionales
+   * Handles selection and upload of images for additional comments
    */
-  protected async onAdditionalMediaSelected(): Promise<void> {
+  protected async onAdditionalImagesSelected(): Promise<void> {
     try {
-      // Verificar permisos antes de abrir el selector
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
-          'Permisos requeridos',
-          'Se necesita acceso a la cámara y galería para seleccionar imágenes. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+          'Permissions Required',
+          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
 
-      // Seleccionar medios usando el servicio nativo
-      const files = await this.mediaPickerService.pickMultipleMedia(10);
+      const files = await this.mediaPickerService.pickImages(true);
       if (files.length === 0) return;
 
       void this.processAdditionalMediaFiles(files);
     } catch (error) {
-      this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-
-      // Registrar error en logs
-      await this.logService.logError('Error al seleccionar archivos de medios adicionales', error, {
+      this.notificationService.error('Error', 'Could not select images');
+      await this.logService.logError('Error selecting additional images', error, {
         severity: 'medium',
-        description:
-          'Error al seleccionar archivos de medios adicionales en el formulario de kitchen',
+        description: 'Error selecting additional images in kitchen form',
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onAdditionalMediaSelected',
+          action: 'onAdditionalImagesSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of videos for additional comments
+   */
+  protected async onAdditionalVideosSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickVideos(true);
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select videos');
+      await this.logService.logError('Error selecting additional videos', error, {
+        severity: 'medium',
+        description: 'Error selecting additional videos in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onAdditionalVideosSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of files for additional comments
+   */
+  protected async onAdditionalFilesSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'File access is needed to select documents. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickFiles(true);
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select files');
+      await this.logService.logError('Error selecting additional files', error, {
+        severity: 'medium',
+        description: 'Error selecting additional files in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onAdditionalFilesSelected',
           projectId: this.project._id,
           customerId: this.customer._id,
         },

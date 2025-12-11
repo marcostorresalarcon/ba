@@ -5,6 +5,7 @@ import { tap } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
 import type { AuthResponse, AuthUser, LoginPayload } from '../../models/auth.model';
+import { CredentialsStorageService } from './credentials-storage.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +14,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
   private readonly storageKey = 'user';
+  private readonly credentialsStorage = inject(CredentialsStorageService);
 
   readonly user = signal<AuthUser | null>(this.restoreUser());
 
@@ -34,6 +36,7 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('access_token');
     localStorage.removeItem(this.storageKey);
+    this.credentialsStorage.clearCredentials();
     this.user.set(null);
   }
 

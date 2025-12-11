@@ -413,6 +413,288 @@ export class MediaPickerService {
   }
 
   /**
+   * Selecciona solo imágenes (nativo en iOS usando Camera/Photo Library)
+   * @param allowMultiple - Si es true, permite seleccionar múltiples imágenes
+   * @returns Promise<File[]> - Array de archivos de imagen seleccionados
+   */
+  async pickImages(allowMultiple = false): Promise<File[]> {
+    if (!this.isNative) {
+      return this.pickMediaWeb(allowMultiple, true);
+    }
+
+    if (this.platform === 'ios') {
+      return this.pickImagesNativeIOS(allowMultiple);
+    }
+
+    // Android
+    return this.pickImagesNativeAndroid(allowMultiple);
+  }
+
+  /**
+   * Selecciona solo videos (nativo en iOS usando FilePicker)
+   * @param allowMultiple - Si es true, permite seleccionar múltiples videos
+   * @returns Promise<File[]> - Array de archivos de video seleccionados
+   */
+  async pickVideos(allowMultiple = false): Promise<File[]> {
+    if (!this.isNative) {
+      return this.pickVideosWeb(allowMultiple);
+    }
+
+    // En iOS y Android, usar FilePicker para videos
+    return this.pickVideosNative(allowMultiple);
+  }
+
+  /**
+   * Selecciona solo archivos/documentos (nativo en iOS usando FilePicker)
+   * @param allowMultiple - Si es true, permite seleccionar múltiples archivos
+   * @returns Promise<File[]> - Array de archivos seleccionados
+   */
+  async pickFiles(allowMultiple = false): Promise<File[]> {
+    if (!this.isNative) {
+      return this.pickFilesWeb(allowMultiple);
+    }
+
+    // En iOS y Android, usar FilePicker para archivos
+    return this.pickFilesNative(allowMultiple);
+  }
+
+  /**
+   * Selecciona imágenes en iOS nativo usando Camera (permite Photo Library y Camera)
+   */
+  private async pickImagesNativeIOS(allowMultiple: boolean): Promise<File[]> {
+    try {
+      if (allowMultiple) {
+        // Para múltiples imágenes en iOS, usar FilePicker
+        const result = await FilePicker.pickFiles({
+          types: ['image/*'],
+          readData: true
+        });
+
+        if (!result.files || result.files.length === 0) {
+          return [];
+        }
+
+        return await this.convertPickedFilesToFiles(result.files);
+      } else {
+        // Para una sola imagen, usar Camera que abre nativamente Photo Library o Camera
+        const photo = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Photos, // Abre Photo Library nativamente
+          width: 1920,
+          correctOrientation: true
+        });
+
+        const file = await this.photoToFile(photo);
+        return [file];
+      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled' || error.message === 'User canceled' || 
+           error.message === 'User cancelled photos app')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Selecciona imágenes en Android nativo usando Camera
+   */
+  private async pickImagesNativeAndroid(allowMultiple: boolean): Promise<File[]> {
+    try {
+      if (allowMultiple) {
+        // Para múltiples imágenes en Android, usar FilePicker
+        const result = await FilePicker.pickFiles({
+          types: ['image/*'],
+          readData: true
+        });
+
+        if (!result.files || result.files.length === 0) {
+          return [];
+        }
+
+        return await this.convertPickedFilesToFiles(result.files);
+      } else {
+        // Para una sola imagen, usar Camera
+        const photo = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Prompt, // Permite elegir entre Camera o Gallery
+          width: 1920,
+          correctOrientation: true
+        });
+
+        const file = await this.photoToFile(photo);
+        return [file];
+      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled' || error.message === 'User canceled' || 
+           error.message === 'User cancelled photos app')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Selecciona videos nativo usando FilePicker
+   */
+  private async pickVideosNative(allowMultiple: boolean): Promise<File[]> {
+    try {
+      const result = await FilePicker.pickFiles({
+        types: ['video/*'],
+        readData: true
+      });
+
+      if (!result.files || result.files.length === 0) {
+        return [];
+      }
+
+      // FilePicker permite múltiples archivos por defecto, limitar si es necesario
+      const filesToProcess = allowMultiple ? result.files : result.files.slice(0, 1);
+      return await this.convertPickedFilesToFiles(filesToProcess);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Selecciona archivos/documentos nativo usando FilePicker
+   */
+  private async pickFilesNative(allowMultiple: boolean): Promise<File[]> {
+    try {
+      const result = await FilePicker.pickFiles({
+        types: ['application/*', 'text/*'],
+        readData: true
+      });
+
+      if (!result.files || result.files.length === 0) {
+        return [];
+      }
+
+      // FilePicker permite múltiples archivos por defecto, limitar si es necesario
+      const filesToProcess = allowMultiple ? result.files : result.files.slice(0, 1);
+      return await this.convertPickedFilesToFiles(filesToProcess);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error && 
+          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Selecciona videos en web
+   */
+  private pickVideosWeb(allowMultiple: boolean): Promise<File[]> {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = allowMultiple;
+      input.accept = 'video/*';
+
+      input.onchange = (event: Event) => {
+        const target = event.target as HTMLInputElement;
+        const files = target.files;
+        if (files && files.length > 0) {
+          const fileArray = Array.from(files);
+          const invalidFiles = fileArray.filter(file => !file.type.startsWith('video/'));
+          if (invalidFiles.length > 0) {
+            reject(new Error('Only video files are allowed'));
+            return;
+          }
+          resolve(fileArray);
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.oncancel = () => resolve([]);
+      input.onerror = (error) => reject(error);
+      input.click();
+    });
+  }
+
+  /**
+   * Selecciona archivos/documentos en web
+   */
+  private pickFilesWeb(allowMultiple: boolean): Promise<File[]> {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = allowMultiple;
+      input.accept = 'application/*,text/*,.pdf,.doc,.docx,.txt';
+
+      input.onchange = (event: Event) => {
+        const target = event.target as HTMLInputElement;
+        const files = target.files;
+        if (files && files.length > 0) {
+          const fileArray = Array.from(files);
+          const invalidFiles = fileArray.filter(file => 
+            !file.type.startsWith('application/') && 
+            !file.type.startsWith('text/') && 
+            file.type !== ''
+          );
+          if (invalidFiles.length > 0) {
+            reject(new Error('Only document files are allowed'));
+            return;
+          }
+          resolve(fileArray);
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.oncancel = () => resolve([]);
+      input.onerror = (error) => reject(error);
+      input.click();
+    });
+  }
+
+  /**
+   * Convierte archivos seleccionados por FilePicker a File[]
+   */
+  private async convertPickedFilesToFiles(pickedFiles: any[]): Promise<File[]> {
+    const files: File[] = [];
+    for (const pickedFile of pickedFiles) {
+      if (pickedFile.data) {
+        const base64Data = pickedFile.data;
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
+        
+        const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+          type: pickedFile.mimeType || 'application/octet-stream' 
+        });
+        files.push(file);
+      } else if (pickedFile.path) {
+        // Si no hay data pero hay path, usar fetch
+        const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+          type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+        });
+        files.push(file);
+      }
+    }
+    return files;
+  }
+
+  /**
    * Selecciona múltiples medios (imágenes, videos y archivos)
    * @param maxFiles - Número máximo de archivos a seleccionar
    * @param imagesOnly - Deprecated: ya no se usa, se permiten todos los tipos

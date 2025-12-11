@@ -24,18 +24,28 @@
         <input
           formControlName="name"
           type="text"
-          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          class="rounded-2xl border bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          [class.border-red-500]="hasError('name')"
+          [class.border-fog]="!hasError('name')"
           placeholder="Juan"
         />
+        @if (hasError('name')) {
+          <p class="text-xs text-red-600">{{ getErrorMessage('name') }}</p>
+        }
       </label>
       <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
         Last Name*
         <input
           formControlName="lastName"
           type="text"
-          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          class="rounded-2xl border bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          [class.border-red-500]="hasError('lastName')"
+          [class.border-fog]="!hasError('lastName')"
           placeholder="Rodríguez"
         />
+        @if (hasError('lastName')) {
+          <p class="text-xs text-red-600">{{ getErrorMessage('lastName') }}</p>
+        }
       </label>
     </div>
 
@@ -45,9 +55,14 @@
         <input
           formControlName="phone"
           type="tel"
-          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
-          placeholder="987654321"
+          class="rounded-2xl border bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          [class.border-red-500]="hasError('phone')"
+          [class.border-fog]="!hasError('phone')"
+          placeholder="(123) 456-7890"
         />
+        @if (hasError('phone')) {
+          <p class="text-xs text-red-600">{{ getErrorMessage('phone') }}</p>
+        }
       </label>
       <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
         Date
@@ -62,20 +77,28 @@
         <input
           formControlName="email"
           type="email"
-          class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          class="rounded-2xl border bg-white px-4 py-3 focus:border-pine focus:outline-none"
+          [class.border-red-500]="hasError('email')"
+          [class.border-fog]="!hasError('email')"
           placeholder="juan@example.com"
         />
+        @if (hasError('email')) {
+          <p class="text-xs text-red-600">{{ getErrorMessage('email') }}</p>
+        }
       </label>
     </div>
 
     <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
       Address
+      <div #addressContainer class="address-autocomplete-container w-full">
+        <!-- PlaceAutocompleteElement se insertará aquí dinámicamente -->
+      </div>
+      <!-- Input oculto para sincronización con el formulario -->
       <input
         formControlName="address"
-        type="text"
-        class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
-        placeholder="456 Oak Avenue, Suite 12"
+        type="hidden"
       />
+      <p class="text-xs text-slate">Start typing to search for a US address</p>
     </label>
 
     <div class="grid gap-4 md:grid-cols-3">
@@ -110,12 +133,16 @@
 
     <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
       Lead Source
-      <input
+      <select
         formControlName="leadSource"
-        type="text"
-        class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
-        placeholder="Referral from a friend"
-      />
+        class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none text-charcoal"
+      >
+        <option value="">Select a lead source</option>
+        <option value="Google Ads">Google Ads</option>
+        <option value="Meta Ads">Meta Ads</option>
+        <option value="Walk-in">Walk-in</option>
+        <option value="Referrals">Referrals</option>
+      </select>
     </label>
 
     <label class="flex flex-col gap-2 text-left text-sm text-charcoal">

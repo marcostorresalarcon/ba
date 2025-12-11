@@ -13,6 +13,7 @@ import type { FormControl, FormGroup } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import type { LoginPayload } from '../../../../core/models/auth.model';
+import { CredentialsStorageService } from '../../../../core/services/auth/credentials-storage.service';
 
 type LoginFormGroup = FormGroup<{
   email: FormControl<string>;
@@ -29,11 +30,12 @@ type LoginFormGroup = FormGroup<{
 })
 export class LoginFormComponent {
   private readonly fb = inject(FormBuilder);
+  private readonly credentialsStorage = inject(CredentialsStorageService);
 
   protected readonly form: LoginFormGroup = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
-    rememberMe: [true]
+    rememberMe: [false]
   });
 
   protected readonly showPassword = signal(false);
@@ -54,6 +56,9 @@ export class LoginFormComponent {
   @Output() readonly clearError = new EventEmitter<void>();
 
   constructor() {
+    // Restaurar credenciales guardadas al inicializar
+    this.restoreSavedCredentials();
+
     // Limpiar el error cuando el usuario empiece a escribir
     this.form.valueChanges
       .pipe(takeUntilDestroyed())
@@ -62,6 +67,20 @@ export class LoginFormComponent {
           this.clearError.emit();
         }
       });
+  }
+
+  /**
+   * Restaura las credenciales guardadas si existen
+   */
+  private restoreSavedCredentials(): void {
+    const saved = this.credentialsStorage.getCredentials();
+    if (saved) {
+      this.form.patchValue({
+        email: saved.email,
+        password: saved.password,
+        rememberMe: true
+      });
+    }
   }
 
   protected togglePasswordVisibility(): void {
@@ -78,8 +97,8 @@ export class LoginFormComponent {
       return;
     }
 
-    const { email, password } = this.form.getRawValue();
-    this.submitCredentials.emit({ email, password });
+    const { email, password, rememberMe } = this.form.getRawValue();
+    this.submitCredentials.emit({ email, password, rememberMe });
   }
 
   protected controlInvalid(controlName: keyof LoginFormGroup['controls']): boolean {
