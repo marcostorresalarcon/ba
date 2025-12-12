@@ -423,6 +423,7 @@ export class MediaPickerService {
     }
 
     if (this.platform === 'ios') {
+      // iOS: usar picker nativo (Photos/Camera). iOS no permite selección múltiple nativa.
       return this.pickImagesNativeIOS(allowMultiple);
     }
 
@@ -440,7 +441,11 @@ export class MediaPickerService {
       return this.pickVideosWeb(allowMultiple);
     }
 
-    // En iOS y Android, usar FilePicker para videos
+    // iOS: usar flujo dedicado; Android: FilePicker por defecto.
+    if (this.platform === 'ios') {
+      return this.pickVideosNativeIOS(allowMultiple);
+    }
+
     return this.pickVideosNative(allowMultiple);
   }
 
@@ -463,32 +468,18 @@ export class MediaPickerService {
    */
   private async pickImagesNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
-      if (allowMultiple) {
-        // Para múltiples imágenes en iOS, usar FilePicker
-        const result = await FilePicker.pickFiles({
-          types: ['image/*'],
-          readData: true
-        });
+      // iOS: Camera con Photos (nativo). No hay múltiple selección nativa; devolvemos solo uno.
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Photos,
+        width: 1920,
+        correctOrientation: true
+      });
 
-        if (!result.files || result.files.length === 0) {
-          return [];
-        }
-
-        return await this.convertPickedFilesToFiles(result.files);
-      } else {
-        // Para una sola imagen, usar Camera que abre nativamente Photo Library o Camera
-        const photo = await Camera.getPhoto({
-          quality: 90,
-          allowEditing: false,
-          resultType: CameraResultType.Uri,
-          source: CameraSource.Photos, // Abre Photo Library nativamente
-          width: 1920,
-          correctOrientation: true
-        });
-
-        const file = await this.photoToFile(photo);
-        return [file];
-      }
+      const file = await this.photoToFile(photo);
+      return [file];
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in error && 
           (error.message === 'User cancelled' || error.message === 'User canceled' || 
@@ -560,6 +551,34 @@ export class MediaPickerService {
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in error && 
           (error.message === 'User cancelled' || error.message === 'User canceled')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Selecciona videos en iOS. El plugin Camera solo soporta fotos; usamos selector nativo de videos (FilePicker).
+   */
+  private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
+    try {
+      // El plugin de cámara no soporta captura/selección de video; usamos FilePicker de forma nativa.
+      const result = await FilePicker.pickFiles({
+        types: ['video/*'],
+        readData: true
+      });
+
+      if (!result.files || result.files.length === 0) {
+        return [];
+      }
+
+      // FilePicker permite múltiples archivos; limitar si no se permite.
+      const filesToProcess = allowMultiple ? result.files : result.files.slice(0, 1);
+      return await this.convertPickedFilesToFiles(filesToProcess);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error &&
+          (error.message === 'User cancelled' || error.message === 'User canceled' ||
+           error.message === 'User cancelled photos app')) {
         return [];
       }
       throw error;
