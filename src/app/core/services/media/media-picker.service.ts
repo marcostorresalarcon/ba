@@ -441,11 +441,19 @@ export class MediaPickerService {
       return this.pickVideosWeb(allowMultiple);
     }
 
-    // iOS: usar flujo dedicado; Android: FilePicker por defecto.
+    /**
+     * IMPORTANTE (iOS):
+     * - El plugin oficial de Camera no soporta seleccionar videos desde Photos.
+     * - Con las dependencias actuales, la única forma estable de elegir videos es vía FilePicker (abre la app Files).
+     * - Por eso, aunque el botón diga "Select Videos", en iOS se usará FilePicker de videos.
+     * Si en el futuro se añade un plugin específico para videos (ej. @capawesome/capacitor-video-recorder),
+     * aquí se podría enrutar a ese flujo nativo.
+     */
     if (this.platform === 'ios') {
       return this.pickVideosNativeIOS(allowMultiple);
     }
 
+    // Android: usar FilePicker para videos
     return this.pickVideosNative(allowMultiple);
   }
 

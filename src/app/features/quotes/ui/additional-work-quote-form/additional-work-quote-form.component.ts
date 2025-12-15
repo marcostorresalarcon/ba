@@ -536,7 +536,8 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
         // Cargar audioNotes
         if (quote.audioNotes) {
-          this.form.controls.audioNotes.setValue(quote.audioNotes, { emitEvent: false });
+          // Ordenar de más reciente a más antiguo manteniendo el orden original del backend
+          this.form.controls.audioNotes.setValue([...quote.audioNotes].reverse(), { emitEvent: false });
         }
 
         // Hacer merge de sketchFiles: combinar los existentes con los del quote (sin duplicados)
@@ -671,6 +672,8 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   protected confirmSubmit(): void {
     this.showSummary.set(false);
     // Mostrar vista de destinatarios antes de enviar
+    // Preseleccionar todos los destinatarios por defecto
+    this.selectedRecipients.set(['Baldemar', 'Fila', 'Office']);
     this.showRecipientsView.set(true);
   }
 
@@ -733,8 +736,14 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       materials = formValue.materials ?? null;
     }
 
-    // No enviar versionNumber - el backend lo calcula automáticamente por projectId + category
-    // Si hay quoteId, estamos creando una nueva versión, pero el backend calculará el número correcto
+    // Calcular versionNumber
+    // Si hay originalQuote, crear una nueva versión (versionNumber + 1)
+    // Si no hay, es un nuevo quote (versionNumber = 1)
+    let versionNumber = 1;
+    if (this.originalQuote && this.originalQuote.versionNumber) {
+      versionNumber = this.originalQuote.versionNumber + 1;
+    }
+
     // Construir el payload base
     const quotePayload: QuotePayload = {
       customerId: this.customer._id,
@@ -745,8 +754,8 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       experience: 'basic', // Para bathroom y basement usar 'basic' por defecto
       totalPrice: this.totalCost(),
       notes: formValue.notes ?? undefined,
-      userId
-      // versionNumber no se envía - el backend lo calcula automáticamente
+      userId,
+      versionNumber
     };
 
     // Agregar el campo de información según la categoría
@@ -761,29 +770,6 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     // Agregar materials solo si tiene valor
     if (materials !== null && materials !== undefined) {
       quotePayload.materials = materials;
-    }
-
-    // Agregar audioNotes si tiene valor
-    if (formValue.audioNotes) {
-      quotePayload.audioNotes = formValue.audioNotes;
-    }
-
-    // Agregar sketchFiles si tiene valor
-    if (formValue.sketchFiles && formValue.sketchFiles.length > 0) {
-      quotePayload.sketchFiles = formValue.sketchFiles;
-    }
-
-    // Agregar additionalComments si tiene valor
-    if (formValue.additionalComments) {
-      quotePayload.additionalComments = formValue.additionalComments;
-    }
-
-    // Agregar roughQuote y clientBudget si tienen valor
-    if (formValue.roughQuote !== null && formValue.roughQuote !== undefined) {
-      quotePayload.roughQuote = formValue.roughQuote;
-    }
-    if (formValue.clientBudget !== null && formValue.clientBudget !== undefined) {
-      quotePayload.clientBudget = formValue.clientBudget;
     }
 
     // Siempre usar createQuote, incluso para nuevas versiones
@@ -859,13 +845,29 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       'source',
       'address',
       'notes',
-      'materials',
-      'audioNotes',
-      'sketchFiles',
-      'additionalComments',
-      'roughQuote',
-      'clientBudget'
+      'materials', // materials va en el nivel raíz del payload, no en additionalWorkInformation
     ]);
+
+    // Agregar campos de archivos si existen
+    if (formValue['audioNotes']) {
+      additionalWorkInfo['audioNotes'] = formValue['audioNotes'];
+    }
+
+    if (formValue['sketchFiles'] && formValue['sketchFiles']?.length > 0) {
+      additionalWorkInfo['sketchFiles'] = formValue['sketchFiles'];
+    }
+
+    if (formValue['additionalComments']) {
+      additionalWorkInfo['additionalComments'] = formValue['additionalComments'];
+    }
+
+    // Agregar campos de budget
+    if (formValue['roughQuote'] !== null && formValue['roughQuote'] !== undefined) {
+      additionalWorkInfo['roughQuote'] = formValue['roughQuote'];
+    }
+    if (formValue['clientBudget'] !== null && formValue['clientBudget'] !== undefined) {
+      additionalWorkInfo['clientBudget'] = formValue['clientBudget'];
+    }
 
     // Obtener todos los nombres de campos válidos desde inputs_additional_work.json
     const validFieldNames = new Set<string>();
@@ -1085,8 +1087,8 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
               }
             : { url };
           
-          // Agregar el nuevo audio al array
-          this.form.controls.audioNotes.setValue([...currentAudios, newAudio], { emitEvent: true });
+          // Agregar el nuevo audio al inicio del array (más reciente primero)
+          this.form.controls.audioNotes.setValue([newAudio, ...currentAudios], { emitEvent: true });
           
           if (response.success) {
             this.notificationService.success('Success', 'Audio processed successfully');
@@ -1111,7 +1113,8 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         },
         error: (error) => {
           const currentAudios = this.form.controls.audioNotes.value || [];
-          this.form.controls.audioNotes.setValue([...currentAudios, { url }], { emitEvent: true });
+          // Guardar solo la URL al inicio (más reciente primero)
+          this.form.controls.audioNotes.setValue([{ url }, ...currentAudios], { emitEvent: true });
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
           this.isProcessingAudio.set(false);
           void this.logService.logError('Error al procesar audio con API', error, {
@@ -1257,33 +1260,100 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Maneja la subida de archivos para comentarios adicionales
+   * Handles selection and upload of images for additional comments
    */
-  protected async onAdditionalMediaSelected(): Promise<void> {
+  protected async onAdditionalImagesSelected(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
-          'Permisos requeridos',
-          'Se necesita acceso a la cámara y galería para seleccionar imágenes. Por favor, habilita los permisos en la configuración de tu dispositivo.'
+          'Permissions Required',
+          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
 
-      const files = await this.mediaPickerService.pickMultipleMedia(10);
+      const files = await this.mediaPickerService.pickImages(true);
       if (files.length === 0) return;
 
       void this.processAdditionalMediaFiles(files);
     } catch (error) {
-      this.notificationService.error('Error', 'No se pudieron seleccionar los archivos');
-      await this.logService.logError('Error al seleccionar archivos de medios adicionales', error, {
+      this.notificationService.error('Error', 'Could not select images');
+      await this.logService.logError('Error selecting additional images', error, {
         severity: 'medium',
-        description:
-          'Error al seleccionar archivos de medios adicionales en el formulario de additional-work',
+        description: 'Error selecting additional images in additional-work form',
         source: 'additional-work-quote-form',
         metadata: {
           component: 'AdditionalWorkQuoteFormComponent',
-          action: 'onAdditionalMediaSelected',
+          action: 'onAdditionalImagesSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of videos for additional comments
+   */
+  protected async onAdditionalVideosSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickVideos(true);
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select videos');
+      await this.logService.logError('Error selecting additional videos', error, {
+        severity: 'medium',
+        description: 'Error selecting additional videos in additional-work form',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'onAdditionalVideosSelected',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection and upload of files for additional comments
+   */
+  protected async onAdditionalFilesSelected(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'File access is needed to select documents. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.pickFiles(true);
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not select files');
+      await this.logService.logError('Error selecting additional files', error, {
+        severity: 'medium',
+        description: 'Error selecting additional files in additional-work form',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'onAdditionalFilesSelected',
           projectId: this.project._id,
           customerId: this.customer._id,
         },

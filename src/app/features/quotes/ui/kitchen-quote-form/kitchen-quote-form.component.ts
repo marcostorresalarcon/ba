@@ -659,7 +659,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             const audioArray = Array.isArray(audioNotes)
               ? audioNotes
               : [audioNotes];
-            this.form.controls.audioNotes.setValue(audioArray, { emitEvent: true });
+            // Ordenar de más reciente a más antiguo manteniendo el orden original del backend
+            this.form.controls.audioNotes.setValue([...audioArray].reverse(), { emitEvent: true });
           }
           // Hacer merge de sketchFiles: combinar los existentes con los del quote (sin duplicados)
           const existingSketches = this.form.controls.sketchFiles.value ?? [];
@@ -1824,8 +1825,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
             }
             : { url };
 
-          // Agregar el nuevo audio al array
-          this.form.controls.audioNotes.setValue([...currentAudios, newAudio], { emitEvent: true });
+          // Agregar el nuevo audio al inicio del array (más reciente primero)
+          this.form.controls.audioNotes.setValue([newAudio, ...currentAudios], { emitEvent: true });
 
           if (response.success) {
             this.notificationService.success('Success', 'Audio processed successfully');
@@ -1851,9 +1852,9 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           this.isProcessingAudio.set(false);
         },
         error: (error) => {
-          // Si falla el resumen, guardamos solo la URL
+          // Si falla el resumen, guardamos solo la URL (más reciente primero)
           const currentAudios = this.form.controls.audioNotes.value || [];
-          this.form.controls.audioNotes.setValue([...currentAudios, { url }], { emitEvent: true });
+          this.form.controls.audioNotes.setValue([{ url }, ...currentAudios], { emitEvent: true });
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
           this.isProcessingAudio.set(false);
 
@@ -2339,6 +2340,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   protected confirmSubmit(): void {
     this.showSummary.set(false);
     // Mostrar vista de destinatarios antes de enviar
+    // Preseleccionar todos los destinatarios por defecto
+    this.selectedRecipients.set(['Baldemar', 'Fila', 'Office']);
     this.showRecipientsView.set(true);
   }
 

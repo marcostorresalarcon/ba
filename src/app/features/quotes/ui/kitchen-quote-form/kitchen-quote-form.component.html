@@ -169,13 +169,13 @@
                         @if (audioNote.summary) {
                           <div class="flex items-start gap-2">
                             <span class="text-pine font-medium">Summary:</span>
-                            <span class="text-charcoal">{{ audioNote.summary }}</span>
+                            <span class="text-charcoal whitespace-pre-line">{{ audioNote.summary }}</span>
                           </div>
                         }
                         @if (audioNote.transcription) {
                           <div class="flex items-start gap-2">
                             <span class="text-clay font-medium">Transcription:</span>
-                            <span class="text-charcoal">{{ audioNote.transcription }}</span>
+                            <span class="text-charcoal whitespace-pre-line">{{ audioNote.transcription }}</span>
                           </div>
                         }
                       </div>
@@ -942,14 +942,14 @@
                       @if (audioNote.summary) {
                         <div>
                           <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-pine">Summary</h5>
-                          <p class="text-sm text-charcoal">{{ audioNote.summary }}</p>
+                          <p class="text-sm text-charcoal whitespace-pre-line">{{ audioNote.summary }}</p>
                         </div>
                       }
 
                       @if (audioNote.transcription) {
                         <div>
                           <h5 class="mb-1 text-xs font-semibold uppercase tracking-wide text-clay">Transcription</h5>
-                          <p class="text-xs text-slate italic">{{ audioNote.transcription }}</p>
+                          <p class="text-xs text-slate italic whitespace-pre-line">{{ audioNote.transcription }}</p>
                         </div>
                       }
                     </div>
@@ -1410,7 +1410,7 @@
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             <span class="text-pine font-medium">Summary:</span>
-                            <span class="text-charcoal">{{ audioNote.summary.length > 100 ? (audioNote.summary.substring(0, 100) + '...') : audioNote.summary }}</span>
+                            <span class="text-charcoal whitespace-pre-line">{{ audioNote.summary.length > 100 ? (audioNote.summary.substring(0, 100) + '...') : audioNote.summary }}</span>
                           </div>
                         }
                         @if (audioNote.transcription) {
@@ -1419,7 +1419,7 @@
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             <span class="text-clay font-medium">Transcription:</span>
-                            <span class="text-charcoal">{{ audioNote.transcription.length > 100 ? (audioNote.transcription.substring(0, 100) + '...') : audioNote.transcription }}</span>
+                            <span class="text-charcoal whitespace-pre-line">{{ audioNote.transcription.length > 100 ? (audioNote.transcription.substring(0, 100) + '...') : audioNote.transcription }}</span>
                           </div>
                         }
                         @if (!audioNote.summary && !audioNote.transcription) {
