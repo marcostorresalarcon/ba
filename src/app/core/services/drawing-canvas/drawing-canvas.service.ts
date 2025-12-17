@@ -24,11 +24,6 @@ export class DrawingCanvasService {
     // Guardar el callback antes de navegar
     this.saveCallback = saveCallback ?? null;
     
-    // Guardar la posición de scroll actual (sobrescribir el anterior si existe)
-    const scrollY = window.scrollY;
-    console.log('[DrawingCanvasService] openCanvas - Guardando scrollY:', scrollY);
-    sessionStorage.setItem('drawingCanvasScrollY', scrollY.toString());
-    
     // Guardar el callback en sessionStorage para recuperarlo después
     if (saveCallback) {
       sessionStorage.setItem('drawingCanvasCallback', 'true');
@@ -58,9 +53,7 @@ export class DrawingCanvasService {
     console.log('[DrawingCanvasService] processResult - resultStr existe:', !!resultStr);
     
     if (!resultStr) {
-      console.log('[DrawingCanvasService] processResult - No hay resultado, restaurando scroll');
-      // Aún así restaurar scroll si no hay resultado
-      this.restoreScrollPosition();
+      console.log('[DrawingCanvasService] processResult - No hay resultado');
       return;
     }
 
@@ -88,9 +81,6 @@ export class DrawingCanvasService {
           sessionStorage.removeItem('drawingCanvasResult');
           sessionStorage.removeItem('drawingCanvasCallback');
           console.log('[DrawingCanvasService] processResult - Resultado limpiado de sessionStorage');
-          
-          // Esperar un poco para que el DOM se actualice con el nuevo sketch
-          await new Promise(resolve => setTimeout(resolve, 300));
         } catch (error) {
           console.error('[DrawingCanvasService] processResult - Error executing save callback:', error);
           // No limpiar el resultado en caso de error para que se pueda reintentar
@@ -110,52 +100,6 @@ export class DrawingCanvasService {
       sessionStorage.removeItem('drawingCanvasResult');
       sessionStorage.removeItem('drawingCanvasCallback');
     }
-
-    // Restaurar posición de scroll después de procesar el resultado y actualizar el DOM
-    console.log('[DrawingCanvasService] processResult - Restaurando scroll');
-    this.restoreScrollPosition();
-  }
-
-  /**
-   * Restaura la posición de scroll guardada
-   */
-  private restoreScrollPosition(): void {
-    const scrollYStr = sessionStorage.getItem('drawingCanvasScrollY');
-    console.log('[DrawingCanvasService] restoreScrollPosition - scrollYStr:', scrollYStr);
-    
-    if (!scrollYStr) {
-      console.log('[DrawingCanvasService] restoreScrollPosition - No hay scrollY guardado');
-      return;
-    }
-
-    const scrollY = parseInt(scrollYStr, 10);
-    console.log('[DrawingCanvasService] restoreScrollPosition - scrollY parseado:', scrollY);
-    console.log('[DrawingCanvasService] restoreScrollPosition - scrollY actual de window:', window.scrollY);
-    
-    // NO eliminar el scrollY del sessionStorage aquí, se eliminará cuando se abra el canvas de nuevo
-    // Esto permite que funcione en múltiples navegaciones
-    
-    // Esperar a que el DOM esté completamente renderizado antes de restaurar el scroll
-    setTimeout(() => {
-      console.log('[DrawingCanvasService] restoreScrollPosition - Intentando restaurar scroll a:', scrollY);
-      // Usar requestAnimationFrame para asegurar que el DOM esté renderizado
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: scrollY, behavior: 'smooth' });
-        console.log('[DrawingCanvasService] restoreScrollPosition - Primer scrollTo ejecutado, scrollY actual:', window.scrollY);
-        
-        // Segundo intento después de un pequeño delay para asegurar que funcione
-        // incluso si el router intenta restaurar el scroll
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: scrollY, behavior: 'smooth' });
-            console.log('[DrawingCanvasService] restoreScrollPosition - Segundo scrollTo ejecutado, scrollY actual:', window.scrollY);
-            // Limpiar el scrollY solo después de restaurarlo exitosamente
-            sessionStorage.removeItem('drawingCanvasScrollY');
-            console.log('[DrawingCanvasService] restoreScrollPosition - scrollY eliminado de sessionStorage');
-          });
-        }, 200);
-      });
-    }, 300);
   }
 
   /**
@@ -163,5 +107,31 @@ export class DrawingCanvasService {
    */
   hasPendingResult(): boolean {
     return sessionStorage.getItem('drawingCanvasResult') !== null;
+  }
+
+  /**
+   * Ejecuta el callback guardado si existe
+   * Útil para ejecutar el callback antes de navegar
+   */
+  async executeSaveCallback(dataUrl: string): Promise<boolean> {
+    if (this.saveCallback) {
+      try {
+        await this.saveCallback(dataUrl);
+        this.saveCallback = null;
+        sessionStorage.removeItem('drawingCanvasCallback');
+        return true;
+      } catch (error) {
+        console.error('[DrawingCanvasService] executeSaveCallback - Error:', error);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Verifica si hay un callback guardado
+   */
+  hasSaveCallback(): boolean {
+    return this.saveCallback !== null;
   }
 }

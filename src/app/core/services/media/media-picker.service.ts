@@ -432,7 +432,7 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona solo videos (nativo en iOS usando FilePicker)
+   * Selecciona solo videos (nativo en iOS usando FilePicker, similar a pickImages)
    * @param allowMultiple - Si es true, permite seleccionar múltiples videos
    * @returns Promise<File[]> - Array de archivos de video seleccionados
    */
@@ -444,10 +444,8 @@ export class MediaPickerService {
     /**
      * IMPORTANTE (iOS):
      * - El plugin oficial de Camera no soporta seleccionar videos desde Photos.
-     * - Con las dependencias actuales, la única forma estable de elegir videos es vía FilePicker (abre la app Files).
-     * - Por eso, aunque el botón diga "Select Videos", en iOS se usará FilePicker de videos.
-     * Si en el futuro se añade un plugin específico para videos (ej. @capawesome/capacitor-video-recorder),
-     * aquí se podría enrutar a ese flujo nativo.
+     * - Usamos FilePicker con types: ['video/*'] que en iOS puede mostrar la galería de videos nativa.
+     * - Este enfoque es similar al usado para imágenes, pero adaptado para videos.
      */
     if (this.platform === 'ios') {
       return this.pickVideosNativeIOS(allowMultiple);
@@ -553,9 +551,19 @@ export class MediaPickerService {
         return [];
       }
 
+      // Validar que todos los archivos sean videos
+      const videoFiles = result.files.filter(file => {
+        const mimeType = file.mimeType || '';
+        return mimeType.startsWith('video/');
+      });
+
+      if (videoFiles.length === 0) {
+        return [];
+      }
+
       // FilePicker permite múltiples archivos por defecto, limitar si es necesario
-      const filesToProcess = allowMultiple ? result.files : result.files.slice(0, 1);
-      return await this.convertPickedFilesToFiles(filesToProcess);
+      const filesToProcess = allowMultiple ? videoFiles : videoFiles.slice(0, 1);
+      return await this.convertPickedFilesToFiles(filesToProcess, true); // Validar que sean videos
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in error && 
           (error.message === 'User cancelled' || error.message === 'User canceled')) {
@@ -566,11 +574,14 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos en iOS. El plugin Camera solo soporta fotos; usamos selector nativo de videos (FilePicker).
+   * Selecciona videos en iOS usando el mismo flujo nativo que las imágenes.
+   * Nota: El plugin Camera no soporta videos directamente, pero FilePicker con types: ['video/*']
+   * en iOS puede abrir la galería de videos nativa dependiendo de la configuración del sistema.
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
-      // El plugin de cámara no soporta captura/selección de video; usamos FilePicker de forma nativa.
+      // Intentar usar FilePicker con tipos de video para abrir la galería nativa de videos
+      // En iOS, cuando se especifica 'video/*', el sistema puede mostrar la galería de videos
       const result = await FilePicker.pickFiles({
         types: ['video/*'],
         readData: true
@@ -580,9 +591,19 @@ export class MediaPickerService {
         return [];
       }
 
+      // Validar que todos los archivos sean videos
+      const videoFiles = result.files.filter(file => {
+        const mimeType = file.mimeType || '';
+        return mimeType.startsWith('video/');
+      });
+
+      if (videoFiles.length === 0) {
+        return [];
+      }
+
       // FilePicker permite múltiples archivos; limitar si no se permite.
-      const filesToProcess = allowMultiple ? result.files : result.files.slice(0, 1);
-      return await this.convertPickedFilesToFiles(filesToProcess);
+      const filesToProcess = allowMultiple ? videoFiles : videoFiles.slice(0, 1);
+      return await this.convertPickedFilesToFiles(filesToProcess, true); // Validar que sean videos
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in error &&
           (error.message === 'User cancelled' || error.message === 'User canceled' ||
@@ -689,10 +710,15 @@ export class MediaPickerService {
 
   /**
    * Convierte archivos seleccionados por FilePicker a File[]
+   * @param pickedFiles - Array de archivos seleccionados por FilePicker
+   * @param validateVideoType - Si es true, valida que todos los archivos sean videos
    */
-  private async convertPickedFilesToFiles(pickedFiles: any[]): Promise<File[]> {
+  private async convertPickedFilesToFiles(pickedFiles: any[], validateVideoType = false): Promise<File[]> {
     const files: File[] = [];
     for (const pickedFile of pickedFiles) {
+      let mimeType = pickedFile.mimeType || 'application/octet-stream';
+      let blob: Blob;
+
       if (pickedFile.data) {
         const base64Data = pickedFile.data;
         const byteCharacters = atob(base64Data);
@@ -701,22 +727,27 @@ export class MediaPickerService {
           byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
         const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
-        
-        const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-          type: pickedFile.mimeType || 'application/octet-stream' 
-        });
-        files.push(file);
+        blob = new Blob([byteArray], { type: mimeType });
       } else if (pickedFile.path) {
         // Si no hay data pero hay path, usar fetch
         const fileUri = Capacitor.convertFileSrc(pickedFile.path);
         const response = await fetch(fileUri);
-        const blob = await response.blob();
-        const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-          type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
-        });
-        files.push(file);
+        blob = await response.blob();
+        // Usar el tipo MIME del blob si está disponible
+        mimeType = blob.type || mimeType;
+      } else {
+        continue; // Saltar archivos sin data ni path
       }
+
+      // Validar que sea video si se requiere
+      if (validateVideoType && !mimeType.startsWith('video/')) {
+        continue; // Saltar archivos que no sean videos
+      }
+
+      const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+        type: mimeType
+      });
+      files.push(file);
     }
     return files;
   }

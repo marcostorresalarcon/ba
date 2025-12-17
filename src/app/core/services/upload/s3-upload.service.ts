@@ -5,6 +5,7 @@ import { firstValueFrom, type Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
 import { LogService } from '../log/log.service';
+import { LoadingService } from '../loading/loading.service';
 
 export interface PresignedUrlRequest {
   fileName: string;
@@ -30,6 +31,7 @@ export class S3UploadService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
   private readonly logService = inject(LogService);
+  private readonly loadingService = inject(LoadingService);
 
   /**
    * Solicita una URL presignada para subir un archivo a S3
@@ -379,8 +381,11 @@ export class S3UploadService {
   ): Promise<string> {
     let presignedUrlResponse: PresignedUrlResponse | null = null;
 
+    // Iniciar loading para la subida a S3 (la petición HTTP ya tiene su propio loading)
+    this.loadingService.start();
+
     try {
-      // 1. Solicitar URL presignada
+      // 1. Solicitar URL presignada (ya tiene loading del interceptor HTTP)
       try {
         presignedUrlResponse = await firstValueFrom(
           this.getPresignedUrl(file.name, file.type)
@@ -473,6 +478,9 @@ export class S3UploadService {
       }
       
       throw error;
+    } finally {
+      // Detener loading cuando termine la subida (éxito o error)
+      this.loadingService.stop();
     }
   }
 

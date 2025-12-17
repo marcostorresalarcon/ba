@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/cor
 import { RouterOutlet } from '@angular/router';
 
 import { NotificationCenterComponent } from './shared/ui/notification-center/notification-center.component';
+import { LoadingOverlayComponent } from './shared/ui/loading-overlay/loading-overlay.component';
 import { BackButtonService } from './core/services/navigation/back-button.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NotificationCenterComponent],
+  imports: [RouterOutlet, NotificationCenterComponent, LoadingOverlayComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

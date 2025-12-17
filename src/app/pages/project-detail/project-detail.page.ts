@@ -126,18 +126,9 @@ export class ProjectDetailPage {
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoadingQuotes.set(false)))
       .subscribe({
         next: (quotes) => {
-          // Ordenar por versionNumber descendente (última versión primero)
-          const sortedQuotes = [...quotes].sort((a, b) => {
-            // Primero por versionNumber descendente
-            if (b.versionNumber !== a.versionNumber) {
-              return b.versionNumber - a.versionNumber;
-            }
-            // Si tienen la misma versión, ordenar por fecha de creación descendente
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
-          });
-          this.quotes.set(sortedQuotes);
+          // El componente quote-list manejará la agrupación y ordenamiento
+          // Solo pasamos las quotes sin ordenar
+          this.quotes.set(quotes);
         },
         error: (error) => {
           const message = this.errorService.handle(error);
@@ -202,11 +193,12 @@ export class ProjectDetailPage {
       .subscribe({
         next: () => {
           this.notificationService.success('Éxito', 'Estimado eliminado correctamente');
-          // Recargar la lista de quotes
-          const projectId = this.projectId();
-          if (projectId) {
-            this.loadQuotes(projectId);
-          }
+          
+          // Actualizar la lista removiendo el quote eliminado directamente
+          // Esto es más rápido que recargar todo desde el servidor
+          const currentQuotes = this.quotes();
+          const updatedQuotes = currentQuotes.filter(q => q._id !== quote._id);
+          this.quotes.set(updatedQuotes);
         },
         error: (error) => {
           const message = this.errorService.handle(error);

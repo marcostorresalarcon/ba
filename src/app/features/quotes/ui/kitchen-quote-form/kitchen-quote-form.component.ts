@@ -329,12 +329,17 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           sessionStorage.removeItem('drawingCanvasResult');
           sessionStorage.removeItem('drawingCanvasCallback');
 
-          // Si hay un resultado de guardado, procesarlo directamente
-          console.log('[KitchenQuote] processPendingCanvasResult - Llamando a onSketchSaved');
-          void this.onSketchSaved(result.dataUrl).then(() => {
-            // Restaurar scroll después de procesar el sketch
-            this.restoreScrollPosition();
-          });
+          // Verificar si se debe hacer scroll (solo si se guardó un sketch nuevo)
+          const shouldScroll = sessionStorage.getItem('drawingCanvasShouldScroll') === 'true';
+          sessionStorage.removeItem('drawingCanvasShouldScroll');
+          console.log('[KitchenQuote] processPendingCanvasResult - Llamando a onSketchSaved, shouldScroll:', shouldScroll);
+          
+          // Esperar a que Angular termine de restaurar la posición de scroll con withInMemoryScrolling
+          // Usar un delay suficiente para que la restauración de scroll se complete primero
+          // Si shouldScroll es false, no hacer scroll y dejar que Angular maneje la restauración
+          setTimeout(() => {
+            void this.onSketchSaved(result.dataUrl, shouldScroll);
+          }, 500);
         } else {
           // Para otros casos, usar el servicio
           console.log('[KitchenQuote] processPendingCanvasResult - Usando servicio processResult');
@@ -344,48 +349,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         console.log('[KitchenQuote] processPendingCanvasResult - No hay resultStr, usando servicio');
         void this.drawingCanvasService.processResult();
       }
-    } else {
-      console.log('[KitchenQuote] processPendingCanvasResult - No hay resultado pendiente');
-      // Aún así restaurar scroll si no hay resultado pendiente
-      this.restoreScrollPosition();
     }
-  }
-
-  /**
-   * Restaura la posición de scroll guardada
-   */
-  private restoreScrollPosition(): void {
-    const scrollYStr = sessionStorage.getItem('drawingCanvasScrollY');
-    console.log('[KitchenQuote] restoreScrollPosition - scrollYStr:', scrollYStr);
-
-    if (!scrollYStr) {
-      console.log('[KitchenQuote] restoreScrollPosition - No hay scrollY guardado');
-      return;
-    }
-
-    const scrollY = parseInt(scrollYStr, 10);
-    console.log('[KitchenQuote] restoreScrollPosition - scrollY parseado:', scrollY);
-    console.log('[KitchenQuote] restoreScrollPosition - scrollY actual de window:', window.scrollY);
-
-    // Esperar a que el DOM esté completamente renderizado antes de restaurar el scroll
-    setTimeout(() => {
-      console.log('[KitchenQuote] restoreScrollPosition - Intentando restaurar scroll a:', scrollY);
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: scrollY, behavior: 'smooth' });
-        console.log('[KitchenQuote] restoreScrollPosition - Primer scrollTo ejecutado, scrollY actual:', window.scrollY);
-
-        // Segundo intento después de un pequeño delay para asegurar que funcione
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: scrollY, behavior: 'smooth' });
-            console.log('[KitchenQuote] restoreScrollPosition - Segundo scrollTo ejecutado, scrollY actual:', window.scrollY);
-            // Limpiar el scrollY solo después de restaurarlo exitosamente
-            sessionStorage.removeItem('drawingCanvasScrollY');
-            console.log('[KitchenQuote] restoreScrollPosition - scrollY eliminado de sessionStorage');
-          });
-        }, 200);
-      });
-    }, 500);
   }
 
   ngAfterViewInit(): void {
@@ -1922,10 +1886,13 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
   /**
    * Maneja el guardado del dibujo (múltiples dibujos)
+   * @param dataUrl El dataUrl del sketch
+   * @param shouldScrollToNotes Si debe hacer scroll a la sección de notas (solo cuando se guarda desde el canvas, no al restaurar)
    */
-  protected async onSketchSaved(dataUrl: string): Promise<void> {
+  protected async onSketchSaved(dataUrl: string, shouldScrollToNotes: boolean = true): Promise<void> {
     console.log('[KitchenQuote] onSketchSaved - Iniciando guardado de sketch');
     console.log('[KitchenQuote] onSketchSaved - dataUrl recibido:', dataUrl.substring(0, 50) + '...');
+    console.log('[KitchenQuote] onSketchSaved - shouldScrollToNotes:', shouldScrollToNotes);
 
     this.isUploadingSketch.set(true);
 
@@ -1982,6 +1949,16 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       }
 
       this.notificationService.success('Success', 'Sketch saved successfully');
+      
+      // Solo hacer scroll a la sección de notas si se guardó desde el canvas (no al restaurar la página)
+      // Esto evita sobrescribir la posición de scroll que Angular está restaurando con withInMemoryScrolling
+      if (shouldScrollToNotes) {
+        // Esperar un poco más para asegurar que Angular haya terminado de restaurar la posición de scroll
+        // Luego hacer scroll instantáneo hacia la sección de notas
+        setTimeout(() => {
+          this.scrollToNotesSection();
+        }, 100);
+      }
     } catch (error) {
       this.notificationService.error('Error', 'Could not save sketch');
 
@@ -1999,6 +1976,42 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       });
     } finally {
       this.isUploadingSketch.set(false);
+    }
+  }
+
+  /**
+   * Hace scroll hacia la sección de notas de forma imperceptible
+   * Usa scrollTop directamente para evitar cualquier transición CSS
+   */
+  private scrollToNotesSection(): void {
+    const notesSection = document.getElementById('notes-section');
+    if (notesSection) {
+      // Guardar el scroll-behavior actual del HTML para restaurarlo después
+      const htmlElement = document.documentElement;
+      const originalScrollBehavior = htmlElement.style.scrollBehavior;
+      
+      // Deshabilitar temporalmente scroll-behavior smooth del CSS
+      htmlElement.style.scrollBehavior = 'auto';
+      
+      // Calcular la posición exacta con offset
+      const offset = 20;
+      const elementPosition = notesSection.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      
+      // Usar scrollTop directamente para scroll instantáneo sin transición
+      // Esto no se ve afectado por el CSS scroll-behavior
+      if (window.scrollTo) {
+        window.scrollTo(0, offsetPosition);
+      } else {
+        // Fallback para navegadores antiguos
+        document.documentElement.scrollTop = offsetPosition;
+        document.body.scrollTop = offsetPosition;
+      }
+      
+      // Restaurar el scroll-behavior original después de un pequeño delay
+      setTimeout(() => {
+        htmlElement.style.scrollBehavior = originalScrollBehavior;
+      }, 0);
     }
   }
 

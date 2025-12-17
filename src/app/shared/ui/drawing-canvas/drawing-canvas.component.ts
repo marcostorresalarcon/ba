@@ -9,9 +9,9 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="w-full h-full bg-white flex flex-col min-h-0" style="height: 100%; max-height: 100vh; overflow: hidden;">
+    <div class="w-full h-screen bg-white flex flex-col overflow-hidden" style="height: 100vh;">
       <!-- Toolbar -->
-      <div class="flex flex-col border-b border-fog/60 bg-white shadow-sm">
+      <div class="flex flex-col border-b border-fog/60 bg-white shadow-sm flex-shrink-0">
         <!-- Top Bar: Actions -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-fog/20">
           <button (click)="cancel.emit()" class="text-slate hover:text-charcoal font-medium">Cancel</button>
@@ -216,7 +216,7 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
       </div>
 
       <!-- Canvas Area -->
-      <div class="flex-1 relative bg-fog/5 touch-none" style="min-height: 0; flex: 1 1 0%; overflow: hidden; overflow-y: hidden;">
+      <div class="flex-1 relative bg-fog/5 touch-none overflow-hidden" style="flex: 1 1 auto; min-height: 0;">
         <canvas #canvas class="w-full h-full"></canvas>
       </div>
     </div>
@@ -259,6 +259,10 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     setTimeout(() => {
       this.initCanvas();
       this.setupResize();
+      // Forzar un resize inicial después de un pequeño delay adicional
+      setTimeout(() => {
+        this.updateCanvasDimensions();
+      }, 100);
     }, 0);
   }
 
@@ -326,37 +330,34 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
     this.canvas.freeDrawingBrush = brush;
   }
 
+  private updateCanvasDimensions() {
+    const parent = this.canvasEl?.nativeElement?.parentElement;
+    if (!parent || !this.canvas) {
+      return;
+    }
+
+    try {
+      const width = parent.clientWidth;
+      const height = parent.clientHeight;
+      
+      // Solo actualizar si las dimensiones son válidas
+      if (width > 0 && height > 0) {
+        this.canvas.setDimensions({
+          width: width,
+          height: height
+        });
+        this.canvas.renderAll();
+      }
+    } catch (error) {
+      // Silenciar errores de fabric.js durante la inicialización
+      console.warn('Error updating canvas dimensions:', error);
+    }
+  }
+
   private setupResize() {
-    // Función helper para actualizar dimensiones de forma segura
-    const updateDimensions = () => {
-      const parent = this.canvasEl?.nativeElement?.parentElement;
-      if (!parent || !this.canvas) {
-        return;
-      }
-
-      // Verificar que el canvas esté completamente inicializado
-      // Verificando que el canvas tenga las propiedades necesarias
-      try {
-        const width = parent.clientWidth;
-        const height = parent.clientHeight;
-        
-        // Solo actualizar si las dimensiones son válidas
-        if (width > 0 && height > 0) {
-          this.canvas.setDimensions({
-            width: width,
-            height: height
-          });
-          this.canvas.renderAll();
-        }
-      } catch (error) {
-        // Silenciar errores de fabric.js durante la inicialización
-        console.warn('Error updating canvas dimensions:', error);
-      }
-    };
-
     // Configurar ResizeObserver
     this.resizeObserver = new ResizeObserver(() => {
-      updateDimensions();
+      this.updateCanvasDimensions();
     });
 
     const parent = this.canvasEl.nativeElement.parentElement;
@@ -366,7 +367,7 @@ export class DrawingCanvasComponent implements AfterViewInit, OnDestroy {
 
     // También escuchar resize de ventana como fallback
     this.windowResizeHandler = () => {
-      updateDimensions();
+      this.updateCanvasDimensions();
     };
     window.addEventListener('resize', this.windowResizeHandler);
   }

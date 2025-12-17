@@ -1,0 +1,20 @@
+:root {
+  color-scheme: light !important;
+}
+
+:host,
+app-root {
+  /* Sobrescribe la función light-dark() con valores fijos */
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  color-scheme: light !important;
+
+  /* Restablece bordes si el estilo intruso los puso */
+  border: none !important;
+}
+
+/* Asegura que el body también sea blanco */
+body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}

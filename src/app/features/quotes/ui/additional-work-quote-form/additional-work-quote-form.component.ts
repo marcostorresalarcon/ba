@@ -281,13 +281,11 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
           console.log('[AdditionalWork] processPendingCanvasResult - Limpiando sessionStorage antes de procesar');
           sessionStorage.removeItem('drawingCanvasResult');
           sessionStorage.removeItem('drawingCanvasCallback');
-          
+
           // Si hay un resultado de guardado, procesarlo directamente
           console.log('[AdditionalWork] processPendingCanvasResult - Llamando a onSketchSaved');
-          void this.onSketchSaved(result.dataUrl).then(() => {
-            // Restaurar scroll después de procesar el sketch
-            this.restoreScrollPosition();
-          });
+          void this.onSketchSaved(result.dataUrl);
+          // NO restaurar scroll aquí - onSketchSaved manejará el scroll hacia la sección de notas
         } else {
           // Para otros casos, usar el servicio
           console.log('[AdditionalWork] processPendingCanvasResult - Usando servicio processResult');
@@ -297,48 +295,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         console.log('[AdditionalWork] processPendingCanvasResult - No hay resultStr, usando servicio');
         void this.drawingCanvasService.processResult();
       }
-    } else {
-      console.log('[AdditionalWork] processPendingCanvasResult - No hay resultado pendiente');
-      // Aún así restaurar scroll si no hay resultado pendiente
-      this.restoreScrollPosition();
     }
-  }
-
-  /**
-   * Restaura la posición de scroll guardada
-   */
-  private restoreScrollPosition(): void {
-    const scrollYStr = sessionStorage.getItem('drawingCanvasScrollY');
-    console.log('[AdditionalWork] restoreScrollPosition - scrollYStr:', scrollYStr);
-    
-    if (!scrollYStr) {
-      console.log('[AdditionalWork] restoreScrollPosition - No hay scrollY guardado');
-      return;
-    }
-
-    const scrollY = parseInt(scrollYStr, 10);
-    console.log('[AdditionalWork] restoreScrollPosition - scrollY parseado:', scrollY);
-    console.log('[AdditionalWork] restoreScrollPosition - scrollY actual de window:', window.scrollY);
-    
-    // Esperar a que el DOM esté completamente renderizado antes de restaurar el scroll
-    setTimeout(() => {
-      console.log('[AdditionalWork] restoreScrollPosition - Intentando restaurar scroll a:', scrollY);
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: scrollY, behavior: 'smooth' });
-        console.log('[AdditionalWork] restoreScrollPosition - Primer scrollTo ejecutado, scrollY actual:', window.scrollY);
-        
-        // Segundo intento después de un pequeño delay para asegurar que funcione
-        setTimeout(() => {
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: scrollY, behavior: 'smooth' });
-            console.log('[AdditionalWork] restoreScrollPosition - Segundo scrollTo ejecutado, scrollY actual:', window.scrollY);
-            // Limpiar el scrollY solo después de restaurarlo exitosamente
-            sessionStorage.removeItem('drawingCanvasScrollY');
-            console.log('[AdditionalWork] restoreScrollPosition - scrollY eliminado de sessionStorage');
-          });
-        }, 200);
-      });
-    }, 500);
   }
 
   ngAfterViewInit(): void {
@@ -1235,6 +1192,11 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       }
 
       this.notificationService.success('Success', 'Sketch saved successfully');
+      
+      // Hacer scroll suave hacia la sección de notas después de guardar
+      setTimeout(() => {
+        this.scrollToNotesSection();
+      }, 100);
     } catch (error) {
       this.notificationService.error('Error', 'Could not save sketch');
       await this.logService.logError('Error al guardar sketch', error, {
@@ -1250,6 +1212,28 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       });
     } finally {
       this.isUploadingSketch.set(false);
+    }
+  }
+
+  /**
+   * Hace scroll hacia la sección de notas de forma imperceptible
+   */
+  private scrollToNotesSection(): void {
+    const notesSection = document.getElementById('notes-section');
+    if (notesSection) {
+      // Calcular la posición con un pequeño offset para mejor visualización
+      const offset = 20;
+      const elementPosition = notesSection.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+      // Usar requestAnimationFrame para asegurar que el DOM esté renderizado
+      // Scroll instantáneo para que sea imperceptible
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'auto' // Cambiar a 'auto' para scroll instantáneo e imperceptible
+        });
+      });
     }
   }
 

@@ -7,13 +7,13 @@
       </h2>
     </div>
     @if (customer) {
-      <button
-        type="button"
-        class="text-sm text-slate underline-offset-4 hover:underline"
-        (click)="cancelEdit.emit()"
-      >
-        Cancel
-      </button>
+    <button
+      type="button"
+      class="text-sm text-slate underline-offset-4 hover:underline"
+      (click)="cancelEdit.emit()"
+    >
+      Cancel
+    </button>
     }
   </header>
 
@@ -28,9 +28,10 @@
           [class.border-red-500]="hasError('name')"
           [class.border-fog]="!hasError('name')"
           placeholder="Juan"
+          (input)="onTextInput($event)"
         />
         @if (hasError('name')) {
-          <p class="text-xs text-red-600">{{ getErrorMessage('name') }}</p>
+        <p class="text-xs text-red-600">{{ getErrorMessage('name') }}</p>
         }
       </label>
       <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
@@ -42,9 +43,10 @@
           [class.border-red-500]="hasError('lastName')"
           [class.border-fog]="!hasError('lastName')"
           placeholder="Rodríguez"
+          (input)="onTextInput($event)"
         />
         @if (hasError('lastName')) {
-          <p class="text-xs text-red-600">{{ getErrorMessage('lastName') }}</p>
+        <p class="text-xs text-red-600">{{ getErrorMessage('lastName') }}</p>
         }
       </label>
     </div>
@@ -59,9 +61,10 @@
           [class.border-red-500]="hasError('phone')"
           [class.border-fog]="!hasError('phone')"
           placeholder="(123) 456-7890"
+          (input)="onPhoneInput($event)"
         />
         @if (hasError('phone')) {
-          <p class="text-xs text-red-600">{{ getErrorMessage('phone') }}</p>
+        <p class="text-xs text-red-600">{{ getErrorMessage('phone') }}</p>
         }
       </label>
       <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
@@ -83,7 +86,7 @@
           placeholder="juan@example.com"
         />
         @if (hasError('email')) {
-          <p class="text-xs text-red-600">{{ getErrorMessage('email') }}</p>
+        <p class="text-xs text-red-600">{{ getErrorMessage('email') }}</p>
         }
       </label>
     </div>
@@ -94,10 +97,7 @@
         <!-- PlaceAutocompleteElement se insertará aquí dinámicamente -->
       </div>
       <!-- Input oculto para sincronización con el formulario -->
-      <input
-        formControlName="address"
-        type="hidden"
-      />
+      <input formControlName="address" type="hidden" />
       <p class="text-xs text-slate">Start typing to search for a US address</p>
     </label>
 
@@ -118,7 +118,11 @@
           type="text"
           class="rounded-2xl border border-fog bg-white px-4 py-3 focus:border-pine focus:outline-none"
           placeholder="33130"
+          (input)="onNumberInput($event)"
         />
+        @if (hasError('zipCode')) {
+        <p class="text-xs text-red-600">{{ getErrorMessage('zipCode') }}</p>
+        }
       </label>
       <label class="flex flex-col gap-2 text-left text-sm text-charcoal">
         State
@@ -164,5 +168,3 @@
     </button>
   </form>
 </section>
-
-

@@ -52,8 +52,8 @@ declare namespace google {
         constructor(options?: PlaceAutocompleteElementOptions);
         value: string;
         addEventListener(
-          type: 'gmp-placechanged',
-          listener: (event: PlaceAutocompletePlaceChangedEvent) => void
+          type: 'gmp-select',
+          listener: (event: PlaceAutocompleteSelectEvent) => void
         ): void;
         addEventListener(
           type: string,
@@ -61,8 +61,8 @@ declare namespace google {
           options?: boolean | AddEventListenerOptions
         ): void;
         removeEventListener(
-          type: 'gmp-placechanged',
-          listener: (event: PlaceAutocompletePlaceChangedEvent) => void
+          type: 'gmp-select',
+          listener: (event: PlaceAutocompleteSelectEvent) => void
         ): void;
         removeEventListener(
           type: string,
@@ -71,8 +71,12 @@ declare namespace google {
         ): void;
       }
 
-      interface PlaceAutocompletePlaceChangedEvent extends Event {
-        place: Place;
+      interface PlaceAutocompleteSelectEvent extends Event {
+        placePrediction: PlacePrediction;
+      }
+
+      interface PlacePrediction {
+        toPlace(): Place;
       }
 
       interface Place {

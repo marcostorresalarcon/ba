@@ -17,7 +17,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { FormControl, FormGroup } from '@angular/forms';
 
 import type { Customer, CustomerPayload } from '../../../../core/models/customer.model';
-import { textOnlyValidator, usPhoneValidator, emailFormatValidator } from '../../../../core/validators/custom.validators';
+import { textOnlyValidator, usPhoneValidator, emailFormatValidator, numbersOnlyValidator } from '../../../../core/validators/custom.validators';
 import { GoogleMapsService } from '../../../../core/services/maps/google-maps.service';
 
 export type CustomerFormValue = Omit<CustomerPayload, 'companyId'>;
@@ -72,7 +72,10 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
   private autocompleteElement: google.maps.places.PlaceAutocompleteElement | null = null;
   private initRetryCount = 0;
   private readonly maxInitRetries = 10;
-  private placeChangedHandler?: (event: google.maps.places.PlaceAutocompletePlaceChangedEvent) => void;
+  private placeChangedHandler?: (event: google.maps.places.PlaceAutocompleteSelectEvent) => void;
+  private inputElement: HTMLInputElement | null = null;
+  private inputObserver: MutationObserver | null = null;
+  private elementObserver: MutationObserver | null = null;
 
   @ViewChild('addressContainer', { static: false }) addressContainerRef?: ElementRef<HTMLDivElement>;
 
@@ -84,7 +87,7 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
     email: ['', [emailFormatValidator()]],
     address: [''],
     city: [''],
-    zipCode: [''],
+    zipCode: ['', [numbersOnlyValidator()]],
     state: [''],
     leadSource: [''],
     description: ['']
@@ -136,8 +139,18 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   ngOnDestroy(): void {
+    // Limpiar observers
+    if (this.inputObserver) {
+      this.inputObserver.disconnect();
+      this.inputObserver = null;
+    }
+    if (this.elementObserver) {
+      this.elementObserver.disconnect();
+      this.elementObserver = null;
+    }
+
     if (this.autocompleteElement && this.placeChangedHandler) {
-      this.autocompleteElement.removeEventListener('gmp-placechanged', this.placeChangedHandler);
+      this.autocompleteElement.removeEventListener('gmp-select', this.placeChangedHandler);
       this.placeChangedHandler = undefined;
     }
     if (this.autocompleteElement?.parentNode) {
@@ -145,6 +158,7 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
       this.autocompleteElement.parentNode.removeChild(element);
     }
     this.autocompleteElement = null;
+    this.inputElement = null;
   }
 
   /**
@@ -154,7 +168,7 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
     try {
       // Asegurar que Google Maps API esté cargada
       await this.googleMapsService.ensureGoogleMapsLoaded();
-      
+
       // Importar la biblioteca de Places y obtener PlaceAutocompleteElement
       const { PlaceAutocompleteElement } = await window.google.maps.importLibrary('places') as google.maps.PlacesLibrary;
 
@@ -168,8 +182,6 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
         if (this.initRetryCount < this.maxInitRetries) {
           this.initRetryCount++;
           setTimeout(() => this.initializeAutocomplete(), 100);
-        } else {
-          console.warn('Failed to initialize Google Maps autocomplete: container element not found');
         }
         return;
       }
@@ -212,50 +224,82 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
       // Agregar al contenedor (usar type assertion para Node)
       container.appendChild(this.autocompleteElement as Node);
 
-      // Configurar el handler para el evento gmp-placechanged PRIMERO
-      this.placeChangedHandler = async (event: google.maps.places.PlaceAutocompletePlaceChangedEvent) => {
-        console.log('✅ Place changed event fired', event);
-        if (event.place) {
-          console.log('✅ Place object received:', event.place);
-          await this.handlePlaceSelect(event.place);
-        } else {
-          console.warn('⚠️ Place is null in event');
+      // Configurar el handler para el evento gmp-select
+      // Este es el evento oficial que se dispara cuando el usuario selecciona una dirección
+      this.placeChangedHandler = async (event: any) => {
+        // El evento gmp-select proporciona placePrediction que debe convertirse a Place
+        const placePrediction = event.placePrediction;
+        if (!placePrediction) {
+          return;
+        }
+
+        try {
+          // Convertir placePrediction a Place
+          const place = placePrediction.toPlace();
+
+          // Obtener los campos necesarios
+          await place.fetchFields({
+            fields: ['displayName', 'formattedAddress', 'addressComponents']
+          });
+
+          // Este es el método principal que extrae y completa los campos
+          await this.handlePlaceSelect(place);
+        } catch (error) {
+          // Error processing place
         }
       };
 
-      // Agregar el listener del evento
-      this.autocompleteElement.addEventListener('gmp-placechanged', this.placeChangedHandler);
-      
+      // Agregar el listener usando el evento oficial gmp-select
+      try {
+        this.autocompleteElement.addEventListener('gmp-select', this.placeChangedHandler);
+      } catch (error) {
+        // Error adding event listener
+      }
+
       // Esperar a que el elemento se renderice completamente y encontrar el input
-      const findAndSetupInput = async (retries = 10): Promise<void> => {
+      // El PlaceAutocompleteElement puede tener un shadow DOM, así que necesitamos buscar en diferentes lugares
+      const findAndSetupInput = async (retries = 20): Promise<void> => {
         for (let i = 0; i < retries; i++) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          const inputElement = this.autocompleteElement?.querySelector('input');
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          // Buscar el input en diferentes lugares
+          let inputElement: HTMLInputElement | null = null;
+
+          // 1. Buscar directamente en el elemento
+          inputElement = this.autocompleteElement?.querySelector('input') || null;
+
+          // 2. Si no se encuentra, buscar en shadow DOM
+          if (!inputElement && this.autocompleteElement?.shadowRoot) {
+            inputElement = this.autocompleteElement.shadowRoot.querySelector('input');
+          }
+
+          // 3. Buscar en cualquier lugar dentro del elemento
+          if (!inputElement) {
+            const allInputs = this.autocompleteElement?.querySelectorAll('input');
+            if (allInputs && allInputs.length > 0) {
+              inputElement = allInputs[0] as HTMLInputElement;
+            }
+          }
+
           if (inputElement) {
-            console.log('✅ Input element found after', (i + 1) * 100, 'ms');
-            
             let lastValue = '';
             let blurTimeout: ReturnType<typeof setTimeout> | null = null;
-            
+
             // Escuchar cambios en el input
             inputElement.addEventListener('input', () => {
               const currentValue = this.autocompleteElement?.value || '';
               if (currentValue !== lastValue) {
                 lastValue = currentValue;
-                console.log('📝 Input value changed:', currentValue);
               }
             });
 
             // Escuchar cuando el usuario presiona Enter
             inputElement.addEventListener('keydown', async (e) => {
               if (e.key === 'Enter') {
-                console.log('⌨️ Enter pressed, waiting for place selection...');
                 e.preventDefault();
                 setTimeout(async () => {
                   const currentValue = this.autocompleteElement?.value;
                   if (currentValue && currentValue.length > 5) {
-                    console.log('🔄 Processing address after Enter:', currentValue);
                     await this.handleAddressSelection(currentValue);
                   }
                 }, 500);
@@ -264,73 +308,154 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
 
             // Escuchar cuando se pierde el foco (blur) - esto se dispara cuando se selecciona una opción
             inputElement.addEventListener('blur', async () => {
-              console.log('👋 Input blur event');
-              
               // Limpiar timeout anterior si existe
               if (blurTimeout) {
                 clearTimeout(blurTimeout);
               }
-              
+
+              // Esperar un poco más para que el PlaceAutocompleteElement actualice su valor
               blurTimeout = setTimeout(async () => {
-                const currentValue = this.autocompleteElement?.value;
+                const currentValue = this.autocompleteElement?.value || inputElement.value;
                 const formValue = this.form.controls.address.value;
-                console.log('👋 Blur - currentValue:', currentValue, 'formValue:', formValue);
-                
+
                 if (currentValue && currentValue !== formValue && currentValue.length > 5) {
-                  console.log('🔄 Processing address after blur:', currentValue);
                   await this.handleAddressSelection(currentValue);
                 }
-              }, 400);
+              }, 800);
             });
 
-            // También escuchar el evento 'change' del input
+            // Escuchar el evento 'change' del input
+            // Este evento se dispara cuando el valor del input cambia y pierde el foco
             inputElement.addEventListener('change', async () => {
-              const currentValue = this.autocompleteElement?.value;
-              console.log('🔄 Input change event:', currentValue);
-              if (currentValue && currentValue.length > 5) {
+              const currentValue = this.autocompleteElement?.value || inputElement.value;
+
+              // Solo procesar si es una dirección completa y no ha sido procesada
+              if (currentValue &&
+                currentValue.length > 10 &&
+                (this.form.controls.city.value === '' ||
+                  this.form.controls.state.value === '' ||
+                  this.form.controls.zipCode.value === '')) {
+                // Esperar un poco para que el evento gmp-select se dispare primero
                 setTimeout(async () => {
-                  await this.handleAddressSelection(currentValue);
-                }, 300);
+                  if (this.form.controls.city.value === '' ||
+                    this.form.controls.state.value === '' ||
+                    this.form.controls.zipCode.value === '') {
+                    await this.handleAddressSelection(currentValue);
+                  }
+                }, 1000);
               }
             });
 
-            // Observar cambios en el valor del PlaceAutocompleteElement directamente
+            // Observar cambios en el atributo 'value' del PlaceAutocompleteElement
+            // Esto detecta cuando se actualiza el valor después de seleccionar una dirección
             if (this.autocompleteElement) {
-              const observer = new MutationObserver(() => {
-                const currentValue = this.autocompleteElement?.value;
-                if (currentValue && currentValue !== this.form.controls.address.value && currentValue.length > 5) {
-                  console.log('👀 MutationObserver detected value change:', currentValue);
-                  setTimeout(async () => {
-                    await this.handleAddressSelection(currentValue);
-                  }, 200);
-                }
+              this.elementObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                    const newValue = this.autocompleteElement?.getAttribute('value') || '';
+
+                    if (newValue && newValue.length > 10) {
+                      // Esperar un poco para que el evento gmp-select se dispare primero
+                      setTimeout(async () => {
+                        // Si el evento no procesó la dirección, usar Geocoding API como fallback
+                        if (this.form.controls.city.value === '' &&
+                          this.form.controls.state.value === '' &&
+                          this.form.controls.zipCode.value === '') {
+                          await this.handleAddressSelection(newValue);
+                        }
+                      }, 1000);
+                    }
+                  }
+                });
               });
 
-              observer.observe(this.autocompleteElement as Node, {
+              this.elementObserver.observe(this.autocompleteElement as Node, {
                 attributes: true,
-                attributeFilter: ['value'],
+                attributeFilter: ['value']
+              });
+            }
+
+            // Observar cambios en el valor del input interno
+            // Esto detecta cuando el usuario escribe o selecciona una dirección
+            this.inputObserver = new MutationObserver((mutations) => {
+              mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                  const inputValue = inputElement.value;
+
+                  // Solo procesar si es una dirección completa (más de 10 caracteres)
+                  // y no ha sido procesada aún
+                  if (inputValue && inputValue.length > 10 &&
+                    this.form.controls.address.value !== inputValue) {
+                    // Esperar para que el evento gmp-select se dispare primero
+                    setTimeout(async () => {
+                      if (this.form.controls.city.value === '' &&
+                        this.form.controls.state.value === '' &&
+                        this.form.controls.zipCode.value === '') {
+                        await this.handleAddressSelection(inputValue);
+                      }
+                    }, 1000);
+                  }
+                }
+              });
+            });
+
+            this.inputObserver.observe(inputElement, {
+              attributes: true,
+              attributeFilter: ['value']
+            });
+
+            // Configurar MutationObserver para detectar cuando se agregan sugerencias al dropdown
+            // Esto es más eficiente que usar setInterval
+            if (this.autocompleteElement?.shadowRoot) {
+              const shadowRoot = this.autocompleteElement.shadowRoot;
+              const dropdownObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                  if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    // Se agregaron nodos, pueden ser sugerencias
+                    const suggestions = shadowRoot.querySelectorAll('[role="option"], .pac-item, [data-place-id]');
+                    if (suggestions && suggestions.length > 0) {
+                      suggestions.forEach((suggestion) => {
+                        if (!(suggestion as HTMLElement).hasAttribute('data-listener-added')) {
+                          (suggestion as HTMLElement).setAttribute('data-listener-added', 'true');
+                          suggestion.addEventListener('click', async () => {
+                            // Esperar a que el evento gmp-select se dispare primero
+                            setTimeout(async () => {
+                              // Si el evento no se disparó, procesar manualmente
+                              if (this.form.controls.city.value === '' &&
+                                this.form.controls.state.value === '' &&
+                                this.form.controls.zipCode.value === '') {
+                                const currentValue = this.autocompleteElement?.value || inputElement.value;
+                                if (currentValue && currentValue.length > 10) {
+                                  await this.handleAddressSelection(currentValue);
+                                }
+                              }
+                            }, 1000);
+                          });
+                        }
+                      });
+                    }
+                  }
+                });
+              });
+
+              dropdownObserver.observe(shadowRoot, {
                 childList: true,
                 subtree: true
               });
             }
 
-            console.log('✅ All input listeners and observers set up');
             return;
           }
         }
-        
-        console.warn('⚠️ Input element not found after', retries * 100, 'ms');
       };
 
       // Intentar encontrar y configurar el input
       await findAndSetupInput();
-      
-      console.log('✅ PlaceAutocompleteElement initialized and all event listeners added');
 
       // Sincronizar el valor del formulario con el elemento
       this.syncFormValue();
     } catch (error) {
-      console.error('Error initializing Google Maps autocomplete:', error);
+      // Error initializing Google Maps autocomplete
     }
   }
 
@@ -369,52 +494,80 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   /**
+   * Intenta obtener el place directamente del PlaceAutocompleteElement
+   */
+  private async tryGetPlaceFromElement(): Promise<void> {
+    if (!this.autocompleteElement) {
+      return;
+    }
+
+    try {
+      // Intentar diferentes métodos para obtener el place
+      const methods = ['getPlace', 'place', 'selectedPlace', '_place'];
+
+      for (const method of methods) {
+        if ((this.autocompleteElement as any)[method]) {
+          try {
+            const place = typeof (this.autocompleteElement as any)[method] === 'function'
+              ? (this.autocompleteElement as any)[method]()
+              : (this.autocompleteElement as any)[method];
+
+            if (place) {
+              await this.handlePlaceSelect(place);
+              return;
+            }
+          } catch (error) {
+            // Error calling method
+          }
+        }
+      }
+    } catch (error) {
+      // Error in tryGetPlaceFromElement
+    }
+  }
+
+  /**
    * Maneja la selección de dirección cuando se proporciona el texto de la dirección
    */
   private async handleAddressSelection(addressText: string): Promise<void> {
     if (!addressText || !window.google?.maps) {
-      console.warn('⚠️ handleAddressSelection: Missing addressText or Google Maps');
       return;
     }
 
-    console.log('🔄 handleAddressSelection called with:', addressText);
+    // Primero intentar obtener el place directamente del elemento
+    await this.tryGetPlaceFromElement();
 
+    // Si no funcionó, usar Geocoding API como fallback
     try {
       // Usar Geocoding API para obtener los detalles de la dirección
       const geocoder = new window.google.maps.Geocoder();
-      
+
       const request: google.maps.GeocoderRequest = {
         address: addressText,
         componentRestrictions: { country: 'us' }
       };
 
-      console.log('🔄 Geocoding request:', request);
-
       geocoder.geocode(request, (results, status) => {
-        console.log('📍 Geocoding response - Status:', status, 'Results:', results);
-        
         if (status === 'OK' && results && results.length > 0) {
           const result = results[0];
-          console.log('✅ Geocoding successful, extracting components from:', result);
           this.extractAddressComponents(result);
-        } else {
-          console.warn('⚠️ Geocoding failed or no results. Status:', status);
         }
       });
     } catch (error) {
-      console.error('❌ Error in handleAddressSelection:', error);
+      // Error in handleAddressSelection
     }
   }
 
   /**
-   * Extrae los componentes de dirección de un resultado de Geocoding
+   * Extrae los componentes de dirección de un resultado de Geocoding API
+   * Este método se usa como fallback cuando PlaceAutocompleteElement no proporciona los componentes
+   * Según la documentación oficial de Geocoding API:
+   * - address_components: Array de componentes con long_name, short_name, types
+   * - formatted_address: Dirección completa formateada
    */
   private extractAddressComponents(geocodeResult: google.maps.GeocoderResult): void {
-    console.log('🔍 extractAddressComponents called with:', geocodeResult);
-    
     const addressComponents = geocodeResult.address_components || [];
-    console.log('📍 Address components:', addressComponents);
-    
+
     let city = '';
     let state = '';
     let zipCode = '';
@@ -422,34 +575,45 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
 
     for (const component of addressComponents) {
       const types = component.types || [];
-      console.log('  Component:', component.long_name, 'Types:', types);
+      const longName = component.long_name || '';
+      const shortName = component.short_name || '';
 
-      // Ciudad
-      if (types.includes('locality') && !city) {
-        city = component.long_name || '';
-        console.log('  ✅ Found city (locality):', city);
-      } else if (types.includes('sublocality') && !city) {
-        city = component.long_name || '';
-        console.log('  ✅ Found city (sublocality):', city);
-      } else if (types.includes('administrative_area_level_2') && !city) {
-        city = component.long_name || '';
-        console.log('  ✅ Found city (administrative_area_level_2):', city);
+      // CIUDAD (City):
+      // Según la API oficial de Geocoding, la ciudad puede venir en:
+      // - 'locality': Ciudad principal
+      // - 'sublocality': Sub-localidad (barrio, distrito)
+      // - 'administrative_area_level_2': Condado (a veces usado como ciudad)
+      // Prioridad: locality > sublocality > administrative_area_level_2
+      if (!city) {
+        if (types.includes('locality')) {
+          city = longName;
+        } else if (types.includes('sublocality')) {
+          city = longName;
+        } else if (types.includes('administrative_area_level_2') && !city) {
+          city = longName;
+        }
       }
 
-      // Estado
+      // ESTADO (State):
+      // Según la API oficial de Geocoding, el estado viene en:
+      // - 'administrative_area_level_1': Estado o provincia
+      // Usar short_name para el código de estado (ej: "CA", "NY", "FL")
+      // Si no hay short_name, usar long_name como fallback
       if (types.includes('administrative_area_level_1')) {
-        state = component.short_name || component.long_name || '';
-        console.log('  ✅ Found state:', state);
+        // Preferir short_name (código de estado) pero usar long_name si no está disponible
+        state = shortName || longName;
       }
 
-      // Código postal
+      // CÓDIGO POSTAL (Zip Code):
+      // Según la API oficial de Geocoding, el código postal viene en:
+      // - 'postal_code': Código postal
+      // Usar long_name (puede incluir el código postal extendido)
       if (types.includes('postal_code')) {
-        zipCode = component.long_name || '';
-        console.log('  ✅ Found zipCode:', zipCode);
+        zipCode = longName || shortName;
       }
     }
 
-    // Actualizar el formulario
+    // Preparar actualizaciones del formulario
     const updates: Partial<CustomerFormGroup['value']> = {
       address: fullAddress
     };
@@ -464,128 +628,126 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
       updates.zipCode = zipCode;
     }
 
-    console.log('📝 Updating form with:', updates);
-    console.log('📝 Current form values before update:', {
-      address: this.form.controls.address.value,
-      city: this.form.controls.city.value,
-      state: this.form.controls.state.value,
-      zipCode: this.form.controls.zipCode.value
-    });
-
+    // Aplicar todos los cambios de una vez
     this.form.patchValue(updates);
+
+    // Forzar detección de cambios ya que usamos OnPush
     this.cdr.markForCheck();
-    
-    console.log('✅ Form updated. New values:', {
-      address: this.form.controls.address.value,
-      city: this.form.controls.city.value,
-      state: this.form.controls.state.value,
-      zipCode: this.form.controls.zipCode.value
-    });
   }
 
   /**
    * Maneja la selección de una dirección del autocompletado
+   * Según la documentación oficial de Google Maps Places API:
+   * - formattedAddress: Dirección completa formateada
+   * - addressComponents: Array de componentes de dirección
+   * - Cada componente tiene: longText (nombre completo), shortText (código corto), types (array de tipos)
+   * - Tipos importantes: 'locality' (ciudad), 'administrative_area_level_1' (estado), 'postal_code' (código postal)
    */
   private async handlePlaceSelect(place: google.maps.places.Place): Promise<void> {
     if (!place) {
-      console.warn('Place is null or undefined');
       return;
     }
 
     try {
-      console.log('Processing place selection:', place);
-
-      // Obtener los campos necesarios - usar los campos correctos de la nueva API
+      // Según la API oficial, debemos usar fetchFields para obtener los datos completos
+      // Los campos disponibles según la documentación oficial:
+      // - formattedAddress: Dirección completa
+      // - addressComponents: Componentes de la dirección (ciudad, estado, código postal, etc.)
+      // - displayName: Nombre del lugar
       await place.fetchFields({
         fields: [
           'formattedAddress',
           'addressComponents',
-          'name',
           'displayName'
         ]
       });
 
-      console.log('Place after fetchFields:', place);
-      console.log('Address components:', place.addressComponents);
-
       // Establecer la dirección completa
       const formattedAddress = place.formattedAddress || place.displayName || '';
-      this.form.patchValue({
-        address: formattedAddress
-      });
 
-      // Extraer componentes de la dirección
+      // Extraer componentes de la dirección según la API oficial
       let city = '';
       let state = '';
       let zipCode = '';
 
       if (place.addressComponents && place.addressComponents.length > 0) {
-        console.log('Processing address components:', place.addressComponents);
-        
-        for (const component of place.addressComponents) {
+        for (let i = 0; i < place.addressComponents.length; i++) {
+          const component = place.addressComponents[i];
           const types = component.types || [];
-          console.log('Component:', component, 'Types:', types);
 
-          // Obtener valores - intentar con ambos formatos (nueva API y antigua)
-          const longValue = (component as any).longText || (component as any).long_name || '';
-          const shortValue = (component as any).shortText || (component as any).short_name || '';
+          // Según la API oficial, los componentes tienen:
+          // - longText: Nombre completo (ej: "California", "New York")
+          // - shortText: Código corto (ej: "CA", "NY")
+          const longText = component.longText || '';
+          const shortText = component.shortText || '';
 
-          // Ciudad - puede ser 'locality' o 'sublocality'
-          if (types.includes('locality') && !city) {
-            city = longValue;
-            console.log('Found city (locality):', city);
-          } else if (types.includes('sublocality') && !city) {
-            city = longValue;
-            console.log('Found city (sublocality):', city);
-          } else if (types.includes('sublocality_level_1') && !city) {
-            city = longValue;
-            console.log('Found city (sublocality_level_1):', city);
+          // CIUDAD (City):
+          // Según la API oficial, la ciudad puede venir en varios tipos:
+          // - 'locality': Ciudad principal
+          // - 'sublocality': Sub-localidad (barrio, distrito)
+          // - 'sublocality_level_1': Nivel 1 de sub-localidad
+          // - 'administrative_area_level_2': Condado (a veces usado como ciudad)
+          // Prioridad: locality > sublocality > sublocality_level_1 > administrative_area_level_2
+          if (!city) {
+            if (types.includes('locality')) {
+              city = longText;
+            } else if (types.includes('sublocality')) {
+              city = longText;
+            } else if (types.includes('sublocality_level_1')) {
+              city = longText;
+            } else if (types.includes('administrative_area_level_2') && !city) {
+              city = longText;
+            }
           }
 
-          // Estado - administrative_area_level_1 (usar código corto)
+          // ESTADO (State):
+          // Según la API oficial, el estado viene en:
+          // - 'administrative_area_level_1': Estado o provincia
+          // Usar shortText para el código de estado (ej: "CA", "NY", "FL")
+          // Si no hay shortText, usar longText como fallback
           if (types.includes('administrative_area_level_1')) {
-            state = shortValue || longValue;
-            console.log('Found state:', state);
+            // Preferir shortText (código de estado) pero usar longText si no está disponible
+            state = shortText || longText;
           }
 
-          // Código postal
+          // CÓDIGO POSTAL (Zip Code):
+          // Según la API oficial, el código postal viene en:
+          // - 'postal_code': Código postal
+          // Usar longText (puede incluir el código postal extendido)
           if (types.includes('postal_code')) {
-            zipCode = longValue || shortValue;
-            console.log('Found zipCode:', zipCode);
+            zipCode = longText || shortText;
           }
         }
-      } else {
-        console.warn('No address components found');
       }
 
-      // Actualizar los campos del formulario con los valores extraídos
-      const updates: Partial<CustomerFormGroup['value']> = {};
-      
+      // Preparar actualizaciones del formulario
+      const updates: Partial<CustomerFormGroup['value']> = {
+        address: formattedAddress
+      };
+
       if (city) {
         updates.city = city;
       }
-      
+
       if (state) {
         updates.state = state;
       }
-      
+
       if (zipCode) {
         updates.zipCode = zipCode;
       }
 
-      console.log('Updating form with:', updates);
-
       // Aplicar todos los cambios de una vez
-      if (Object.keys(updates).length > 0) {
-        this.form.patchValue(updates);
-        // Forzar detección de cambios ya que usamos OnPush
-        this.cdr.markForCheck();
-        console.log('Form updated successfully');
-      } else {
-        console.warn('No updates to apply - city, state, or zipCode not found');
-      }
+      this.form.patchValue(updates);
+
+      // Forzar detección de cambios ya que usamos OnPush
+      this.cdr.markForCheck();
     } catch (error) {
-      console.error('Error processing place selection:', error);
+      // Intentar usar Geocoding API como fallback
+      if (place.formattedAddress || place.displayName) {
+        const addressText = place.formattedAddress || place.displayName || '';
+        await this.handleAddressSelection(addressText);
+      }
     }
   }
 
@@ -616,7 +778,7 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
    */
   protected getErrorMessage(controlName: keyof CustomerFormGroup['controls']): string {
     const control = this.form.controls[controlName];
-    
+
     if (!control.errors || !this.hasError(controlName)) {
       return '';
     }
@@ -637,7 +799,68 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
       return 'Please enter a valid email address';
     }
 
+    if (control.errors['numbersOnly']) {
+      return 'Only numbers are allowed';
+    }
+
     return 'Invalid value';
+  }
+
+  /**
+   * Restringe la entrada a solo letras (incluyendo espacios, guiones y apóstrofes)
+   * Para campos de nombre y apellido
+   */
+  protected onTextInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    // Permitir letras (incluyendo acentos), espacios, guiones y apóstrofes
+    const textOnlyRegex = /^[a-zA-ZÀ-ÿ\u00f1\u00d1\s'-]*$/;
+
+    if (!textOnlyRegex.test(value)) {
+      // Remover caracteres no permitidos
+      input.value = value.replace(/[^a-zA-ZÀ-ÿ\u00f1\u00d1\s'-]/g, '');
+      // Actualizar el control del formulario
+      const controlName = input.getAttribute('formControlName');
+      if (controlName) {
+        this.form.controls[controlName as keyof CustomerFormGroup['controls']].setValue(input.value, { emitEvent: false });
+      }
+    }
+  }
+
+  /**
+   * Restringe la entrada a solo números y caracteres de formato de teléfono
+   * Para campos de teléfono
+   */
+  protected onPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    // Permitir números, espacios, guiones, paréntesis, puntos y el prefijo +1
+    const phoneRegex = /^[\d\s\-\(\)\.\+]*$/;
+
+    if (!phoneRegex.test(value)) {
+      // Remover caracteres no permitidos
+      input.value = value.replace(/[^\d\s\-\(\)\.\+]/g, '');
+      // Actualizar el control del formulario
+      this.form.controls.phone.setValue(input.value, { emitEvent: false });
+    }
+  }
+
+  /**
+   * Restringe la entrada a solo números
+   * Para campos de código postal
+   */
+  protected onNumberInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    // Solo números
+    const numbersOnlyRegex = /^\d*$/;
+
+    if (!numbersOnlyRegex.test(value)) {
+      // Remover caracteres no permitidos
+      input.value = value.replace(/\D/g, '');
+      // Actualizar el control del formulario
+      this.form.controls.zipCode.setValue(input.value, { emitEvent: false });
+    }
   }
 }
 

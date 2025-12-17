@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-}
-
 html {
   /* Mejoras de scroll nativo para iOS y Android */
   -webkit-overflow-scrolling: touch;
@@ -61,8 +57,8 @@ select:focus-visible {
 
 /* Contenedores scrollables */
 .scroll-container,
-[class*="overflow"],
-[class*="scroll"] {
+[class*='overflow'],
+[class*='scroll'] {
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -132,4 +128,46 @@ html {
 
 .animate-canvasFromClick {
   animation: canvasFromClick 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root {
+  color-scheme: light !important;
+}
+
+:host,
+app-root {
+  /* Sobrescribe la función light-dark() con valores fijos */
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  color-scheme: light !important;
+
+  /* Restablece bordes si el estilo intruso los puso */
+  border: none !important;
+}
+
+/* Asegura que el body también sea blanco */
+body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Apunta al componente Web de Google Maps */
+gmp-place-autocomplete,
+.address-autocomplete-container {
+  /* Fuerza el esquema de color a luz para que la función light-dark() elija el primero */
+  color-scheme: light !important;
+  border: 0.5px solid #cbd5e1 !important;
+  border-radius: 1rem !important;
+
+  /* Variables específicas para el fondo y texto del input */
+  --gmp-place-autocomplete-background: #ffffff;
+  --gmp-place-autocomplete-text-color: #374151; /* Charcoal/Gray */
+  --gmp-place-autocomplete-placeholder-color: #64748b; /* Slate */
+
+  /* Variables para el menú desplegable (popover) */
+  --gmp-place-autocomplete-popover-background: #ffffff;
+  --gmp-place-autocomplete-popover-text-color: #374151;
+
+  /* Borde (si quieres quitar ese borde negro que veías) */
+  --gmp-place-autocomplete-border-color: #cbd5e1;
 }

@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DrawingCanvasComponent } from '../../shared/ui/drawing-canvas/drawing-canvas.component';
 import { LayoutService } from '../../core/services/layout/layout.service';
+import { DrawingCanvasService } from '../../core/services/drawing-canvas/drawing-canvas.service';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 
 @Component({
@@ -20,6 +21,7 @@ export class DrawingCanvasPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly layoutService = inject(LayoutService);
+  private readonly drawingCanvasService = inject(DrawingCanvasService);
 
   protected readonly breadcrumbs: LayoutBreadcrumb[] = [{ label: 'Drawing Canvas' }];
 
@@ -36,15 +38,14 @@ export class DrawingCanvasPage {
     console.log('[DrawingCanvasPage] onSave - returnUrl:', returnUrl);
     console.log('[DrawingCanvasPage] onSave - callback:', callback);
     
-    // Guardar el dataUrl en sessionStorage para que el componente que lo llamó pueda recuperarlo
+    // Guardar el resultado en sessionStorage para procesarlo después de navegar
+    // Esto permite que Angular restaure la posición de scroll primero, y luego procesamos el resultado
     if (callback) {
       const result = { dataUrl, action: 'save' };
-      console.log('[DrawingCanvasPage] onSave - Guardando resultado en sessionStorage');
+      console.log('[DrawingCanvasPage] onSave - Guardando resultado en sessionStorage para procesar después de navegar');
       sessionStorage.setItem('drawingCanvasResult', JSON.stringify(result));
-      
-      // Verificar que se guardó
-      const saved = sessionStorage.getItem('drawingCanvasResult');
-      console.log('[DrawingCanvasPage] onSave - Verificación: resultado guardado:', !!saved);
+      // Marcar que se debe hacer scroll a la sección de notas después de procesar
+      sessionStorage.setItem('drawingCanvasShouldScroll', 'true');
     } else {
       console.warn('[DrawingCanvasPage] onSave - No hay callback, no se guardará el resultado');
     }

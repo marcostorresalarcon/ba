@@ -66,4 +66,25 @@ export function emailFormatValidator(): ValidatorFn {
   };
 }
 
+/**
+ * Validador para campos que solo permiten números
+ * Útil para códigos postales, números de teléfono, etc.
+ */
+export function numbersOnlyValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value || control.value.trim() === '') {
+      return null; // Permitir vacío si no es requerido
+    }
+
+    // Solo números
+    const numbersOnlyRegex = /^\d+$/;
+    
+    if (!numbersOnlyRegex.test(control.value)) {
+      return { numbersOnly: { value: control.value } };
+    }
+
+    return null;
+  };
+}
+
 
