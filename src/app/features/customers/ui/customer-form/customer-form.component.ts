@@ -103,10 +103,13 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
     if (changes['customer']) {
       const value = changes['customer'].currentValue as Customer | null;
       if (value) {
+        // Formatear el teléfono si existe
+        const formattedPhone = value.phone ? this.formatPhoneNumber(value.phone) : '';
+        
         this.form.patchValue({
           name: value.name,
           lastName: value.lastName,
-          phone: value.phone ?? '',
+          phone: formattedPhone,
           date: value.date ?? '',
           email: value.email ?? '',
           address: value.address ?? '',
@@ -761,7 +764,18 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
       return;
     }
 
-    const payload = this.form.getRawValue();
+    const formValue = this.form.getRawValue();
+    
+    // Agregar prefijo +1 al teléfono si tiene valor
+    const phoneWithPrefix = formValue.phone 
+      ? `+1${formValue.phone.replace(/\D/g, '')}` 
+      : '';
+    
+    const payload: CustomerFormValue = {
+      ...formValue,
+      phone: phoneWithPrefix
+    };
+    
     this.submitCustomer.emit(payload);
   }
 
@@ -828,21 +842,56 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
   }
 
   /**
-   * Restringe la entrada a solo números y caracteres de formato de teléfono
-   * Para campos de teléfono
+   * Formatea un número de teléfono al formato (999) 999-9999
+   * @param phoneNumber - Número de teléfono sin formato o con formato
+   * @returns Número formateado como (999) 999-9999
+   */
+  private formatPhoneNumber(phoneNumber: string): string {
+    // Remover todos los caracteres no numéricos
+    const numbersOnly = phoneNumber.replace(/\D/g, '');
+    
+    // Si tiene el código de país +1, removerlo
+    const cleaned = numbersOnly.startsWith('1') && numbersOnly.length === 11 
+      ? numbersOnly.slice(1) 
+      : numbersOnly;
+    
+    // Limitar a 10 dígitos
+    const limitedNumbers = cleaned.slice(0, 10);
+    
+    // Formatear como (999) 999-9999
+    if (limitedNumbers.length === 0) {
+      return '';
+    } else if (limitedNumbers.length <= 3) {
+      return `(${limitedNumbers}`;
+    } else if (limitedNumbers.length <= 6) {
+      return `(${limitedNumbers.slice(0, 3)}) ${limitedNumbers.slice(3)}`;
+    } else {
+      return `(${limitedNumbers.slice(0, 3)}) ${limitedNumbers.slice(3, 6)}-${limitedNumbers.slice(6)}`;
+    }
+  }
+
+  /**
+   * Restringe la entrada a solo números y formatea automáticamente como (999) 999-9999
+   * Para campos de teléfono de Estados Unidos (+1)
    */
   protected onPhoneInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const value = input.value;
-    // Permitir números, espacios, guiones, paréntesis, puntos y el prefijo +1
-    const phoneRegex = /^[\d\s\-\(\)\.\+]*$/;
-
-    if (!phoneRegex.test(value)) {
-      // Remover caracteres no permitidos
-      input.value = value.replace(/[^\d\s\-\(\)\.\+]/g, '');
-      // Actualizar el control del formulario
-      this.form.controls.phone.setValue(input.value, { emitEvent: false });
-    }
+    let value = input.value;
+    
+    // Remover todos los caracteres no numéricos
+    const numbersOnly = value.replace(/\D/g, '');
+    
+    // Limitar a 10 dígitos (formato US sin código de país)
+    const limitedNumbers = numbersOnly.slice(0, 10);
+    
+    // Formatear como (999) 999-9999
+    const formatted = this.formatPhoneNumber(limitedNumbers);
+    
+    // Actualizar el valor del input
+    input.value = formatted;
+    
+    // Actualizar el control del formulario
+    this.form.controls.phone.setValue(formatted, { emitEvent: false });
   }
 
   /**

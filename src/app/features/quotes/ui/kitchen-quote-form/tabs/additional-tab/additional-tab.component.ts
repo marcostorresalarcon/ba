@@ -11,6 +11,10 @@ import { ControlContainer, FormGroupDirective, ReactiveFormsModule } from '@angu
 import { NotificationService } from '../../../../../../core/services/notification/notification.service';
 import { PermissionsService } from '../../../../../../core/services/permissions/permissions.service';
 import { MediaPickerService } from '../../../../../../core/services/media/media-picker.service';
+import { AudioRecorderService } from '../../../../../../core/services/audio/audio-recorder.service';
+import { AudioService } from '../../../../../../core/services/audio/audio.service';
+import { S3UploadService } from '../../../../../../core/services/upload/s3-upload.service';
+import { LogService } from '../../../../../../core/services/log/log.service';
 import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
 
 @Component({
@@ -25,18 +29,150 @@ export class AdditionalTabComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly permissionsService = inject(PermissionsService);
   private readonly mediaPickerService = inject(MediaPickerService);
+  private readonly audioRecorderService = inject(AudioRecorderService);
+  private readonly audioService = inject(AudioService);
+  private readonly s3UploadService = inject(S3UploadService);
+  private readonly logService = inject(LogService);
 
   @Input({ required: true }) form!: KitchenQuoteFormGroup;
 
-  protected readonly isRecording = signal(false);
+  protected readonly isRecording = this.audioRecorderService.isRecording;
+  protected readonly isUploadingAudio = signal(false);
+  protected readonly isProcessingAudio = signal(false);
   protected readonly hasRecording = signal(false);
   protected readonly mediaFiles = signal<File[]>([]);
   protected readonly drawings = signal<string[]>([]);
   protected readonly estimateResult = signal<number | null>(null);
 
-  protected toggleVoiceRecording(): void {
-    // TODO: Implement voice recording
-    this.isRecording.set(!this.isRecording());
+  protected async toggleVoiceRecording(): Promise<void> {
+    if (this.isRecording()) {
+      await this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  private async startRecording(): Promise<void> {
+    try {
+      await this.audioRecorderService.startRecording();
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.notificationService.error(
+        'Error',
+        `Could not start recording. ${errorMsg}`
+      );
+      await this.logService.logError('Error al iniciar grabación de audio', error, {
+        severity: 'medium',
+        description: 'Error al intentar iniciar la grabación de audio en additional tab',
+        source: 'additional-tab',
+        metadata: {
+          component: 'AdditionalTabComponent',
+          action: 'startRecording'
+        }
+      });
+    }
+  }
+
+  private async stopRecording(): Promise<void> {
+    try {
+      const audioFile = await this.audioRecorderService.stopRecording();
+      await this.processAudioFile(audioFile);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.notificationService.error('Error', `Error stopping recording: ${errorMsg}`);
+      await this.logService.logError('Error al detener grabación de audio', error, {
+        severity: 'medium',
+        description: 'Error al intentar detener la grabación de audio en additional tab',
+        source: 'additional-tab',
+        metadata: {
+          component: 'AdditionalTabComponent',
+          action: 'stopRecording'
+        }
+      });
+    }
+  }
+
+  private async processAudioFile(file: File): Promise<void> {
+    this.isUploadingAudio.set(true);
+    this.isProcessingAudio.set(true);
+
+    try {
+      const url = await this.s3UploadService.uploadFile(file);
+      this.isUploadingAudio.set(false);
+
+      // Procesar con API de audio
+      this.notificationService.info('Processing', 'Generating audio summary...');
+
+      this.audioService.summarizeAudio(file).subscribe({
+        next: (response) => {
+          const currentAudios = this.form.controls.audioNotes.value || [];
+          const newAudio = response.success
+            ? {
+                url,
+                transcription: response.data.transcription,
+                summary: response.data.summary,
+              }
+            : { url };
+
+          // Agregar el nuevo audio al inicio del array (más reciente primero)
+          this.form.controls.audioNotes.setValue([newAudio, ...currentAudios], { emitEvent: true });
+
+          if (response.success) {
+            this.notificationService.success('Success', 'Audio processed successfully');
+          } else {
+            this.notificationService.info(
+              'Warning',
+              'Audio saved, but summary could not be generated'
+            );
+            void this.logService.logNotification('Audio guardado pero resumen no generado', {
+              description: 'El audio se subió correctamente pero no se pudo generar el resumen',
+              source: 'additional-tab',
+              metadata: {
+                component: 'AdditionalTabComponent',
+                action: 'processAudioFile',
+                audioUrl: url
+              }
+            });
+          }
+          this.isProcessingAudio.set(false);
+          this.hasRecording.set(true);
+        },
+        error: (error) => {
+          // Si falla el procesamiento, al menos guardar el audio
+          const currentAudios = this.form.controls.audioNotes.value || [];
+          this.form.controls.audioNotes.setValue([{ url }, ...currentAudios], { emitEvent: true });
+          this.notificationService.info('Warning', 'Audio saved, but text processing failed');
+          this.isProcessingAudio.set(false);
+          this.hasRecording.set(true);
+
+          void this.logService.logError('Error al procesar audio con API', error, {
+            severity: 'medium',
+            description: 'Error al procesar el audio con la API de resumen, pero el archivo se guardó correctamente',
+            source: 'additional-tab',
+            metadata: {
+              component: 'AdditionalTabComponent',
+              action: 'summarizeAudio',
+              audioUrl: url
+            }
+          });
+        }
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
+      this.isUploadingAudio.set(false);
+      this.isProcessingAudio.set(false);
+
+      await this.logService.logError('Error al subir archivo de audio', error, {
+        severity: 'high',
+        description: 'Error al subir el archivo de audio a S3',
+        source: 'additional-tab',
+        metadata: {
+          component: 'AdditionalTabComponent',
+          action: 'processAudioFile'
+        }
+      });
+    }
   }
 
   protected async onMediaFileSelected(): Promise<void> {

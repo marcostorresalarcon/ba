@@ -95,7 +95,7 @@ export class PermissionsService {
 
   /**
    * Verifica y solicita permisos de galería de fotos
-   * @returns Promise<boolean> - true si se otorgó el permiso
+   * @returns Promise<boolean> - true si se otorgó el permiso (granted, no limited)
    */
   async requestPhotoLibraryPermission(): Promise<boolean> {
     if (!this.isNative) {
@@ -107,11 +107,21 @@ export class PermissionsService {
     try {
       const permissions = await Camera.checkPermissions();
       
+      // En iOS 14+, 'limited' significa acceso limitado (solo fotos seleccionadas)
+      // Para FilePicker necesitamos acceso completo ('granted')
       if (permissions.photos === 'granted') {
         return true;
       }
 
-      // Solicitar permisos si no están otorgados
+      // Si está en 'limited', necesitamos solicitar acceso completo
+      if (permissions.photos === 'limited') {
+        // Solicitar permisos nuevamente para obtener acceso completo
+        const requestResult = await Camera.requestPermissions({ permissions: ['photos'] });
+        // Retornar true solo si es 'granted', no 'limited'
+        return requestResult.photos === 'granted';
+      }
+
+      // Si no está otorgado, solicitar permisos
       const requestResult = await Camera.requestPermissions({ permissions: ['photos'] });
       return requestResult.photos === 'granted';
     } catch {

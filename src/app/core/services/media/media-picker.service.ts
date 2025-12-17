@@ -4,6 +4,7 @@ import { Camera, CameraResultType, CameraSource, type Photo } from '@capacitor/c
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 
 import { LogService } from '../log/log.service';
+import { PermissionsService } from '../permissions/permissions.service';
 
 /**
  * Servicio para seleccionar medios (imágenes/videos) usando Capacitor Camera
@@ -16,6 +17,7 @@ export class MediaPickerService {
   private readonly isNative = Capacitor.isNativePlatform();
   private readonly platform = Capacitor.getPlatform();
   private readonly logService = inject(LogService);
+  private readonly permissionsService = inject(PermissionsService);
 
   /**
    * Selecciona un medio (imagen, video o archivo) desde la cámara, galería o sistema de archivos
@@ -474,6 +476,12 @@ export class MediaPickerService {
    */
   private async pickImagesNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
+      // Solicitar permisos de galería antes de acceder
+      const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
+      if (!hasPermission) {
+        throw new Error('Photo library permission denied');
+      }
+
       // iOS: Camera con Photos (nativo). No hay múltiple selección nativa; devolvemos solo uno.
       const photo = await Camera.getPhoto({
         quality: 90,
@@ -489,7 +497,7 @@ export class MediaPickerService {
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in error && 
           (error.message === 'User cancelled' || error.message === 'User canceled' || 
-           error.message === 'User cancelled photos app')) {
+           error.message === 'User cancelled photos app' || error.message === 'Photo library permission denied')) {
         return [];
       }
       throw error;
@@ -542,6 +550,12 @@ export class MediaPickerService {
    */
   private async pickVideosNative(allowMultiple: boolean): Promise<File[]> {
     try {
+      // Solicitar permisos de galería antes de acceder
+      const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
+      if (!hasPermission) {
+        throw new Error('Photo library permission denied');
+      }
+
       const result = await FilePicker.pickFiles({
         types: ['video/*'],
         readData: true
@@ -566,7 +580,8 @@ export class MediaPickerService {
       return await this.convertPickedFilesToFiles(filesToProcess, true); // Validar que sean videos
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+          (error.message === 'User cancelled' || error.message === 'User canceled' || 
+           error.message === 'Photo library permission denied')) {
         return [];
       }
       throw error;
@@ -580,6 +595,29 @@ export class MediaPickerService {
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
+      // Solicitar permisos de galería antes de acceder (crítico para iOS/iPad)
+      // En iOS 14+, necesitamos acceso completo ('granted'), no acceso limitado ('limited')
+      const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
+      if (!hasPermission) {
+        // Registrar el error para depuración
+        void this.logService.logError(
+          'Photo library permission denied for videos',
+          new Error('Photo library permission not granted'),
+          {
+            severity: 'medium',
+            description: 'User denied photo library access or only granted limited access',
+            source: 'media-picker-service',
+            metadata: {
+              service: 'MediaPickerService',
+              method: 'pickVideosNativeIOS',
+              platform: 'ios',
+              allowMultiple
+            }
+          }
+        );
+        throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
+      }
+
       // Intentar usar FilePicker con tipos de video para abrir la galería nativa de videos
       // En iOS, cuando se especifica 'video/*', el sistema puede mostrar la galería de videos
       const result = await FilePicker.pickFiles({
@@ -605,11 +643,35 @@ export class MediaPickerService {
       const filesToProcess = allowMultiple ? videoFiles : videoFiles.slice(0, 1);
       return await this.convertPickedFilesToFiles(filesToProcess, true); // Validar que sean videos
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error &&
-          (error.message === 'User cancelled' || error.message === 'User canceled' ||
-           error.message === 'User cancelled photos app')) {
+      const errorMessage = error && typeof error === 'object' && 'message' in error 
+        ? String(error.message) 
+        : '';
+      
+      if (errorMessage === 'User cancelled' || 
+          errorMessage === 'User canceled' ||
+          errorMessage === 'User cancelled photos app' || 
+          errorMessage === 'Photo library permission denied' ||
+          errorMessage.includes('Photo library permission')) {
         return [];
       }
+      
+      // Registrar otros errores
+      void this.logService.logError(
+        'Error selecting videos in iOS',
+        error,
+        {
+          severity: 'medium',
+          description: 'Error selecting videos using FilePicker in iOS',
+          source: 'media-picker-service',
+          metadata: {
+            service: 'MediaPickerService',
+            method: 'pickVideosNativeIOS',
+            platform: 'ios',
+            allowMultiple
+          }
+        }
+      );
+      
       throw error;
     }
   }

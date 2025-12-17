@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { IosMediaService } from '../ios/ios-media.service';
 import { PermissionsService } from '../permissions/permissions.service';
+import { LogService } from '../log/log.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,10 +10,16 @@ import { PermissionsService } from '../permissions/permissions.service';
 export class AudioRecorderService {
   private readonly iosMediaService = inject(IosMediaService);
   private readonly permissionsService = inject(PermissionsService);
-  private readonly isIOS = Capacitor.getPlatform() === 'ios';
+  private readonly logService = inject(LogService);
+  private readonly platform = Capacitor.getPlatform();
+  private readonly isNative = Capacitor.isNativePlatform();
+  private readonly isIOS = this.platform === 'ios';
+  private readonly isMac = this.platform === 'ios' && typeof navigator !== 'undefined' && 
+    (navigator.userAgent.includes('Macintosh') || navigator.userAgent.includes('Mac OS'));
   
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
+  private audioStream: MediaStream | null = null;
   
   readonly isRecording = signal<boolean>(false);
   
@@ -21,31 +28,82 @@ export class AudioRecorderService {
       return;
     }
 
+    // Verificar que MediaRecorder esté disponible
+    if (typeof MediaRecorder === 'undefined') {
+      const errorMsg = 'MediaRecorder API is not supported in this browser. Please use a modern browser.';
+      void this.logService.logError('MediaRecorder not available', new Error(errorMsg), {
+        severity: 'high',
+        description: 'MediaRecorder API not available',
+        source: 'audio-recorder-service',
+        metadata: {
+          service: 'AudioRecorderService',
+          method: 'startRecording',
+          platform: this.platform,
+          isNative: this.isNative,
+          isMac: this.isMac
+        }
+      });
+      throw new Error(errorMsg);
+    }
+
     // Verificar y solicitar permisos de micrófono
     const hasPermission = await this.permissionsService.requestMicrophonePermission();
     if (!hasPermission) {
-      throw new Error('Microphone permission denied. Please enable microphone access in your device settings.');
+      const errorMsg = 'Microphone permission denied. Please enable microphone access in your device settings.';
+      void this.logService.logError('Microphone permission denied', new Error(errorMsg), {
+        severity: 'medium',
+        description: 'User denied microphone permission',
+        source: 'audio-recorder-service',
+        metadata: {
+          service: 'AudioRecorderService',
+          method: 'startRecording',
+          platform: this.platform
+        }
+      });
+      throw new Error(errorMsg);
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Obtener stream de audio con configuración optimizada para iOS/Mac
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        // En iOS/Mac, especificar sampleRate puede ayudar
+        ...(this.isIOS || this.isMac ? { sampleRate: 44100 } : {})
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: audioConstraints 
+      });
       
-      // En iOS, usar formato compatible. MediaRecorder en iOS suele usar 'audio/mp4' o 'audio/aac'
+      this.audioStream = stream;
+      
+      // En iOS/iPad/Mac, usar formato compatible. MediaRecorder en iOS suele usar 'audio/mp4' o 'audio/aac'
       // Intentar usar un formato compatible, si no está disponible, usar el predeterminado
       let mimeType = ''; 
       
-      if (this.isIOS) {
-        // iOS suele soportar estos formatos
-        if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/aac')) {
-          mimeType = 'audio/aac';
-        } else if (MediaRecorder.isTypeSupported('audio/mpeg')) {
-          mimeType = 'audio/mpeg';
+      if (this.isIOS || this.isMac) {
+        // iOS/iPad/Mac suelen soportar estos formatos en orden de preferencia
+        const supportedTypes = [
+          'audio/mp4',
+          'audio/aac',
+          'audio/mpeg',
+          'audio/m4a',
+          'audio/x-m4a'
+        ];
+        
+        for (const type of supportedTypes) {
+          if (MediaRecorder.isTypeSupported(type)) {
+            mimeType = type;
+            break;
+          }
         }
       } else {
         // Para web/Android, intentar webm primero
-        if (MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
           mimeType = 'audio/webm';
         } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
           mimeType = 'audio/mp4';
@@ -57,18 +115,30 @@ export class AudioRecorderService {
       this.audioChunks = [];
 
       this.mediaRecorder.addEventListener('dataavailable', (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
           this.audioChunks.push(event.data);
         }
       });
 
-      this.mediaRecorder.addEventListener('error', () => {
-        // Error silencioso - el usuario será notificado por el componente
+      this.mediaRecorder.addEventListener('error', (event) => {
+        const error = event instanceof ErrorEvent ? event.error : new Error('MediaRecorder error');
+        void this.logService.logError('MediaRecorder error during recording', error, {
+          severity: 'medium',
+          description: 'Error occurred during audio recording',
+          source: 'audio-recorder-service',
+          metadata: {
+            service: 'AudioRecorderService',
+            method: 'startRecording',
+            platform: this.platform,
+            mimeType: this.mediaRecorder?.mimeType || 'unknown'
+          }
+        });
       });
 
-      // En iOS, necesitamos usar timeslice para asegurar que se capturen los datos
+      // En iOS/iPad/Mac, necesitamos usar timeslice para asegurar que se capturen los datos
       // timeslice: número de milisegundos para grabar antes de disparar dataavailable
-      const timeslice = this.isIOS ? 1000 : undefined; // En iOS, capturar cada segundo
+      // Usar un intervalo más corto en iOS para mejor captura
+      const timeslice = (this.isIOS || this.isMac) ? 500 : undefined;
       
       if (timeslice) {
         this.mediaRecorder.start(timeslice);
@@ -78,7 +148,27 @@ export class AudioRecorderService {
       
       this.isRecording.set(true);
     } catch (error) {
-      throw new Error('Could not access microphone. Please verify permissions.');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      void this.logService.logError('Error starting audio recording', error, {
+        severity: 'high',
+        description: `Failed to start audio recording: ${errorMsg}`,
+        source: 'audio-recorder-service',
+        metadata: {
+          service: 'AudioRecorderService',
+          method: 'startRecording',
+          platform: this.platform,
+          isNative: this.isNative,
+          isMac: this.isMac
+        }
+      });
+      
+      // Limpiar stream si se creó pero falló
+      if (this.audioStream) {
+        this.audioStream.getTracks().forEach(track => track.stop());
+        this.audioStream = null;
+      }
+      
+      throw new Error(`Could not access microphone: ${errorMsg}. Please verify permissions.`);
     }
   }
 
@@ -122,16 +212,40 @@ export class AudioRecorderService {
           }
           
           // Stop all tracks to release microphone
-          this.mediaRecorder?.stream.getTracks().forEach(track => track.stop());
+          if (this.audioStream) {
+            this.audioStream.getTracks().forEach(track => track.stop());
+            this.audioStream = null;
+          }
+          if (this.mediaRecorder?.stream) {
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          }
           this.mediaRecorder = null;
           this.isRecording.set(false);
           
           resolve(audioFile);
         } catch (error) {
           // Stop tracks even on error
-          this.mediaRecorder?.stream.getTracks().forEach(track => track.stop());
+          if (this.audioStream) {
+            this.audioStream.getTracks().forEach(track => track.stop());
+            this.audioStream = null;
+          }
+          if (this.mediaRecorder?.stream) {
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          }
           this.mediaRecorder = null;
           this.isRecording.set(false);
+          
+          void this.logService.logError('Error processing audio after stop', error, {
+            severity: 'medium',
+            description: 'Error occurred while processing audio file after stopping recording',
+            source: 'audio-recorder-service',
+            metadata: {
+              service: 'AudioRecorderService',
+              method: 'stopRecording',
+              platform: this.platform
+            }
+          });
+          
           reject(error);
         }
       }, { once: true }); // Usar { once: true } para que el listener solo se ejecute una vez
@@ -165,12 +279,24 @@ export class AudioRecorderService {
               const audioFile = new File([audioBlob], `voice-note-${Date.now()}.${extension}`, { type: mimeType });
               
               this.iosMediaService.convertAudioFormat(audioFile).then(converted => {
-                this.mediaRecorder?.stream.getTracks().forEach(track => track.stop());
+                if (this.audioStream) {
+                  this.audioStream.getTracks().forEach(track => track.stop());
+                  this.audioStream = null;
+                }
+                if (this.mediaRecorder?.stream) {
+                  this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
                 this.mediaRecorder = null;
                 this.isRecording.set(false);
                 resolve(converted);
               }).catch(() => {
-                this.mediaRecorder?.stream.getTracks().forEach(track => track.stop());
+                if (this.audioStream) {
+                  this.audioStream.getTracks().forEach(track => track.stop());
+                  this.audioStream = null;
+                }
+                if (this.mediaRecorder?.stream) {
+                  this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                }
                 this.mediaRecorder = null;
                 this.isRecording.set(false);
                 resolve(audioFile);
@@ -186,8 +312,23 @@ export class AudioRecorderService {
 
   cancelRecording(): void {
     if (this.mediaRecorder && this.isRecording()) {
-      this.mediaRecorder.stop();
-      this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      try {
+        if (this.mediaRecorder.state !== 'inactive') {
+          this.mediaRecorder.stop();
+        }
+      } catch {
+        // Ignorar errores al detener
+      }
+      
+      if (this.audioStream) {
+        this.audioStream.getTracks().forEach(track => track.stop());
+        this.audioStream = null;
+      }
+      
+      if (this.mediaRecorder?.stream) {
+        this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      }
+      
       this.mediaRecorder = null;
       this.isRecording.set(false);
       this.audioChunks = [];
