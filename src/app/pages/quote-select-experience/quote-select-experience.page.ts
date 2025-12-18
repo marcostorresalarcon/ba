@@ -80,6 +80,11 @@ export class QuoteSelectExperiencePage {
       return;
     }
 
+    // Si no hay quoteId, es un nuevo estimado - marcar para limpiar localStorage
+    if (!quoteId) {
+      sessionStorage.setItem('isNewQuote', 'true');
+    }
+
     // Navegar a la página de creación con la experiencia seleccionada
     if (projectType === 'kitchen') {
       const url = quoteId

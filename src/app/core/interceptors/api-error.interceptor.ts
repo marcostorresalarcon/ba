@@ -14,30 +14,31 @@ export const apiErrorInterceptor: HttpInterceptorFn = (req, next) => {
       // Manejar el error con el servicio existente
       errorService.handle(error);
 
-      // Registrar el error en el sistema de logs
-      const errorMessage = errorService.extractMessage(error);
-      const severity = error.status >= 500 ? 'critical' : error.status >= 400 ? 'high' : 'medium';
+      // Registrar el error en el sistema de logs, pero evitar bucles infinitos
+      // Si el error proviene del endpoint de logs (/log), no intentamos registrarlo de nuevo
+      if (!req.url.includes('/log')) {
+        const errorMessage = errorService.extractMessage(error);
+        const severity = error.status >= 500 ? 'critical' : error.status >= 400 ? 'high' : 'medium';
 
-      logService.logError(
-        `HTTP Error: ${errorMessage}`,
-        error,
-        {
-          severity,
-          description: `Error en petición HTTP: ${req.method} ${req.url}`,
-          source: 'http-interceptor',
-          endpoint: req.url,
-          method: req.method,
-          statusCode: error.status,
-          metadata: {
-            errorUrl: error.url,
-            errorStatus: error.status,
-            errorStatusText: error.statusText,
-            errorBody: error.error
+        logService.logError(
+          `HTTP Error: ${errorMessage}`,
+          error,
+          {
+            severity,
+            description: `Error en petición HTTP: ${req.method} ${req.url}`,
+            source: 'http-interceptor',
+            endpoint: req.url,
+            method: req.method,
+            statusCode: error.status,
+            metadata: {
+              errorUrl: error.url,
+              errorStatus: error.status,
+              errorStatusText: error.statusText,
+              errorBody: error.error
+            }
           }
-        }
-      ).catch(() => {
-        // Silenciar errores de logging para no crear bucles infinitos
-      });
+        ).catch(console.error); // Solo loguear en consola si falla el registro del log
+      }
 
       return throwError(() => error);
     })

@@ -25,6 +25,15 @@ export class AudioService {
 
     return this.http.post<AudioSummaryResponse>(`${this.baseUrl}/audio/summarize`, formData);
   }
+
+  /**
+   * Procesa un audio desde una URL de S3 y genera un resumen
+   * @param url URL del archivo de audio en S3
+   * @returns Observable con la respuesta del resumen
+   */
+  summarizeAudioFromUrl(url: string): Observable<AudioSummaryResponse> {
+    return this.http.post<AudioSummaryResponse>(`${this.baseUrl}/audio/summarize-from-url`, { url });
+  }
 }
 
 

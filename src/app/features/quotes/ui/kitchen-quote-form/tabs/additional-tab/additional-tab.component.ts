@@ -15,6 +15,7 @@ import { AudioRecorderService } from '../../../../../../core/services/audio/audi
 import { AudioService } from '../../../../../../core/services/audio/audio.service';
 import { S3UploadService } from '../../../../../../core/services/upload/s3-upload.service';
 import { LogService } from '../../../../../../core/services/log/log.service';
+import { LoadingService } from '../../../../../../core/services/loading/loading.service';
 import type { KitchenQuoteFormGroup } from '../../kitchen-quote-form.types';
 
 @Component({
@@ -33,6 +34,7 @@ export class AdditionalTabComponent {
   private readonly audioService = inject(AudioService);
   private readonly s3UploadService = inject(S3UploadService);
   private readonly logService = inject(LogService);
+  private readonly loadingService = inject(LoadingService);
 
   @Input({ required: true }) form!: KitchenQuoteFormGroup;
 
@@ -100,10 +102,11 @@ export class AdditionalTabComponent {
       const url = await this.s3UploadService.uploadFile(file);
       this.isUploadingAudio.set(false);
 
-      // Procesar con API de audio
+      // Procesar con API de audio usando la URL de S3
+      // El interceptor HTTP activará automáticamente el loader
       this.notificationService.info('Processing', 'Generating audio summary...');
 
-      this.audioService.summarizeAudio(file).subscribe({
+      this.audioService.summarizeAudioFromUrl(url).subscribe({
         next: (response) => {
           const currentAudios = this.form.controls.audioNotes.value || [];
           const newAudio = response.success
@@ -136,6 +139,8 @@ export class AdditionalTabComponent {
           }
           this.isProcessingAudio.set(false);
           this.hasRecording.set(true);
+          // Asegurar que el loader se cierre después de que el interceptor HTTP termine
+          setTimeout(() => this.loadingService.reset(), 200);
         },
         error: (error) => {
           // Si falla el procesamiento, al menos guardar el audio
@@ -144,6 +149,8 @@ export class AdditionalTabComponent {
           this.notificationService.info('Warning', 'Audio saved, but text processing failed');
           this.isProcessingAudio.set(false);
           this.hasRecording.set(true);
+          // Asegurar que el loader se cierre después de que el interceptor HTTP termine
+          setTimeout(() => this.loadingService.reset(), 200);
 
           void this.logService.logError('Error al procesar audio con API', error, {
             severity: 'medium',
@@ -162,6 +169,8 @@ export class AdditionalTabComponent {
       this.notificationService.error('Error', `Could not upload audio file: ${errorMsg}`);
       this.isUploadingAudio.set(false);
       this.isProcessingAudio.set(false);
+      // Asegurar que el loader se cierre después de que el interceptor HTTP termine
+      setTimeout(() => this.loadingService.reset(), 200);
 
       await this.logService.logError('Error al subir archivo de audio', error, {
         severity: 'high',

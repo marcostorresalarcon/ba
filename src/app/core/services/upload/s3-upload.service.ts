@@ -50,7 +50,8 @@ export class S3UploadService {
 
   /**
    * Sube un archivo directamente a S3 usando una URL presignada
-   * Usa fetch API en Capacitor (más compatible) y XMLHttpRequest en web (soporta progreso)
+   * En web, intenta primero con fetch (mejor manejo de CORS), luego XHR como fallback
+   * En Capacitor, usa fetch directamente
    * @param file Archivo a subir
    * @param presignedUrl URL presignada obtenida de getPresignedUrl
    * @param onProgress Callback opcional para reportar progreso
@@ -63,18 +64,70 @@ export class S3UploadService {
   ): Promise<string> {
     const isNative = Capacitor.isNativePlatform();
 
-    // En Capacitor, usar fetch (más compatible)
-    // En web, usar XMLHttpRequest (soporta progreso)
+    // En Capacitor, usar fetch directamente
     if (isNative) {
       return this.uploadFileToS3WithFetch(file, presignedUrl);
     } else {
-      return this.uploadFileToS3WithXHR(file, presignedUrl, onProgress);
+      // En web, intentar primero con fetch (mejor manejo de CORS)
+      // Si falla, usar XHR como fallback
+      try {
+        return await this.uploadFileToS3WithFetch(file, presignedUrl);
+      } catch (fetchError) {
+        const errorMessage = fetchError instanceof Error ? fetchError.message : String(fetchError);
+        
+        // Si es un error de CORS o red, intentar con XHR
+        const shouldRetryWithXHR = 
+          errorMessage.includes('Failed to fetch') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('NetworkError') ||
+          errorMessage.includes('CORS');
+        
+        if (shouldRetryWithXHR) {
+          // Intentar con XHR como fallback
+          try {
+            return await this.uploadFileToS3WithXHR(file, presignedUrl, onProgress);
+          } catch (xhrError) {
+            // Si ambos fallan, lanzar el error más descriptivo
+            const xhrErrorMessage = xhrError instanceof Error ? xhrError.message : String(xhrError);
+            const combinedError = new Error(
+              `Upload failed with both fetch and XHR. Fetch error: ${errorMessage}. XHR error: ${xhrErrorMessage}`
+            );
+            
+            await this.logService.logError(
+              'Error al subir archivo a S3: fetch y XHR fallaron',
+              combinedError,
+              {
+                severity: 'critical',
+                description: 'Tanto fetch como XMLHttpRequest fallaron al subir archivo. Verificar configuración de CORS en S3.',
+                source: 's3-upload-service',
+                metadata: {
+                  service: 'S3UploadService',
+                  method: 'uploadFileToS3',
+                  fileName: file.name,
+                  fileSize: file.size,
+                  fileType: file.type,
+                  cleanContentType: this.cleanContentType(file.type),
+                  platform: 'web',
+                  fetchError: errorMessage.substring(0, 500),
+                  xhrError: xhrErrorMessage.substring(0, 500),
+                  presignedUrlDomain: presignedUrl ? new URL(presignedUrl).hostname : 'unknown',
+                  troubleshooting: 'Verificar configuración de CORS en el bucket S3. El bucket debe permitir PUT desde el origen de la aplicación.'
+                }
+              }
+            );
+            
+            throw combinedError;
+          }
+        } else {
+          // Si no es un error de red/CORS, lanzar el error original
+          throw fetchError;
+        }
+      }
     }
   }
 
   /**
-   * Sube archivo usando fetch API (para Capacitor)
-   * Si fetch falla, intenta con XMLHttpRequest como fallback
+   * Sube archivo usando fetch API (para Capacitor y como primera opción en web)
    */
   private async uploadFileToS3WithFetch(
     file: File,
@@ -84,7 +137,7 @@ export class S3UploadService {
     const cleanContentType = this.cleanContentType(file.type);
 
     try {
-      // Intentar primero con fetch
+      // Intentar con fetch
       const response = await fetch(presignedUrl, {
         method: 'PUT',
         body: file,
@@ -115,7 +168,8 @@ export class S3UploadService {
               statusCode: response.status,
               statusText: response.statusText,
               errorResponse: errorText.substring(0, 500),
-              platform: 'capacitor'
+              presignedUrlDomain: presignedUrl ? new URL(presignedUrl).hostname : 'unknown',
+              platform: Capacitor.isNativePlatform() ? 'capacitor' : 'web'
             }
           }
         );
@@ -127,59 +181,21 @@ export class S3UploadService {
       const publicUrl = presignedUrl.split('?')[0];
       return publicUrl;
     } catch (error) {
-      // Si el error ya fue manejado arriba, intentar con XMLHttpRequest como fallback
+      // Si el error ya fue manejado arriba (status error), lanzarlo directamente
       if (error instanceof Error && error.message.includes('Upload failed with status')) {
         throw error;
       }
 
-      // Si fetch falla con "Load failed" o errores de red, intentar con XMLHttpRequest
+      // Para errores de red/CORS, registrar y lanzar
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const shouldRetryWithXHR = 
-        errorMessage.includes('Load failed') ||
-        errorMessage.includes('Failed to fetch') ||
-        errorMessage.includes('network') ||
-        errorMessage.includes('NetworkError');
-
-      if (shouldRetryWithXHR) {
-        // Intentar con XMLHttpRequest como fallback
-        try {
-          return await this.uploadFileToS3WithXHRFallback(file, presignedUrl, cleanContentType);
-        } catch (xhrError) {
-          // Si XMLHttpRequest también falla, registrar ambos errores
-          await this.logService.logError(
-            'Error al subir archivo a S3: fetch y XMLHttpRequest fallaron',
-            xhrError,
-            {
-              severity: 'critical',
-              description: `Tanto fetch como XMLHttpRequest fallaron al subir archivo. Fetch error: ${errorMessage}`,
-              source: 's3-upload-service',
-              metadata: {
-                service: 'S3UploadService',
-                method: 'uploadFileToS3WithFetch',
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                cleanContentType,
-                originalError: errorMessage.substring(0, 500),
-                xhrError: xhrError instanceof Error ? xhrError.message.substring(0, 500) : String(xhrError),
-                platform: 'capacitor'
-              }
-            }
-          );
-          
-          throw xhrError;
-        }
-      }
-
-      // Para otros errores, registrar y lanzar
-      const logError = new Error(`Upload failed: ${errorMessage}`);
+      const logError = new Error(`Upload failed with fetch: ${errorMessage}`);
 
       await this.logService.logError(
-        'Error al subir archivo a S3',
+        'Error al subir archivo a S3 con fetch',
         logError,
         {
           severity: 'high',
-          description: `Error al subir archivo a S3: ${errorMessage}`,
+          description: `Error al subir archivo a S3 usando fetch: ${errorMessage}. Posible problema de CORS.`,
           source: 's3-upload-service',
           metadata: {
             service: 'S3UploadService',
@@ -190,7 +206,9 @@ export class S3UploadService {
             cleanContentType,
             errorType: error instanceof Error ? error.constructor.name : typeof error,
             errorMessage: errorMessage.substring(0, 500),
-            platform: 'capacitor'
+            presignedUrlDomain: presignedUrl ? new URL(presignedUrl).hostname : 'unknown',
+            platform: Capacitor.isNativePlatform() ? 'capacitor' : 'web',
+            troubleshooting: 'Verificar configuración de CORS en el bucket S3. El bucket debe permitir PUT desde el origen de la aplicación.'
           }
         }
       );
@@ -312,16 +330,24 @@ export class S3UploadService {
         }
       });
 
-      xhr.addEventListener('error', () => {
-        const error = new Error('Upload failed due to network error');
+      xhr.addEventListener('error', (event) => {
+        const errorDetails = {
+          status: xhr.status,
+          statusText: xhr.statusText,
+          readyState: xhr.readyState,
+          responseText: xhr.responseText?.substring(0, 500) || 'No response',
+          presignedUrlDomain: presignedUrl ? new URL(presignedUrl).hostname : 'unknown'
+        };
         
-        // Registrar error en logs
+        const error = new Error(`Upload failed due to network error. Details: ${JSON.stringify(errorDetails)}`);
+        
+        // Registrar error en logs con más detalles
         void this.logService.logError(
           'Error de red al subir archivo a S3',
           error,
           {
             severity: 'high',
-            description: 'Error de red al intentar subir archivo a S3 usando URL presignada (Web)',
+            description: `Error de red al intentar subir archivo a S3 usando URL presignada (Web). Posible problema de CORS o configuración del bucket.`,
             source: 's3-upload-service',
             metadata: {
               service: 'S3UploadService',
@@ -329,7 +355,10 @@ export class S3UploadService {
               fileName: file.name,
               fileSize: file.size,
               fileType: file.type,
-              platform: 'web'
+              cleanContentType: this.cleanContentType(file.type),
+              platform: 'web',
+              ...errorDetails,
+              troubleshooting: 'Verificar configuración de CORS en el bucket S3. El bucket debe permitir PUT desde el origen de la aplicación.'
             }
           }
         );
@@ -364,7 +393,13 @@ export class S3UploadService {
 
       // Iniciar la subida
       xhr.open('PUT', presignedUrl);
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      
+      // Usar el Content-Type limpio para evitar problemas
+      const cleanContentType = this.cleanContentType(file.type);
+      xhr.setRequestHeader('Content-Type', cleanContentType);
+      
+      // No establecer otros headers que puedan interferir con la firma de AWS
+      // AWS S3 requiere que los headers coincidan exactamente con los usados para firmar la URL
       xhr.send(file);
     });
   }

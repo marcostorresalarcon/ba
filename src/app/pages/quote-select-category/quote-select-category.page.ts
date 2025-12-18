@@ -101,6 +101,11 @@ export class QuoteSelectCategoryPage {
       return;
     }
 
+    // Si no hay quoteId, es un nuevo estimado - marcar para limpiar localStorage
+    if (!quoteId) {
+      sessionStorage.setItem('isNewQuote', 'true');
+    }
+
     // Para kitchen, primero seleccionar experiencia
     if (category === 'kitchen') {
       const url = quoteId

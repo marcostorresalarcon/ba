@@ -47,7 +47,8 @@ export class MediaPickerService {
   private async pickMediaNativeIOS(): Promise<File[]> {
     try {
       const result = await FilePicker.pickFiles({
-        types: ['image/*', 'video/*', 'application/*', 'text/*'],
+        // En iOS se deben usar UTIs, no tipos MIME
+        types: ['public.image', 'public.movie', 'public.data', 'public.text', 'public.content'],
         readData: true
       });
 
@@ -621,7 +622,7 @@ export class MediaPickerService {
       // Intentar usar FilePicker con tipos de video para abrir la galería nativa de videos
       // En iOS, cuando se especifica 'video/*', el sistema puede mostrar la galería de videos
       const result = await FilePicker.pickFiles({
-        types: ['video/*'],
+        types: ['public.movie'], // UTI correcto para videos en iOS
         readData: true
       });
 
@@ -829,7 +830,8 @@ export class MediaPickerService {
     if (this.platform === 'ios') {
       try {
         const result = await FilePicker.pickFiles({
-          types: ['image/*', 'video/*', 'application/*', 'text/*'],
+          // En iOS se deben usar UTIs
+          types: ['public.image', 'public.movie', 'public.data', 'public.text'],
           readData: true
         });
 
