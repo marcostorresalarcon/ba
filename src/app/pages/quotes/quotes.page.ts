@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { CompanyContextService } from '../../core/services/company/company-context.service';
@@ -18,12 +19,19 @@ import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 import { LayoutService } from '../../core/services/layout/layout.service';
-import type { Quote } from '../../core/models/quote.model';
+import type { Quote, QuoteCategory } from '../../core/models/quote.model';
+
+type CategoryFilter = QuoteCategory | 'all';
+
+interface GroupedQuotes {
+  category: QuoteCategory;
+  quotes: Quote[];
+}
 
 @Component({
   selector: 'app-quotes-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './quotes.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -39,6 +47,60 @@ export class QuotesPage {
   protected readonly selectedCompany = this.companyContext.selectedCompany;
   protected readonly isLoading = signal(true);
   protected readonly quotes = signal<Quote[]>([]);
+  protected readonly categoryFilter = signal<CategoryFilter>('all');
+  
+  protected readonly categoryOptions: { value: CategoryFilter; label: string }[] = [
+    { value: 'all', label: 'All Types' },
+    { value: 'kitchen', label: 'Kitchen' },
+    { value: 'additional-work', label: 'Additional Work' },
+    { value: 'bathroom', label: 'Bathroom' },
+    { value: 'basement', label: 'Basement' }
+  ];
+
+  protected readonly groupedQuotes = computed<GroupedQuotes[]>(() => {
+    const filter = this.categoryFilter();
+    let filteredQuotes = this.quotes();
+
+    // Aplicar filtro si no es 'all'
+    if (filter !== 'all') {
+      filteredQuotes = filteredQuotes.filter(quote => quote.category === filter);
+    }
+
+    // Agrupar por categoría
+    const grouped = new Map<QuoteCategory, Quote[]>();
+    
+    filteredQuotes.forEach(quote => {
+      if (!grouped.has(quote.category)) {
+        grouped.set(quote.category, []);
+      }
+      grouped.get(quote.category)!.push(quote);
+    });
+
+    // Convertir a array y ordenar cada grupo por fecha (mayor a menor)
+    const result: GroupedQuotes[] = Array.from(grouped.entries()).map(([category, quotes]) => {
+      // Ordenar por fecha de creación descendente (más reciente primero)
+      const sorted = [...quotes].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      return { category, quotes: sorted };
+    });
+
+    // Ordenar los grupos por orden de categoría (kitchen, additional-work, bathroom, basement)
+    const categoryOrder: Record<QuoteCategory, number> = {
+      kitchen: 1,
+      'additional-work': 2,
+      bathroom: 3,
+      basement: 4
+    };
+
+    return result.sort((a, b) => {
+      const orderA = categoryOrder[a.category] ?? 999;
+      const orderB = categoryOrder[b.category] ?? 999;
+      return orderA - orderB;
+    });
+  });
 
   protected readonly breadcrumbs = computed<LayoutBreadcrumb[]>(() => {
     return [
@@ -95,6 +157,16 @@ export class QuotesPage {
       completed: 'bg-green-600/20 text-green-700'
     };
     return colors[status] ?? 'bg-slate/20 text-slate';
+  }
+
+  protected getCategoryLabel(category: string): string {
+    const labels: Record<string, string> = {
+      kitchen: 'Kitchen',
+      bathroom: 'Bathroom',
+      basement: 'Basement',
+      'additional-work': 'Additional Work'
+    };
+    return labels[category] ?? category;
   }
 }
 
