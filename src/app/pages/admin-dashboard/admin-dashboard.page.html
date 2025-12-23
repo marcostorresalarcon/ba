@@ -175,31 +175,16 @@
 
         <!-- Recent Estimates -->
         <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-6">
                 <h3 class="font-display text-xl text-charcoal">Recent Estimates</h3>
                 <button (click)="setActiveTab('quotes')" class="text-pine text-sm font-bold hover:underline">View All</button>
             </div>
-            
-            <!-- Filter -->
-            <div class="flex items-center gap-3 mb-6">
-                <label for="categoryFilter" class="text-sm font-medium text-charcoal">Filter by type:</label>
-                <select
-                    id="categoryFilter"
-                    [(ngModel)]="categoryFilter"
-                    class="rounded-xl border border-fog/60 bg-white px-4 py-2 text-sm text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
-                >
-                    @for (option of categoryOptions; track option.value) {
-                        <option [value]="option.value">{{ option.label }}</option>
-                    }
-                </select>
-            </div>
-            
             <div class="overflow-x-auto">
                  <table class="w-full text-left">
                     <tbody class="divide-y divide-fog/40">
-                        @for (quote of filteredRecentQuotes(); track quote._id) {
+                        @for (quote of recentQuotes(); track quote._id) {
                             <tr class="hover:bg-fog/5 transition">
-                                <td class="py-3 font-medium text-charcoal">{{ getCategoryLabel(quote.category) }} (v{{ quote.versionNumber }})</td>
+                                <td class="py-3 font-medium text-charcoal capitalize">{{ quote.category }} (v{{ quote.versionNumber }})</td>
                                 <td class="py-3 text-charcoal font-bold text-right">${{ quote.totalPrice | number:'1.2-2' }}</td>
                                 <td class="py-3 text-right">
                                      <span class="px-2 py-1 rounded-full text-xs font-bold uppercase" 

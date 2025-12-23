@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
@@ -18,16 +17,14 @@ import { LayoutService } from '../../core/services/layout/layout.service';
 import type { KpiResponse, InvoiceKpiResponse } from '../../core/models/kpi.model';
 import type { Customer } from '../../core/models/customer.model';
 import type { Project } from '../../core/models/project.model';
-import type { Quote, QuoteCategory } from '../../core/models/quote.model';
+import type { Quote } from '../../core/models/quote.model';
 import type { Invoice } from '../../core/models/invoice.model';
 import { Router } from '@angular/router';
-
-type CategoryFilter = QuoteCategory | 'all';
 
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule],
   templateUrl: './admin-dashboard.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -56,27 +53,6 @@ export class AdminDashboardPage {
   protected readonly recentPayments = signal<any[]>([]);
 
   protected readonly activeTab = signal<'dashboard' | 'customers' | 'projects' | 'quotes' | 'invoices' | 'payments'>('dashboard');
-  
-  protected readonly categoryFilter = signal<CategoryFilter>('all');
-  
-  protected readonly categoryOptions: { value: CategoryFilter; label: string }[] = [
-    { value: 'all', label: 'All Types' },
-    { value: 'kitchen', label: 'Kitchen' },
-    { value: 'additional-work', label: 'Additional Work' },
-    { value: 'bathroom', label: 'Bathroom' },
-    { value: 'basement', label: 'Basement' }
-  ];
-
-  protected readonly filteredRecentQuotes = computed<Quote[]>(() => {
-    const filter = this.categoryFilter();
-    const quotes = this.recentQuotes();
-    
-    if (filter === 'all') {
-      return quotes;
-    }
-    
-    return quotes.filter(quote => quote.category === filter);
-  });
 
   protected readonly breadcrumbs: LayoutBreadcrumb[] = [{ label: 'Admin Dashboard' }];
 
@@ -152,15 +128,5 @@ export class AdminDashboardPage {
   viewProject(id: string) { this.router.navigate(['/projects', id]); }
   viewQuote(id: string) { this.router.navigate(['/quotes', id]); }
   viewInvoice(id: string) { this.router.navigate(['/invoices', id]); }
-
-  protected getCategoryLabel(category: string): string {
-    const labels: Record<string, string> = {
-      kitchen: 'Kitchen',
-      bathroom: 'Bathroom',
-      basement: 'Basement',
-      'additional-work': 'Additional Work'
-    };
-    return labels[category] ?? category;
-  }
 }
 

@@ -1,24 +1,8 @@
 <section class="mt-5">
-    <div class="mb-6 flex flex-col gap-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="font-display text-3xl text-charcoal">Estimates</h2>
-          <p class="text-slate mt-1">Manage all estimates for {{ selectedCompany()?.name }}</p>
-        </div>
-      </div>
-      
-      <!-- Filter -->
-      <div class="flex items-center gap-3">
-        <label for="categoryFilter" class="text-sm font-medium text-charcoal">Filter by type:</label>
-        <select
-          id="categoryFilter"
-          [(ngModel)]="categoryFilter"
-          class="rounded-xl border border-fog/60 bg-white px-4 py-2 text-sm text-charcoal focus:border-pine focus:ring-1 focus:ring-pine"
-        >
-          @for (option of categoryOptions; track option.value) {
-            <option [value]="option.value">{{ option.label }}</option>
-          }
-        </select>
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h2 class="font-display text-3xl text-charcoal">Estimates</h2>
+        <p class="text-slate mt-1">Manage all estimates for {{ selectedCompany()?.name }}</p>
       </div>
     </div>
 
@@ -34,64 +18,50 @@
         <p class="mt-1 text-xs text-slate">Create estimates from the projects view.</p>
       </div>
     } @else {
-      <div class="space-y-6">
-        @for (group of groupedQuotes(); track group.category) {
-          <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 shadow-brand overflow-hidden">
-            <!-- Category Header -->
-            <div class="px-6 py-4 border-b border-fog/40 bg-fog/10">
-              <div class="flex items-center gap-2">
-                <h3 class="text-lg font-semibold text-charcoal">{{ getCategoryLabel(group.category) }}</h3>
-                <span class="rounded-full bg-fog/40 px-2.5 py-0.5 text-xs font-medium text-slate">
-                  {{ group.quotes.length }} {{ group.quotes.length === 1 ? 'estimate' : 'estimates' }}
-                </span>
-              </div>
-            </div>
-            
-            <!-- Quotes in this category -->
-            <div class="overflow-x-auto">
-              <table class="w-full text-left">
-                <thead class="bg-fog/10 border-b border-fog/40 text-xs uppercase text-slate">
-                  <tr>
-                    <th class="px-6 py-4 font-semibold tracking-wider">Version</th>
-                    <th class="px-6 py-4 font-semibold tracking-wider text-right">Total</th>
-                    <th class="px-6 py-4 font-semibold tracking-wider text-center">Status</th>
-                    <th class="px-6 py-4 font-semibold tracking-wider">Date</th>
-                    <th class="px-6 py-4 font-semibold tracking-wider text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-fog/40">
-                  @for (quote of group.quotes; track quote._id) {
-                    <tr class="hover:bg-fog/5 transition group cursor-pointer" (click)="viewQuote(quote)">
-                      <td class="px-6 py-4">
-                        <span class="inline-flex items-center rounded-full bg-fog/20 px-2.5 py-0.5 text-xs font-medium text-slate">
-                          v{{ quote.versionNumber }}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4 text-right">
-                        <span class="font-display font-bold text-charcoal text-lg">${{ quote.totalPrice | number:'1.2-2' }}</span>
-                      </td>
-                      <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider"
-                          [ngClass]="getStatusColor(quote.status)">
-                          {{ quote.status.replace('_', ' ') }}
-                        </span>
-                      </td>
-                      <td class="px-6 py-4">
-                        <div class="text-xs text-slate">{{ quote.createdAt | date:'mediumDate' }}</div>
-                      </td>
-                      <td class="px-6 py-4 text-right">
-                        <button (click)="viewQuote(quote); $event.stopPropagation()" 
-                          class="text-pine font-bold text-sm hover:underline group-hover:translate-x-1 transition-transform inline-block">
-                          View Details &rarr;
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        }
+      <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 shadow-brand overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead class="bg-fog/10 border-b border-fog/40 text-xs uppercase text-slate">
+              <tr>
+                <th class="px-6 py-4 font-semibold tracking-wider">Project</th>
+                <th class="px-6 py-4 font-semibold tracking-wider">Version</th>
+                <th class="px-6 py-4 font-semibold tracking-wider text-right">Total</th>
+                <th class="px-6 py-4 font-semibold tracking-wider text-center">Status</th>
+                <th class="px-6 py-4 font-semibold tracking-wider text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-fog/40">
+              @for (quote of quotes(); track quote._id) {
+                <tr class="hover:bg-fog/5 transition group cursor-pointer" (click)="viewQuote(quote)">
+                  <td class="px-6 py-4">
+                    <div class="font-medium text-charcoal">{{ quote.category | titlecase }}</div>
+                    <div class="text-xs text-slate mt-0.5">{{ quote.createdAt | date:'mediumDate' }}</div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center rounded-full bg-fog/20 px-2.5 py-0.5 text-xs font-medium text-slate">
+                      v{{ quote.versionNumber }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <span class="font-display font-bold text-charcoal text-lg">${{ quote.totalPrice | number:'1.2-2' }}</span>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider"
+                      [ngClass]="getStatusColor(quote.status)">
+                      {{ quote.status.replace('_', ' ') }}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <button (click)="viewQuote(quote); $event.stopPropagation()" 
+                      class="text-pine font-bold text-sm hover:underline group-hover:translate-x-1 transition-transform inline-block">
+                      View Details &rarr;
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
     }
   </section>
