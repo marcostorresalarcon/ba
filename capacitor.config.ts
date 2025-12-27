@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.bakitchenandbathdesigns.appprod',
-  appName: 'App',
+  appName: 'BA Kitchen & Bath Design',
   webDir: 'dist/ba/browser',
   server: {
     // Configuraciones para mejorar el rendimiento del webview
