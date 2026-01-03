@@ -559,7 +559,16 @@ export class MediaPickerService {
 
       // Usar tipos específicos de video para mejor compatibilidad con iOS y Android
       const result = await FilePicker.pickFiles({
-        types: ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/*'],
+        types: [
+          'public.movie',
+          'public.video',
+          'public.mpeg-4',
+          'com.apple.quicktime-movie',
+          'video/mp4',
+          'video/x-m4v',
+          'video/quicktime',
+          'video/*',
+        ],
         readData: true
       });
 
@@ -624,7 +633,16 @@ export class MediaPickerService {
       // iOS requiere tipos más específicos para mostrar correctamente la carpeta de videos
       // Usar tipos específicos de video comunes en iOS: mp4, m4v, y el wildcard como fallback
       const result = await FilePicker.pickFiles({
-        types: ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/*'],
+        types: [
+          'public.movie',
+          'public.video',
+          'public.mpeg-4',
+          'com.apple.quicktime-movie',
+          'video/mp4',
+          'video/x-m4v',
+          'video/quicktime',
+          'video/*',
+        ],
         readData: true
       });
 
@@ -715,7 +733,7 @@ export class MediaPickerService {
       input.type = 'file';
       input.multiple = allowMultiple;
       // iOS requiere tipos específicos explícitos para mostrar la carpeta de videos correctamente
-      input.accept = 'video/mp4,video/x-m4v,video/*';
+      input.accept = 'video/mp4,video/x-m4v,video/quicktime,video/*';
 
       input.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
