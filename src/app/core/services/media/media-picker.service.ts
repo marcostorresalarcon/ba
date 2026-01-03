@@ -229,11 +229,12 @@ export class MediaPickerService {
       input.multiple = allowMultiple;
       
       // Configurar accept para permitir imágenes, videos y archivos
+      // IMPORTANTE: iOS requiere tipos específicos explícitos para videos
       if (imagesOnly) {
         input.accept = 'image/*,image/heic,image/heif';
       } else {
-        // Permitir imágenes, videos y archivos comunes
-        input.accept = 'image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*,image/heic,image/heif';
+        // Permitir imágenes, videos (con tipos específicos para iOS) y archivos comunes
+        input.accept = 'image/*,video/mp4,video/x-m4v,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/*,image/heic,image/heif';
       }
 
       input.onchange = (event: Event) => {
@@ -556,8 +557,9 @@ export class MediaPickerService {
         throw new Error('Photo library permission denied');
       }
 
+      // Usar tipos específicos de video para mejor compatibilidad con iOS y Android
       const result = await FilePicker.pickFiles({
-        types: ['video/*'],
+        types: ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/*'],
         readData: true
       });
 
@@ -618,10 +620,11 @@ export class MediaPickerService {
         throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
       }
 
-      // Intentar usar FilePicker con tipos de video para abrir la galería nativa de videos
-      // En iOS, cuando se especifica 'video/*', el sistema puede mostrar la galería de videos
+      // Intentar usar FilePicker con tipos de video específicos para abrir la galería nativa de videos
+      // iOS requiere tipos más específicos para mostrar correctamente la carpeta de videos
+      // Usar tipos específicos de video comunes en iOS: mp4, m4v, y el wildcard como fallback
       const result = await FilePicker.pickFiles({
-        types: ['video/*'],
+        types: ['video/mp4', 'video/x-m4v', 'video/quicktime', 'video/*'],
         readData: true
       });
 
@@ -704,13 +707,15 @@ export class MediaPickerService {
 
   /**
    * Selecciona videos en web
+   * IMPORTANTE: iOS requiere un atributo accept más específico para mostrar videos correctamente
    */
   private pickVideosWeb(allowMultiple: boolean): Promise<File[]> {
     return new Promise((resolve, reject) => {
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = allowMultiple;
-      input.accept = 'video/*';
+      // iOS requiere tipos específicos explícitos para mostrar la carpeta de videos correctamente
+      input.accept = 'video/mp4,video/x-m4v,video/*';
 
       input.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
