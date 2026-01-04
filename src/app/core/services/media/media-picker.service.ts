@@ -446,10 +446,14 @@ export class MediaPickerService {
 
     /**
      * IMPORTANTE (iOS):
-     * - Usamos Camera.pickImages para videos también, ya que abre el selector nativo PHPicker.
+     * - Los plugins nativos actuales (Camera, ImagePicker) filtran solo imágenes.
+     * - FilePicker abre la app de Archivos (Document Picker).
+     * - La solución más robusta para acceder a la Galería de Videos NATIVA en iOS es usar el selector del sistema (Web),
+     *   que iOS renderiza como un menú nativo con opción explícita "Fototeca" (Photo Library) filtrada correctamente.
      */
     if (this.platform === 'ios') {
-      return this.pickVideosNativeIOS(allowMultiple);
+      // Usar la implementación web en iOS para invocar el menú nativo del sistema
+      return this.pickVideosWeb(allowMultiple);
     }
 
     // Android: usar FilePicker para videos
