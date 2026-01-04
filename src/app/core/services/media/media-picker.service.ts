@@ -67,9 +67,9 @@ export class MediaPickerService {
           }
           const byteArray = new Uint8Array(byteNumbers);
           const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
-          
-          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-            type: pickedFile.mimeType || 'application/octet-stream' 
+
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+            type: pickedFile.mimeType || 'application/octet-stream'
           });
           files.push(file);
         } else if (pickedFile.path) {
@@ -77,8 +77,8 @@ export class MediaPickerService {
           const fileUri = Capacitor.convertFileSrc(pickedFile.path);
           const response = await fetch(fileUri);
           const blob = await response.blob();
-          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-            type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+            type: pickedFile.mimeType || blob.type || 'application/octet-stream'
           });
           files.push(file);
         }
@@ -87,8 +87,8 @@ export class MediaPickerService {
       return files;
     } catch (error) {
       // Si el usuario cancela, retornar array vacío
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled')) {
         return [];
       }
 
@@ -132,8 +132,8 @@ export class MediaPickerService {
       return [file];
     } catch (error) {
       // Si el usuario cancela o es un error de Camera, intentar con FilePicker
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled photos app' || error.message === 'User cancelled')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled photos app' || error.message === 'User cancelled')) {
         // Intentar con FilePicker como fallback
         try {
           return await this.pickMediaNativeWithFilePicker();
@@ -191,17 +191,17 @@ export class MediaPickerService {
           }
           const byteArray = new Uint8Array(byteNumbers);
           const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
-          
-          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-            type: pickedFile.mimeType || 'application/octet-stream' 
+
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+            type: pickedFile.mimeType || 'application/octet-stream'
           });
           files.push(file);
         } else if (pickedFile.path) {
           const fileUri = Capacitor.convertFileSrc(pickedFile.path);
           const response = await fetch(fileUri);
           const blob = await response.blob();
-          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-            type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+            type: pickedFile.mimeType || blob.type || 'application/octet-stream'
           });
           files.push(file);
         }
@@ -209,8 +209,8 @@ export class MediaPickerService {
 
       return files;
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled')) {
         return [];
       }
       throw error;
@@ -227,7 +227,7 @@ export class MediaPickerService {
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = allowMultiple;
-      
+
       // Configurar accept para permitir imágenes, videos y archivos
       // IMPORTANTE: iOS requiere tipos específicos explícitos para videos
       if (imagesOnly) {
@@ -242,7 +242,7 @@ export class MediaPickerService {
         const files = target.files;
         if (files && files.length > 0) {
           const fileArray = Array.from(files);
-          
+
           // Validar que solo sean imágenes si imagesOnly es true
           if (imagesOnly) {
             const invalidFiles = fileArray.filter(file => !file.type.startsWith('image/'));
@@ -251,7 +251,7 @@ export class MediaPickerService {
               return;
             }
           }
-          
+
           resolve(fileArray);
         } else {
           resolve([]);
@@ -498,9 +498,9 @@ export class MediaPickerService {
       const file = await this.photoToFile(photo);
       return [file];
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled' || 
-           error.message === 'User cancelled photos app' || error.message === 'Photo library permission denied')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled' ||
+          error.message === 'User cancelled photos app' || error.message === 'Photo library permission denied')) {
         return [];
       }
       throw error;
@@ -539,9 +539,9 @@ export class MediaPickerService {
         return [file];
       }
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled' || 
-           error.message === 'User cancelled photos app')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled' ||
+          error.message === 'User cancelled photos app')) {
         return [];
       }
       throw error;
@@ -592,9 +592,9 @@ export class MediaPickerService {
       const filesToProcess = allowMultiple ? videoFiles : videoFiles.slice(0, 1);
       return await this.convertPickedFilesToFiles(filesToProcess, true); // Validar que sean videos
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled' || 
-           error.message === 'Photo library permission denied')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled' ||
+          error.message === 'Photo library permission denied')) {
         return [];
       }
       throw error;
@@ -647,27 +647,27 @@ export class MediaPickerService {
         // GalleryPhoto es compatible con Photo para estos campos (path, webPath, format)
         const photo = galleryPhoto as unknown as Photo;
         const file = await this.photoToFile(photo);
-        
+
         // Aceptamos el archivo seleccionado por el usuario.
         // PHPicker es visual, el usuario ve lo que selecciona.
         files.push(file);
       }
-      
+
       return files;
 
     } catch (error) {
-      const errorMessage = error && typeof error === 'object' && 'message' in error 
-        ? String(error.message) 
+      const errorMessage = error && typeof error === 'object' && 'message' in error
+        ? String(error.message)
         : '';
-      
-      if (errorMessage === 'User cancelled' || 
-          errorMessage === 'User canceled' ||
-          errorMessage === 'User cancelled photos app' || 
-          errorMessage === 'Photo library permission denied' ||
-          errorMessage.includes('Photo library permission')) {
+
+      if (errorMessage === 'User cancelled' ||
+        errorMessage === 'User canceled' ||
+        errorMessage === 'User cancelled photos app' ||
+        errorMessage === 'Photo library permission denied' ||
+        errorMessage.includes('Photo library permission')) {
         return [];
       }
-      
+
       // Registrar otros errores
       void this.logService.logError(
         'Error selecting videos in iOS',
@@ -684,7 +684,7 @@ export class MediaPickerService {
           }
         }
       );
-      
+
       throw error;
     }
   }
@@ -707,8 +707,8 @@ export class MediaPickerService {
       const filesToProcess = allowMultiple ? result.files : result.files.slice(0, 1);
       return await this.convertPickedFilesToFiles(filesToProcess);
     } catch (error) {
-      if (error && typeof error === 'object' && 'message' in error && 
-          (error.message === 'User cancelled' || error.message === 'User canceled')) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled')) {
         return [];
       }
       throw error;
@@ -764,9 +764,9 @@ export class MediaPickerService {
         const files = target.files;
         if (files && files.length > 0) {
           const fileArray = Array.from(files);
-          const invalidFiles = fileArray.filter(file => 
-            !file.type.startsWith('application/') && 
-            !file.type.startsWith('text/') && 
+          const invalidFiles = fileArray.filter(file =>
+            !file.type.startsWith('application/') &&
+            !file.type.startsWith('text/') &&
             file.type !== ''
           );
           if (invalidFiles.length > 0) {
@@ -821,7 +821,7 @@ export class MediaPickerService {
         continue; // Saltar archivos que no sean videos
       }
 
-      const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
+      const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
         type: mimeType
       });
       files.push(file);
@@ -866,17 +866,17 @@ export class MediaPickerService {
             }
             const byteArray = new Uint8Array(byteNumbers);
             const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
-            
-            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-              type: pickedFile.mimeType || 'application/octet-stream' 
+
+            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+              type: pickedFile.mimeType || 'application/octet-stream'
             });
             files.push(file);
           } else if (pickedFile.path) {
             const fileUri = Capacitor.convertFileSrc(pickedFile.path);
             const response = await fetch(fileUri);
             const blob = await response.blob();
-            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, { 
-              type: pickedFile.mimeType || blob.type || 'application/octet-stream' 
+            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+              type: pickedFile.mimeType || blob.type || 'application/octet-stream'
             });
             files.push(file);
           }
@@ -884,8 +884,8 @@ export class MediaPickerService {
 
         return files;
       } catch (error) {
-        if (error && typeof error === 'object' && 'message' in error && 
-            (error.message === 'User cancelled' || error.message === 'User canceled')) {
+        if (error && typeof error === 'object' && 'message' in error &&
+          (error.message === 'User cancelled' || error.message === 'User canceled')) {
           return [];
         }
         throw error;
