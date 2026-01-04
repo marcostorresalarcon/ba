@@ -435,7 +435,7 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona solo videos (nativo en iOS usando FilePicker, similar a pickImages)
+   * Selecciona solo videos (nativo en iOS usando Camera para experiencia "igual a imágenes")
    * @param allowMultiple - Si es true, permite seleccionar múltiples videos
    * @returns Promise<File[]> - Array de archivos de video seleccionados
    */
@@ -446,9 +446,7 @@ export class MediaPickerService {
 
     /**
      * IMPORTANTE (iOS):
-     * - El plugin oficial de Camera no soporta seleccionar videos desde Photos.
-     * - Usamos FilePicker con types: ['video/*'] que en iOS puede mostrar la galería de videos nativa.
-     * - Este enfoque es similar al usado para imágenes, pero adaptado para videos.
+     * - Usamos Camera.pickImages para videos también, ya que abre el selector nativo PHPicker.
      */
     if (this.platform === 'ios') {
       return this.pickVideosNativeIOS(allowMultiple);
@@ -547,7 +545,7 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos nativo usando FilePicker
+   * Selecciona videos nativo usando FilePicker (Android)
    */
   private async pickVideosNative(allowMultiple: boolean): Promise<File[]> {
     try {
@@ -600,14 +598,13 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos en iOS usando el mismo flujo nativo que las imágenes.
-   * Nota: El plugin Camera no soporta videos directamente, pero FilePicker con types: ['video/*']
-   * en iOS puede abrir la galería de videos nativa dependiendo de la configuración del sistema.
+   * Selecciona videos en iOS usando el plugin Camera (recomendado por nativo)
+   * Nota: Usamos Camera.pickImages que abre el selector nativo PHPicker.
+   * Aunque se llama "pickImages", PHPicker puede configurarse para mostrar videos.
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
       // Solicitar permisos de galería antes de acceder (crítico para iOS/iPad)
-      // En iOS 14+, necesitamos acceso completo ('granted'), no acceso limitado ('limited')
       const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
       if (!hasPermission) {
         // Registrar el error para depuración
@@ -629,40 +626,31 @@ export class MediaPickerService {
         throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
       }
 
-      // Intentar usar FilePicker con tipos de video específicos para abrir la galería nativa de videos
-      // iOS requiere tipos más específicos para mostrar correctamente la carpeta de videos
-      // Usar tipos específicos de video comunes en iOS: mp4, m4v, y el wildcard como fallback
-      const result = await FilePicker.pickFiles({
-        types: [
-          'public.movie',
-          'public.video',
-          'public.mpeg-4',
-          'com.apple.quicktime-movie',
-          'video/mp4',
-          'video/x-m4v',
-          'video/quicktime',
-          'video/*',
-        ],
-        readData: true
+      // Usar Camera.pickImages para abrir el selector nativo de galería (PHPicker)
+      // Esto garantiza la experiencia "igual a imágenes" que el usuario desea
+      const result = await Camera.pickImages({
+        quality: 90,
+        limit: allowMultiple ? 0 : 1, // 0 = ilimitado (depende de plataforma, en web es 0, en iOS puede ser distinto pero 0 suele ser todo)
       });
 
-      if (!result.files || result.files.length === 0) {
+      if (result.photos.length === 0) {
         return [];
       }
 
-      // Validar que todos los archivos sean videos
-      const videoFiles = result.files.filter(file => {
-        const mimeType = file.mimeType || '';
-        return mimeType.startsWith('video/');
-      });
-
-      if (videoFiles.length === 0) {
-        return [];
+      const files: File[] = [];
+      for (const galleryPhoto of result.photos) {
+        // Convertir GalleryPhoto a Photo y luego a File
+        // GalleryPhoto es compatible con Photo para estos campos (path, webPath, format)
+        const photo = galleryPhoto as unknown as Photo;
+        const file = await this.photoToFile(photo);
+        
+        // Aceptamos el archivo seleccionado por el usuario.
+        // PHPicker es visual, el usuario ve lo que selecciona.
+        files.push(file);
       }
+      
+      return files;
 
-      // FilePicker permite múltiples archivos; limitar si no se permite.
-      const filesToProcess = allowMultiple ? videoFiles : videoFiles.slice(0, 1);
-      return await this.convertPickedFilesToFiles(filesToProcess, true); // Validar que sean videos
     } catch (error) {
       const errorMessage = error && typeof error === 'object' && 'message' in error 
         ? String(error.message) 
@@ -682,7 +670,7 @@ export class MediaPickerService {
         error,
         {
           severity: 'medium',
-          description: 'Error selecting videos using FilePicker in iOS',
+          description: 'Error selecting videos using Camera.pickImages in iOS',
           source: 'media-picker-service',
           metadata: {
             service: 'MediaPickerService',
@@ -733,7 +721,7 @@ export class MediaPickerService {
       input.type = 'file';
       input.multiple = allowMultiple;
       // iOS requiere tipos específicos explícitos para mostrar la carpeta de videos correctamente
-      input.accept = 'video/mp4,video/x-m4v,video/quicktime,video/*';
+      input.accept = 'video/mp4,video/x-m4v,video/*';
 
       input.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
@@ -923,4 +911,3 @@ export class MediaPickerService {
     return files;
   }
 }
-
