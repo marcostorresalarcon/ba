@@ -98,33 +98,61 @@ export class PermissionsService {
    * @returns Promise<boolean> - true si se otorgó el permiso (granted, no limited)
    */
   async requestPhotoLibraryPermission(): Promise<boolean> {
+    console.log('[PermissionsService] requestPhotoLibraryPermission: Iniciando', {
+      isNative: this.isNative,
+      platform: this.platform
+    });
+
     if (!this.isNative) {
       // En web, no se necesitan permisos especiales para input file
+      console.log('[PermissionsService] requestPhotoLibraryPermission: Web platform, retornando true');
       return true;
     }
 
     // En iOS y Android, usar el plugin de Camera de Capacitor
     try {
+      console.log('[PermissionsService] Verificando permisos actuales...');
       const permissions = await Camera.checkPermissions();
+      
+      console.log('[PermissionsService] Permisos actuales:', {
+        camera: permissions.camera,
+        photos: permissions.photos
+      });
       
       // En iOS 14+, 'limited' significa acceso limitado (solo fotos seleccionadas)
       // Para FilePicker necesitamos acceso completo ('granted')
       if (permissions.photos === 'granted') {
+        console.log('[PermissionsService] Permiso ya otorgado (granted)');
         return true;
       }
 
       // Si está en 'limited', necesitamos solicitar acceso completo
       if (permissions.photos === 'limited') {
+        console.log('[PermissionsService] Permiso limitado detectado, solicitando acceso completo...');
         // Solicitar permisos nuevamente para obtener acceso completo
         const requestResult = await Camera.requestPermissions({ permissions: ['photos'] });
+        console.log('[PermissionsService] Resultado de solicitud (desde limited):', {
+          camera: requestResult.camera,
+          photos: requestResult.photos
+        });
         // Retornar true solo si es 'granted', no 'limited'
-        return requestResult.photos === 'granted';
+        const granted = requestResult.photos === 'granted';
+        console.log('[PermissionsService] Permiso otorgado después de solicitud:', granted);
+        return granted;
       }
 
       // Si no está otorgado, solicitar permisos
+      console.log('[PermissionsService] Permiso no otorgado, solicitando...');
       const requestResult = await Camera.requestPermissions({ permissions: ['photos'] });
-      return requestResult.photos === 'granted';
-    } catch {
+      console.log('[PermissionsService] Resultado de solicitud:', {
+        camera: requestResult.camera,
+        photos: requestResult.photos
+      });
+      const granted = requestResult.photos === 'granted';
+      console.log('[PermissionsService] Permiso final:', granted);
+      return granted;
+    } catch (error) {
+      console.error('[PermissionsService] Error al solicitar permisos:', error);
       return false;
     }
   }

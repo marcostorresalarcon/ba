@@ -292,6 +292,14 @@ export class MediaPickerService {
    * Convierte un Photo de Capacitor a File
    */
   private async photoToFile(photo: Photo): Promise<File> {
+    console.log('[MediaPickerService] photoToFile: Iniciando conversión', {
+      hasPath: !!photo.path,
+      hasWebPath: !!photo.webPath,
+      format: photo.format,
+      path: photo.path,
+      webPath: photo.webPath
+    });
+
     let fileUri: string;
     let mimeType: string;
     let fileName: string;
@@ -300,50 +308,101 @@ export class MediaPickerService {
     if (photo.path) {
       // En nativo, convertir el path usando Capacitor
       fileUri = Capacitor.convertFileSrc(photo.path);
+      console.log('[MediaPickerService] photoToFile: Usando path nativo', {
+        originalPath: photo.path,
+        convertedUri: fileUri
+      });
 
       // Determinar tipo MIME y nombre de archivo desde el path
       const extension = photo.path.split('.').pop()?.toLowerCase() || 'jpg';
       mimeType = this.getMimeTypeFromExtension(extension);
       fileName = `media-${Date.now()}.${extension}`;
+      console.log('[MediaPickerService] photoToFile: Detectado desde path', {
+        extension,
+        mimeType,
+        fileName
+      });
     } else if (photo.webPath) {
       // En web, usar webPath directamente
       fileUri = photo.webPath;
       fileName = `media-${Date.now()}.jpg`;
       mimeType = 'image/jpeg';
+      console.log('[MediaPickerService] photoToFile: Usando webPath', {
+        webPath: photo.webPath,
+        mimeType,
+        fileName
+      });
     } else {
+      console.error('[MediaPickerService] photoToFile: No hay path ni webPath válido');
       throw new Error('No valid path or webPath in photo');
     }
 
     // Obtener el archivo usando fetch
     try {
+      console.log('[MediaPickerService] photoToFile: Fetching file desde URI:', fileUri);
       const response = await fetch(fileUri);
 
       if (!response.ok) {
+        console.error('[MediaPickerService] photoToFile: Error en fetch', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries())
+        });
         throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
       }
 
+      console.log('[MediaPickerService] photoToFile: Response headers:', {
+        contentType: response.headers.get('content-type'),
+        contentLength: response.headers.get('content-length')
+      });
+
       const blob = await response.blob();
+      console.log('[MediaPickerService] photoToFile: Blob obtenido', {
+        type: blob.type,
+        size: blob.size,
+        mimeTypeDetected: mimeType
+      });
 
       if (!blob || blob.size === 0) {
+        console.error('[MediaPickerService] photoToFile: Blob vacío');
         throw new Error('File is empty');
       }
 
       // Validación de seguridad para evitar crashes por memoria en dispositivos móviles
       // 50MB es un límite seguro para manejar en memoria (blob)
       if (this.isNative && blob.size > 50 * 1024 * 1024) {
+        console.error('[MediaPickerService] photoToFile: Archivo muy grande', {
+          size: blob.size,
+          maxSize: 50 * 1024 * 1024
+        });
         throw new Error('File is too large for mobile upload. Please choose a smaller file or shorter video (max 50MB).');
       }
 
       // Usar el tipo MIME del blob si está disponible, sino usar el detectado
       const finalMimeType = blob.type || mimeType;
+      console.log('[MediaPickerService] photoToFile: Tipo MIME final', {
+        blobType: blob.type,
+        detectedMimeType: mimeType,
+        finalMimeType
+      });
 
       // Ajustar extensión si el tipo MIME es diferente
       if (blob.type && blob.type !== mimeType) {
         const correctExtension = this.getExtensionFromMimeType(blob.type);
         fileName = `media-${Date.now()}.${correctExtension}`;
+        console.log('[MediaPickerService] photoToFile: Ajustando extensión', {
+          oldExtension: fileName.split('.').pop(),
+          newExtension: correctExtension,
+          newFileName: fileName
+        });
       }
 
       const file = new File([blob], fileName, { type: finalMimeType });
+      console.log('[MediaPickerService] photoToFile: File creado exitosamente', {
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
       return file;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -446,14 +505,12 @@ export class MediaPickerService {
 
     /**
      * IMPORTANTE (iOS):
-     * - Los plugins nativos actuales (Camera, ImagePicker) filtran solo imágenes.
-     * - FilePicker abre la app de Archivos (Document Picker).
-     * - La solución más robusta para acceder a la Galería de Videos NATIVA en iOS es usar el selector del sistema (Web),
-     *   que iOS renderiza como un menú nativo con opción explícita "Fototeca" (Photo Library) filtrada correctamente.
+     * - Usamos Camera.getPhoto igual que para imágenes, que muestra TODA la galería (imágenes y videos)
+     * - Luego validamos que el archivo seleccionado sea un video
+     * - Esto garantiza la experiencia nativa "igual a imágenes"
      */
     if (this.platform === 'ios') {
-      // Usar la implementación web en iOS para invocar el menú nativo del sistema
-      return this.pickVideosWeb(allowMultiple);
+      return this.pickVideosNativeIOS(allowMultiple);
     }
 
     // Android: usar FilePicker para videos
@@ -602,16 +659,39 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos en iOS usando el plugin Camera (recomendado por nativo)
-   * Nota: Usamos Camera.pickImages que abre el selector nativo PHPicker.
-   * Aunque se llama "pickImages", PHPicker puede configurarse para mostrar videos.
+   * Selecciona videos en iOS usando Camera.getPhoto (igual que imágenes)
+   * IMPORTANTE: Camera.getPhoto con CameraSource.Photos muestra TODA la galería (imágenes Y videos)
+   * Validamos después que el archivo seleccionado sea un video
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
+      // LOG: Inicio del proceso
+      console.log('[MediaPickerService] pickVideosNativeIOS: Iniciando selección de videos en iOS', {
+        allowMultiple,
+        platform: this.platform
+      });
+
       // Solicitar permisos de galería antes de acceder (crítico para iOS/iPad)
+      console.log('[MediaPickerService] Verificando permisos de galería...');
       const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
+
+      // LOG: Estado de permisos
+      console.log('[MediaPickerService] Estado de permisos:', { hasPermission });
+
+      // Verificar permisos directamente con Camera para más detalles
+      try {
+        const permissions = await Camera.checkPermissions();
+        console.log('[MediaPickerService] Permisos detallados:', {
+          camera: permissions.camera,
+          photos: permissions.photos
+        });
+      } catch (permError) {
+        console.warn('[MediaPickerService] Error al verificar permisos detallados:', permError);
+      }
+
       if (!hasPermission) {
         // Registrar el error para depuración
+        console.error('[MediaPickerService] Permiso de galería denegado');
         void this.logService.logError(
           'Photo library permission denied for videos',
           new Error('Photo library permission not granted'),
@@ -623,36 +703,129 @@ export class MediaPickerService {
               service: 'MediaPickerService',
               method: 'pickVideosNativeIOS',
               platform: 'ios',
-              allowMultiple
+              allowMultiple,
+              hasPermission
             }
           }
         );
         throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
       }
 
-      // Usar Camera.pickImages para abrir el selector nativo de galería (PHPicker)
-      // Esto garantiza la experiencia "igual a imágenes" que el usuario desea
-      const result = await Camera.pickImages({
-        quality: 90,
-        limit: allowMultiple ? 0 : 1, // 0 = ilimitado (depende de plataforma, en web es 0, en iOS puede ser distinto pero 0 suele ser todo)
-      });
-
-      if (result.photos.length === 0) {
-        return [];
-      }
-
       const files: File[] = [];
-      for (const galleryPhoto of result.photos) {
-        // Convertir GalleryPhoto a Photo y luego a File
-        // GalleryPhoto es compatible con Photo para estos campos (path, webPath, format)
-        const photo = galleryPhoto as unknown as Photo;
-        const file = await this.photoToFile(photo);
+      const maxSelections = allowMultiple ? 10 : 1; // Limitar a 10 videos máximo para evitar problemas de memoria
 
-        // Aceptamos el archivo seleccionado por el usuario.
-        // PHPicker es visual, el usuario ve lo que selecciona.
-        files.push(file);
+      console.log('[MediaPickerService] Iniciando selección de archivos (máximo:', maxSelections, ')');
+
+      // Para múltiples selecciones, hacer un loop (iOS no soporta selección múltiple nativa en getPhoto)
+      for (let i = 0; i < maxSelections; i++) {
+        try {
+          console.log('[MediaPickerService] Intento de selección:', i + 1, 'de', maxSelections);
+
+          // Usar Camera.getPhoto igual que para imágenes - esto muestra TODA la galería (imágenes y videos)
+          const photo = await Camera.getPhoto({
+            quality: 90,
+            allowEditing: false,
+            resultType: CameraResultType.Uri,
+            source: CameraSource.Photos, // Muestra la galería nativa completa
+            width: 1920,
+            correctOrientation: true
+          });
+
+          // LOG: Información del Photo seleccionado
+          console.log('[MediaPickerService] Photo seleccionado:', {
+            path: photo.path,
+            webPath: photo.webPath,
+            format: photo.format,
+            exif: photo.exif ? 'present' : 'missing'
+          });
+
+          // Convertir Photo a File
+          console.log('[MediaPickerService] Convirtiendo Photo a File...');
+          const file = await this.photoToFile(photo);
+
+          // LOG: Información del File convertido
+          console.log('[MediaPickerService] File convertido:', {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            lastModified: file.lastModified
+          });
+
+          // VALIDAR que sea un video (por tipo MIME o extensión)
+          const isVideoByMime = file.type.startsWith('video/');
+          const isVideoByExtension = !!file.name.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm)$/);
+          const isVideo = isVideoByMime || isVideoByExtension;
+
+          console.log('[MediaPickerService] Validación de video:', {
+            isVideoByMime,
+            isVideoByExtension,
+            isVideo,
+            fileType: file.type,
+            fileName: file.name
+          });
+
+          if (!isVideo) {
+            console.warn('[MediaPickerService] Archivo seleccionado NO es un video:', {
+              type: file.type,
+              name: file.name
+            });
+
+            // Si no es video, mostrar mensaje y continuar (o terminar si es selección única)
+            if (!allowMultiple) {
+              const errorMsg = `El archivo seleccionado no es un video (tipo: ${file.type}, nombre: ${file.name}). Por favor, selecciona un video.`;
+              console.error('[MediaPickerService]', errorMsg);
+              throw new Error(errorMsg);
+            }
+            // En modo múltiple, simplemente ignorar este archivo y continuar
+            console.log('[MediaPickerService] Ignorando archivo no-video, continuando selección...');
+            continue;
+          }
+
+          console.log('[MediaPickerService] Video válido agregado:', file.name);
+          files.push(file);
+
+          // Si es selección única o ya tenemos suficientes, terminar
+          if (!allowMultiple || files.length >= maxSelections) {
+            console.log('[MediaPickerService] Selección completada. Total de videos:', files.length);
+            break;
+          }
+
+          // Si es múltiple, preguntar si quiere seleccionar más (opcional - por ahora solo continuamos)
+          // En una implementación más avanzada, podrías mostrar un diálogo "¿Seleccionar otro video?"
+
+        } catch (error) {
+          const errorMessage = error && typeof error === 'object' && 'message' in error
+            ? String(error.message)
+            : '';
+
+          console.error('[MediaPickerService] Error en intento de selección:', {
+            attempt: i + 1,
+            error: errorMessage,
+            errorObject: error
+          });
+
+          // Si el usuario cancela o hay un error específico de validación, terminar el loop
+          if (errorMessage === 'User cancelled' ||
+            errorMessage === 'User canceled' ||
+            errorMessage === 'User cancelled photos app' ||
+            errorMessage.includes('no es un video')) {
+            console.log('[MediaPickerService] Usuario canceló o archivo inválido, terminando selección');
+            break; // Salir del loop
+          }
+
+          // Si es el primer intento y hay error, propagarlo
+          if (i === 0) {
+            console.error('[MediaPickerService] Error en primer intento, propagando error');
+            throw error;
+          }
+
+          // Si es un intento posterior, simplemente terminar
+          console.log('[MediaPickerService] Error en intento posterior, terminando selección');
+          break;
+        }
       }
 
+      console.log('[MediaPickerService] pickVideosNativeIOS completado. Videos seleccionados:', files.length);
       return files;
 
     } catch (error) {
@@ -660,27 +833,37 @@ export class MediaPickerService {
         ? String(error.message)
         : '';
 
+      console.error('[MediaPickerService] Error general en pickVideosNativeIOS:', {
+        errorMessage,
+        error,
+        allowMultiple
+      });
+
       if (errorMessage === 'User cancelled' ||
         errorMessage === 'User canceled' ||
         errorMessage === 'User cancelled photos app' ||
         errorMessage === 'Photo library permission denied' ||
         errorMessage.includes('Photo library permission')) {
+        console.log('[MediaPickerService] Usuario canceló o permiso denegado, retornando array vacío');
         return [];
       }
 
-      // Registrar otros errores
+      // Registrar otros errores con información detallada
       void this.logService.logError(
         'Error selecting videos in iOS',
         error,
         {
           severity: 'medium',
-          description: 'Error selecting videos using Camera.pickImages in iOS',
+          description: `Error selecting videos using Camera.getPhoto in iOS: ${errorMessage}`,
           source: 'media-picker-service',
           metadata: {
             service: 'MediaPickerService',
             method: 'pickVideosNativeIOS',
             platform: 'ios',
-            allowMultiple
+            allowMultiple,
+            errorMessage,
+            errorType: error?.constructor?.name,
+            errorStack: error instanceof Error ? error.stack : undefined
           }
         }
       );
