@@ -1,10 +1,20 @@
 import { inject, Injectable } from '@angular/core';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource, type Photo } from '@capacitor/camera';
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 
 import { LogService } from '../log/log.service';
 import { PermissionsService } from '../permissions/permissions.service';
+
+/**
+ * Interfaz para el plugin nativo personalizado de selección de video
+ */
+interface NativeVideoPickerPlugin {
+  pickVideo(options: { allowMultiple: boolean }): Promise<{ files: any[] }>;
+}
+
+// Registrar el plugin nativo que creamos en iOS
+const NativeVideoPicker = registerPlugin<NativeVideoPickerPlugin>('NativeVideoPicker');
 
 /**
  * Servicio para seleccionar medios (imágenes/videos) usando Capacitor Camera
@@ -659,201 +669,59 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos en iOS usando Camera.pickImages (PHPicker)
-   * IMPORTANTE: Camera.pickImages abre PHPicker que muestra la galería nativa completa (imágenes Y videos)
-   * PHPicker es el selector moderno de iOS que funciona igual en iPhone e iPad
-   * Validamos después que los archivos seleccionados sean videos
+   * Selecciona videos en iOS usando un Plugin Nativo personalizado (PHPickerViewController)
+   * Esto garantiza abrir la Galería Nativa (Photos) filtrada EXCLUSIVAMENTE para videos.
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
-      // LOG: Inicio del proceso
-      console.log('[MediaPickerService] pickVideosNativeIOS: Iniciando selección de videos en iOS', {
-        allowMultiple,
-        platform: this.platform,
-        method: 'Camera.pickImages (PHPicker)'
-      });
+      console.log('[MediaPickerService] pickVideosNativeIOS: Usando plugin nativo personalizado');
 
-      // Solicitar permisos de galería antes de acceder (crítico para iOS/iPad)
-      console.log('[MediaPickerService] Verificando permisos de galería...');
-      const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
+      // Llamar al plugin nativo que abre PHPicker con filtro de videos
+      const result = await NativeVideoPicker.pickVideo({ allowMultiple });
 
-      // LOG: Estado de permisos
-      console.log('[MediaPickerService] Estado de permisos:', { hasPermission });
-
-      // Verificar permisos directamente con Camera para más detalles
-      try {
-        const permissions = await Camera.checkPermissions();
-        console.log('[MediaPickerService] Permisos detallados:', {
-          camera: permissions.camera,
-          photos: permissions.photos
-        });
-      } catch (permError) {
-        console.warn('[MediaPickerService] Error al verificar permisos detallados:', permError);
-      }
-
-      if (!hasPermission) {
-        // Registrar el error para depuración
-        console.error('[MediaPickerService] Permiso de galería denegado');
-        void this.logService.logError(
-          'Photo library permission denied for videos',
-          new Error('Photo library permission not granted'),
-          {
-            severity: 'medium',
-            description: 'User denied photo library access or only granted limited access',
-            source: 'media-picker-service',
-            metadata: {
-              service: 'MediaPickerService',
-              method: 'pickVideosNativeIOS',
-              platform: 'ios',
-              allowMultiple,
-              hasPermission
-            }
-          }
-        );
-        throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
-      }
-
-      console.log('[MediaPickerService] Usando Camera.pickImages para abrir PHPicker (galería nativa)...');
-
-      // Usar Camera.pickImages que abre PHPicker - el selector moderno de iOS
-      // PHPicker muestra TODA la galería (imágenes y videos) sin filtrar por tipo
-      // Aunque se llama "pickImages", PHPicker muestra videos también
-      const result = await Camera.pickImages({
-        quality: 90,
-        limit: allowMultiple ? 10 : 1, // 0 = ilimitado, pero limitamos a 10 para evitar problemas de memoria
-      });
-
-      console.log('[MediaPickerService] Resultado de pickImages:', {
-        photosCount: result.photos.length
-      });
-
-      if (result.photos.length === 0) {
-        console.log('[MediaPickerService] No se seleccionaron archivos');
+      if (!result.files || result.files.length === 0) {
+        console.log('[MediaPickerService] No se seleccionaron videos');
         return [];
       }
 
       const files: File[] = [];
-
-      // Procesar cada foto/video seleccionado
-      for (let i = 0; i < result.photos.length; i++) {
-        const galleryPhoto = result.photos[i];
-
-        console.log('[MediaPickerService] Procesando archivo', i + 1, 'de', result.photos.length, ':', {
-          path: galleryPhoto.path,
-          webPath: galleryPhoto.webPath,
-          format: galleryPhoto.format
-        });
-
+      for (const nativeFile of result.files) {
         try {
-          // Convertir GalleryPhoto a Photo y luego a File
-          // GalleryPhoto es compatible con Photo para estos campos (path, webPath, format)
-          const photo = galleryPhoto as unknown as Photo;
-          const file = await this.photoToFile(photo);
+          // Convertir el path nativo a una URL accesible por el webview
+          const fileUri = Capacitor.convertFileSrc(nativeFile.path);
 
-          // LOG: Información del File convertido
-          console.log('[MediaPickerService] File convertido:', {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            lastModified: file.lastModified
+          console.log('[MediaPickerService] Procesando video nativo:', {
+            name: nativeFile.name,
+            path: nativeFile.path,
+            uri: fileUri
           });
 
-          // VALIDAR que sea un video (por tipo MIME o extensión)
-          const isVideoByMime = file.type.startsWith('video/');
-          const isVideoByExtension = !!file.name.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm)$/);
-          const isVideo = isVideoByMime || isVideoByExtension;
+          // Obtener el archivo usando fetch
+          const response = await fetch(fileUri);
+          if (!response.ok) throw new Error('Error al leer el archivo de video nativo');
 
-          console.log('[MediaPickerService] Validación de video:', {
-            isVideoByMime,
-            isVideoByExtension,
-            isVideo,
-            fileType: file.type,
-            fileName: file.name
+          const blob = await response.blob();
+
+          // Crear objeto File
+          const file = new File([blob], nativeFile.name || `video-${Date.now()}.mov`, {
+            type: blob.type || nativeFile.mimeType || 'video/quicktime'
           });
 
-          if (!isVideo) {
-            console.warn('[MediaPickerService] Archivo seleccionado NO es un video:', {
-              type: file.type,
-              name: file.name
-            });
-
-            // Si no es video, mostrar mensaje y continuar (o terminar si es selección única)
-            if (!allowMultiple && result.photos.length === 1) {
-              const errorMsg = `El archivo seleccionado no es un video (tipo: ${file.type}, nombre: ${file.name}). Por favor, selecciona un video.`;
-              console.error('[MediaPickerService]', errorMsg);
-              throw new Error(errorMsg);
-            }
-            // En modo múltiple o si hay más archivos, simplemente ignorar este archivo y continuar
-            console.log('[MediaPickerService] Ignorando archivo no-video, continuando...');
-            continue;
-          }
-
-          console.log('[MediaPickerService] Video válido agregado:', file.name);
           files.push(file);
         } catch (error) {
-          const errorMessage = error && typeof error === 'object' && 'message' in error
-            ? String(error.message)
-            : '';
-
-          console.error('[MediaPickerService] Error procesando archivo', i + 1, ':', {
-            error: errorMessage,
-            errorObject: error
-          });
-
-          // Si es selección única y hay error, propagarlo
-          if (!allowMultiple && result.photos.length === 1) {
-            throw error;
-          }
-
-          // En modo múltiple, continuar con el siguiente archivo
-          continue;
+          console.error('[MediaPickerService] Error procesando video individual:', error);
         }
       }
 
-      console.log('[MediaPickerService] pickVideosNativeIOS completado. Videos seleccionados:', files.length, 'de', result.photos.length, 'archivos');
+      console.log(`[MediaPickerService] Videos procesados exitosamente: ${files.length}`);
       return files;
 
     } catch (error) {
-      const errorMessage = error && typeof error === 'object' && 'message' in error
-        ? String(error.message)
-        : '';
+      console.error('[MediaPickerService] Error general en pickVideosNativeIOS (Native Bridge):', error);
 
-      console.error('[MediaPickerService] Error general en pickVideosNativeIOS:', {
-        errorMessage,
-        error,
-        allowMultiple
-      });
-
-      if (errorMessage === 'User cancelled' ||
-        errorMessage === 'User canceled' ||
-        errorMessage === 'User cancelled photos app' ||
-        errorMessage === 'Photo library permission denied' ||
-        errorMessage.includes('Photo library permission')) {
-        console.log('[MediaPickerService] Usuario canceló o permiso denegado, retornando array vacío');
-        return [];
-      }
-
-      // Registrar otros errores con información detallada
-      void this.logService.logError(
-        'Error selecting videos in iOS',
-        error,
-        {
-          severity: 'medium',
-          description: `Error selecting videos using Camera.getPhoto in iOS: ${errorMessage}`,
-          source: 'media-picker-service',
-          metadata: {
-            service: 'MediaPickerService',
-            method: 'pickVideosNativeIOS',
-            platform: 'ios',
-            allowMultiple,
-            errorMessage,
-            errorType: error?.constructor?.name,
-            errorStack: error instanceof Error ? error.stack : undefined
-          }
-        }
-      );
-
-      throw error;
+      // Fallback: Si el bridge nativo falla, intentar con la implementación web como último recurso
+      console.warn('[MediaPickerService] Intentando fallback a implementación web...');
+      return this.pickVideosWeb(allowMultiple);
     }
   }
 
