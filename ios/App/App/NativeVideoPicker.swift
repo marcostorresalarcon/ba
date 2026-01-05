@@ -5,9 +5,15 @@ import UniformTypeIdentifiers
 
 @objc(NativeVideoPicker)
 public class NativeVideoPicker: CAPPlugin, PHPickerViewControllerDelegate {
+    
+    // Propiedad para guardar la llamada mientras se muestra el picker
+    private var savedCall: CAPPluginCall?
 
     @objc func pickVideo(_ call: CAPPluginCall) {
         let allowMultiple = call.getBool("allowMultiple", false)
+        
+        // Guardar la llamada en la propiedad de instancia
+        self.savedCall = call
         
         DispatchQueue.main.async {
             var configuration = PHPickerConfiguration()
@@ -17,14 +23,14 @@ public class NativeVideoPicker: CAPPlugin, PHPickerViewControllerDelegate {
             let picker = PHPickerViewController(configuration: configuration)
             picker.delegate = self
             self.bridge?.viewController?.present(picker, animated: true, completion: nil)
-            self.bridge?.saveCall(call)
         }
     }
 
     public func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         picker.dismiss(animated: true, completion: nil)
         
-        guard let call = self.bridge?.getSavedCall() else { return }
+        guard let call = self.savedCall else { return }
+        self.savedCall = nil // Limpiar la referencia
         
         if results.isEmpty {
             call.resolve(["files": []])
