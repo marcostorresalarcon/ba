@@ -738,13 +738,13 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos en iOS usando FilePicker con tipos muy amplios
-   * Usamos FilePicker con UTIs de iOS que abren la galería de fotos nativa mostrando videos
+   * Selecciona videos en iOS usando FilePicker.pickVideos()
+   * Este método usa PHPickerViewController nativo de iOS que abre la galería de fotos mostrando videos
    * SIN restricciones de formato - acepta cualquier tipo de video
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
-      console.log('[MediaPickerService] pickVideosNativeIOS: Usando FilePicker con tipos amplios para videos');
+      console.log('[MediaPickerService] pickVideosNativeIOS: Usando FilePicker.pickVideos() para galería nativa');
 
       // 1. Solicitar permisos
       const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
@@ -769,67 +769,34 @@ export class MediaPickerService {
         throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
       }
 
-      // 2. Usar FilePicker con TODOS los tipos posibles de video (sin restricciones)
-      // Estos UTIs de iOS deberían abrir la galería de fotos nativa mostrando videos
-      const result = await FilePicker.pickFiles({
-        types: [
-          // UTIs genéricos de iOS para videos (abren galería de fotos)
-          'public.movie',
-          'public.video',
-          'public.audiovisual-content',
-          // Formatos específicos comunes
-          'public.mpeg-4',
-          'com.apple.quicktime-movie',
-          'public.avi',
-          'public.mpeg',
-          'public.mpeg-2-video',
-          // MIME types genéricos (sin restricción de formato específico)
-          'video/*',
-          'video/mp4',
-          'video/quicktime',
-          'video/x-m4v',
-          'video/x-msvideo',
-          'video/x-matroska',
-          'video/webm',
-          'video/3gpp',
-          'video/3gpp2',
-          'video/h264',
-          'video/h265',
-          'video/hevc',
-          // Cualquier cosa que pueda ser video
-          'public.data'
-        ],
-        readData: true
+      // 2. Usar FilePicker.pickVideos() - Este método específico abre la galería nativa usando PHPickerViewController
+      // En iOS, esto abre la galería de fotos nativa mostrando videos (no el selector de archivos)
+      const result = await FilePicker.pickVideos({
+        limit: allowMultiple ? 10 : 1, // Número máximo de videos a seleccionar
+        readData: true,
+        // skipTranscoding: true // Opcional: evita transcodificación automática en iOS para mantener calidad original
       });
 
-      console.log('[MediaPickerService] FilePicker completado. Archivos seleccionados:', result.files?.length || 0);
+      console.log('[MediaPickerService] FilePicker.pickVideos() completado. Archivos seleccionados:', result.files?.length || 0);
 
       if (!result.files || result.files.length === 0) {
-        console.log('[MediaPickerService] No se seleccionaron archivos');
+        console.log('[MediaPickerService] No se seleccionaron videos');
         return [];
       }
 
       // 3. Procesar archivos - ACEPTAR CUALQUIER ARCHIVO (sin restricciones de formato)
-      // Usar convertPickedFilesToFiles con validateVideoType=false para no filtrar nada
+      // pickVideos() ya filtra por videos, pero procesamos todos sin restricciones adicionales
       const allFiles = await this.convertPickedFilesToFiles(result.files, false);
 
-      // Filtrar solo para excluir imágenes claras, pero aceptar TODO lo demás (sin restricciones)
+      // Aceptar todos los archivos retornados por pickVideos() sin filtros adicionales
       const files: File[] = [];
 
       for (const file of allFiles) {
         const mimeType = file.type || '';
         const fileName = file.name || '';
-        const isImageByMime = mimeType.startsWith('image/');
 
-        // Solo excluir si es claramente una imagen (jpg, png, etc.)
-        // Aceptar TODO lo demás sin restricciones
-        if (isImageByMime && !fileName.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm|3gp|3g2|flv|wmv|asf|rm|rmvb|vob|ogv|mts|m2ts|ts|divx|xvid|f4v|mxf|mpg|mpeg|mpv|qt)$/i)) {
-          console.log('[MediaPickerService] Archivo ignorado (es imagen):', fileName);
-          continue;
-        }
-
-        // Aceptar cualquier otro archivo sin restricciones
-        console.log('[MediaPickerService] ✅ Archivo aceptado (sin restricciones):', {
+        // pickVideos() ya debería retornar solo videos, pero aceptamos todo sin restricciones
+        console.log('[MediaPickerService] ✅ Video aceptado:', {
           name: fileName,
           type: mimeType,
           size: file.size
@@ -866,7 +833,7 @@ export class MediaPickerService {
         error,
         {
           severity: 'medium',
-          description: `Error selecting videos using FilePicker: ${msg}`,
+          description: `Error selecting videos using FilePicker.pickVideos(): ${msg}`,
           source: 'media-picker-service',
           metadata: { method: 'pickVideosNativeIOS', platform: 'ios', allowMultiple }
         }
