@@ -435,8 +435,12 @@ export class MediaPickerService {
   /**
    * Obtiene el tipo MIME desde la extensión
    */
+  /**
+   * Obtiene el tipo MIME desde la extensión - SIN RESTRICCIONES, acepta cualquier formato
+   */
   private getMimeTypeFromExtension(extension: string): string {
     const mimeTypes: Record<string, string> = {
+      // Imágenes comunes
       jpg: 'image/jpeg',
       jpeg: 'image/jpeg',
       png: 'image/png',
@@ -444,20 +448,61 @@ export class MediaPickerService {
       webp: 'image/webp',
       heic: 'image/heic',
       heif: 'image/heif',
+      bmp: 'image/bmp',
+      tiff: 'image/tiff',
+      tif: 'image/tiff',
+      svg: 'image/svg+xml',
+      // Videos comunes y extendidos (sin restricciones)
       mp4: 'video/mp4',
       mov: 'video/quicktime',
       avi: 'video/x-msvideo',
       mkv: 'video/x-matroska',
       webm: 'video/webm',
+      m4v: 'video/x-m4v',
+      '3gp': 'video/3gpp',
+      '3g2': 'video/3gpp2',
+      flv: 'video/x-flv',
+      wmv: 'video/x-ms-wmv',
+      asf: 'video/x-ms-asf',
+      rm: 'video/vnd.rn-realvideo',
+      rmvb: 'video/vnd.rn-realvideo',
+      vob: 'video/dvd',
+      ogv: 'video/ogg',
+      mts: 'video/mp2t',
+      m2ts: 'video/mp2t',
+      ts: 'video/mp2t',
+      divx: 'video/divx',
+      xvid: 'video/xvid',
+      f4v: 'video/x-f4v',
+      mxf: 'application/mxf',
+      mpg: 'video/mpeg',
+      mpeg: 'video/mpeg',
+      mpv: 'video/mpv',
+      qt: 'video/quicktime',
     };
-    return mimeTypes[extension.toLowerCase()] || 'image/jpeg';
+    const ext = extension.toLowerCase();
+    // Si conocemos el tipo, usarlo; si no, retornar genérico según extensión
+    if (mimeTypes[ext]) {
+      return mimeTypes[ext];
+    }
+    // Si parece video, retornar video genérico
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v', '3gp', '3g2', 'flv', 'wmv', 'asf', 'rm', 'rmvb', 'vob', 'ogv', 'mts', 'm2ts', 'ts', 'divx', 'xvid', 'f4v', 'mxf', 'mpg', 'mpeg', 'mpv', 'qt'].includes(ext)) {
+      return 'video/*';
+    }
+    // Si parece imagen, retornar image genérico
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'bmp', 'tiff', 'tif', 'svg'].includes(ext)) {
+      return 'image/*';
+    }
+    // Por defecto, retornar application/octet-stream para aceptar cualquier cosa
+    return 'application/octet-stream';
   }
 
   /**
-   * Obtiene la extensión desde el tipo MIME
+   * Obtiene la extensión desde el tipo MIME - SIN RESTRICCIONES
    */
   private getExtensionFromMimeType(mimeType: string): string {
     const extensions: Record<string, string> = {
+      // Imágenes
       'image/jpeg': 'jpg',
       'image/jpg': 'jpg',
       'image/png': 'png',
@@ -465,13 +510,47 @@ export class MediaPickerService {
       'image/webp': 'webp',
       'image/heic': 'heic',
       'image/heif': 'heif',
+      'image/bmp': 'bmp',
+      'image/tiff': 'tiff',
+      'image/svg+xml': 'svg',
+      // Videos (lista ampliada sin restricciones)
       'video/mp4': 'mp4',
       'video/quicktime': 'mov',
       'video/x-msvideo': 'avi',
       'video/x-matroska': 'mkv',
       'video/webm': 'webm',
+      'video/x-m4v': 'm4v',
+      'video/3gpp': '3gp',
+      'video/3gpp2': '3g2',
+      'video/x-flv': 'flv',
+      'video/x-ms-wmv': 'wmv',
+      'video/x-ms-asf': 'asf',
+      'video/vnd.rn-realvideo': 'rm',
+      'video/dvd': 'vob',
+      'video/ogg': 'ogv',
+      'video/mp2t': 'ts',
+      'video/divx': 'divx',
+      'video/xvid': 'xvid',
+      'video/x-f4v': 'f4v',
+      'application/mxf': 'mxf',
+      'video/mpeg': 'mpg',
+      'video/mpv': 'mpv',
     };
-    return extensions[mimeType.toLowerCase()] || 'jpg';
+    const mime = mimeType.toLowerCase();
+    // Si conocemos la extensión, usarla
+    if (extensions[mime]) {
+      return extensions[mime];
+    }
+    // Si es video/* genérico, usar mp4 por defecto
+    if (mime.startsWith('video/')) {
+      return 'mp4';
+    }
+    // Si es image/* genérico, usar jpg por defecto
+    if (mime.startsWith('image/')) {
+      return 'jpg';
+    }
+    // Por defecto, usar extensión genérica
+    return 'bin';
   }
 
   /**
@@ -659,14 +738,13 @@ export class MediaPickerService {
   }
 
   /**
-   * Selecciona videos en iOS usando Camera.getPhoto con Photos
-   * Camera.getPhoto con CameraSource.Photos muestra la galería nativa completa (imágenes Y videos)
-   * Esto es diferente de Camera.pickImages que solo muestra imágenes.
+   * Selecciona videos en iOS usando FilePicker con tipos muy amplios
+   * Usamos FilePicker con UTIs de iOS que abren la galería de fotos nativa mostrando videos
+   * SIN restricciones de formato - acepta cualquier tipo de video
    */
   private async pickVideosNativeIOS(allowMultiple: boolean): Promise<File[]> {
     try {
-      console.log('[MediaPickerService] pickVideosNativeIOS: Iniciando selección con Camera.getPhoto (Photos)');
-      console.log('[MediaPickerService] Este método debería mostrar la galería completa con imágenes y videos');
+      console.log('[MediaPickerService] pickVideosNativeIOS: Usando FilePicker con tipos amplios para videos');
 
       // 1. Solicitar permisos
       const hasPermission = await this.permissionsService.requestPhotoLibraryPermission();
@@ -691,134 +769,88 @@ export class MediaPickerService {
         throw new Error('Photo library permission denied. Please grant full access to all photos in Settings.');
       }
 
-      const files: File[] = [];
-      const maxSelections = allowMultiple ? 10 : 1;
-      let selectionCount = 0;
+      // 2. Usar FilePicker con TODOS los tipos posibles de video (sin restricciones)
+      // Estos UTIs de iOS deberían abrir la galería de fotos nativa mostrando videos
+      const result = await FilePicker.pickFiles({
+        types: [
+          // UTIs genéricos de iOS para videos (abren galería de fotos)
+          'public.movie',
+          'public.video',
+          'public.audiovisual-content',
+          // Formatos específicos comunes
+          'public.mpeg-4',
+          'com.apple.quicktime-movie',
+          'public.avi',
+          'public.mpeg',
+          'public.mpeg-2-video',
+          // MIME types genéricos (sin restricción de formato específico)
+          'video/*',
+          'video/mp4',
+          'video/quicktime',
+          'video/x-m4v',
+          'video/x-msvideo',
+          'video/x-matroska',
+          'video/webm',
+          'video/3gpp',
+          'video/3gpp2',
+          'video/h264',
+          'video/h265',
+          'video/hevc',
+          // Cualquier cosa que pueda ser video
+          'public.data'
+        ],
+        readData: true
+      });
 
-      // 2. Para múltiples selecciones, llamamos getPhoto varias veces
-      // Para una sola selección, llamamos una vez
-      while (selectionCount < maxSelections) {
-        try {
-          console.log('[MediaPickerService] Llamando Camera.getPhoto con CameraSource.Photos...');
+      console.log('[MediaPickerService] FilePicker completado. Archivos seleccionados:', result.files?.length || 0);
 
-          // Usar Camera.getPhoto con Photos - esto DEBERÍA mostrar la galería completa (imágenes Y videos)
-          const photo = await Camera.getPhoto({
-            quality: 90,
-            allowEditing: false,
-            resultType: CameraResultType.Uri,
-            source: CameraSource.Photos, // Abre la galería nativa completa
-            width: 1920,
-            correctOrientation: true
-          });
-
-          console.log('[MediaPickerService] Archivo seleccionado:', {
-            path: photo.path,
-            webPath: photo.webPath,
-            format: photo.format
-          });
-
-          // Convertir a File
-          const file = await this.photoToFile(photo);
-
-          console.log('[MediaPickerService] Archivo convertido:', {
-            name: file.name,
-            type: file.type,
-            size: file.size
-          });
-
-          // Verificar si es video
-          const isVideoByMime = file.type.startsWith('video/');
-          const isVideoByExtension = !!file.name.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm)$/);
-          const isVideo = isVideoByMime || isVideoByExtension;
-
-          console.log('[MediaPickerService] Validación de video:', {
-            isVideoByMime,
-            isVideoByExtension,
-            isVideo,
-            mimeType: file.type,
-            fileName: file.name
-          });
-
-          if (isVideo) {
-            console.log('[MediaPickerService] ✅ Video válido detectado:', {
-              name: file.name,
-              type: file.type,
-              size: file.size
-            });
-            files.push(file);
-            selectionCount++;
-
-            // Si solo queremos uno, salir
-            if (!allowMultiple) {
-              break;
-            }
-          } else {
-            console.warn('[MediaPickerService] ⚠️ Archivo seleccionado NO es un video:', {
-              type: file.type,
-              name: file.name,
-              esImagen: file.type.startsWith('image/')
-            });
-
-            // Si solo queremos uno y seleccionó una imagen, mostrar error
-            if (!allowMultiple) {
-              const errorMsg = `El archivo seleccionado no es un video (tipo: ${file.type}, nombre: ${file.name}). Por favor, selecciona un video de la galería.`;
-              console.error('[MediaPickerService]', errorMsg);
-              throw new Error(errorMsg);
-            }
-
-            // Si permitimos múltiples, simplemente ignorar esta selección y continuar
-            console.log('[MediaPickerService] Ignorando imagen, continuando selección...');
-          }
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-
-          // Si el usuario canceló, terminar la selección
-          if (errorMsg.includes('cancelled') || errorMsg.includes('canceled') || errorMsg.includes('User cancelled')) {
-            console.log('[MediaPickerService] Usuario canceló la selección');
-            break;
-          }
-
-          // Si es un error de validación (no es video), re-lanzar
-          if (errorMsg.includes('no es un video')) {
-            throw error;
-          }
-
-          // Otros errores: registrar y continuar (o terminar si es el primero)
-          console.error('[MediaPickerService] Error procesando selección:', error);
-          if (selectionCount === 0) {
-            void this.logService.logError(
-              'Error selecting videos in iOS',
-              error,
-              {
-                severity: 'medium',
-                description: `Error selecting videos using Camera.getPhoto: ${errorMsg}`,
-                source: 'media-picker-service',
-                metadata: {
-                  service: 'MediaPickerService',
-                  method: 'pickVideosNativeIOS',
-                  platform: 'ios',
-                  allowMultiple,
-                  selectionCount
-                }
-              }
-            );
-            throw error;
-          }
-          break; // Si ya tenemos algunos archivos, terminar
-        }
+      if (!result.files || result.files.length === 0) {
+        console.log('[MediaPickerService] No se seleccionaron archivos');
+        return [];
       }
 
-      if (files.length === 0) {
-        console.log('[MediaPickerService] No se seleccionaron videos');
+      // 3. Procesar archivos - ACEPTAR CUALQUIER ARCHIVO (sin restricciones de formato)
+      // Usar convertPickedFilesToFiles con validateVideoType=false para no filtrar nada
+      const allFiles = await this.convertPickedFilesToFiles(result.files, false);
+
+      // Filtrar solo para excluir imágenes claras, pero aceptar TODO lo demás (sin restricciones)
+      const files: File[] = [];
+
+      for (const file of allFiles) {
+        const mimeType = file.type || '';
+        const fileName = file.name || '';
+        const isImageByMime = mimeType.startsWith('image/');
+
+        // Solo excluir si es claramente una imagen (jpg, png, etc.)
+        // Aceptar TODO lo demás sin restricciones
+        if (isImageByMime && !fileName.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm|3gp|3g2|flv|wmv|asf|rm|rmvb|vob|ogv|mts|m2ts|ts|divx|xvid|f4v|mxf|mpg|mpeg|mpv|qt)$/i)) {
+          console.log('[MediaPickerService] Archivo ignorado (es imagen):', fileName);
+          continue;
+        }
+
+        // Aceptar cualquier otro archivo sin restricciones
+        console.log('[MediaPickerService] ✅ Archivo aceptado (sin restricciones):', {
+          name: fileName,
+          type: mimeType,
+          size: file.size
+        });
+        files.push(file);
+      }
+
+      // Limitar cantidad si es necesario
+      const finalFiles = allowMultiple ? files : files.slice(0, 1);
+
+      if (finalFiles.length === 0) {
+        console.log('[MediaPickerService] No se encontraron videos válidos');
         return [];
       }
 
       console.log('[MediaPickerService] ✅ Selección completada:', {
-        videosSeleccionados: files.length,
-        totalIntentos: selectionCount
+        videosSeleccionados: finalFiles.length,
+        totalArchivos: result.files.length
       });
 
-      return files;
+      return finalFiles;
 
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
@@ -829,13 +861,12 @@ export class MediaPickerService {
 
       console.error('[MediaPickerService] Error en pickVideosNativeIOS:', error);
 
-      // Registrar error
       void this.logService.logError(
         'Error selecting videos in iOS',
         error,
         {
           severity: 'medium',
-          description: `Error selecting videos using Camera.getPhoto: ${msg}`,
+          description: `Error selecting videos using FilePicker: ${msg}`,
           source: 'media-picker-service',
           metadata: { method: 'pickVideosNativeIOS', platform: 'ios', allowMultiple }
         }
@@ -935,20 +966,26 @@ export class MediaPickerService {
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = allowMultiple;
-      // iOS requiere tipos específicos explícitos para mostrar la carpeta de videos correctamente
-      input.accept = 'video/mp4,video/x-m4v,video/*';
+      // SIN RESTRICCIONES: aceptar cualquier formato de video
+      // Lista ampliada de tipos para iOS y otros navegadores
+      input.accept = 'video/*,video/mp4,video/quicktime,video/x-m4v,video/x-msvideo,video/x-matroska,video/webm,video/3gpp,video/3gpp2,video/x-flv,video/x-ms-wmv,video/ogg,video/mpeg';
 
       input.onchange = (event: Event) => {
         const target = event.target as HTMLInputElement;
         const files = target.files;
         if (files && files.length > 0) {
           const fileArray = Array.from(files);
-          const invalidFiles = fileArray.filter(file => !file.type.startsWith('video/'));
-          if (invalidFiles.length > 0) {
-            reject(new Error('Only video files are allowed'));
-            return;
-          }
-          resolve(fileArray);
+          // SIN RESTRICCIONES: aceptar cualquier archivo seleccionado
+          // Solo excluir si es claramente una imagen
+          const validFiles = fileArray.filter(file => {
+            const isImage = file.type.startsWith('image/');
+            // Si es imagen, verificar extensión para estar seguro
+            if (isImage && !file.name.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm|3gp|3g2|flv|wmv|asf|rm|rmvb|vob|ogv|mts|m2ts|ts|divx|xvid|f4v|mxf|mpg|mpeg|mpv|qt)$/i)) {
+              return false; // Es imagen, excluir
+            }
+            return true; // Aceptar todo lo demás sin restricciones
+          });
+          resolve(validFiles);
         } else {
           resolve([]);
         }
