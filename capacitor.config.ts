@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.bakitchenandbathdesigns.app',
+  appId: 'com.bakitchenandbathdesigns.appprod',
   appName: 'BA Kitchen & Bath Design',
   webDir: 'dist/ba/browser',
   server: {
