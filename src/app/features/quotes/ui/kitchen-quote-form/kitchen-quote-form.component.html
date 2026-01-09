@@ -528,29 +528,19 @@
               <div class="space-y-4">
                 <!-- Three separate buttons for Images, Videos, and Files -->
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <!-- Images Button -->
-                  <button
-                    type="button"
-                    (click)="onCountertopsImagesSelected()"
-                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
-                  >
-                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span class="text-sm font-medium text-charcoal">Select Images</span>
-                  </button>
+                  <!-- Images Menu -->
+                  <app-media-picker-menu
+                    mediaType="image"
+                    (captureFromCamera)="onCountertopsImagesCaptureFromCamera()"
+                    (selectFromGallery)="onCountertopsImagesSelectFromGallery()"
+                  />
 
-                  <!-- Videos Button -->
-                  <button
-                    type="button"
-                    (click)="onCountertopsVideosSelected()"
-                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
-                  >
-                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span class="text-sm font-medium text-charcoal">Select Videos</span>
-                  </button>
+                  <!-- Videos Menu -->
+                  <app-media-picker-menu
+                    mediaType="video"
+                    (captureFromCamera)="onCountertopsVideosCaptureFromCamera()"
+                    (selectFromGallery)="onCountertopsVideosSelectFromGallery()"
+                  />
 
                   <!-- Files Button -->
                   <button
@@ -682,29 +672,19 @@
               <div class="space-y-4">
                 <!-- Three separate buttons for Images, Videos, and Files -->
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <!-- Images Button -->
-                  <button
-                    type="button"
-                    (click)="onBacksplashImagesSelected()"
-                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
-                  >
-                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span class="text-sm font-medium text-charcoal">Select Images</span>
-                  </button>
+                  <!-- Images Menu -->
+                  <app-media-picker-menu
+                    mediaType="image"
+                    (captureFromCamera)="onBacksplashImagesCaptureFromCamera()"
+                    (selectFromGallery)="onBacksplashImagesSelectFromGallery()"
+                  />
 
-                  <!-- Videos Button -->
-                  <button
-                    type="button"
-                    (click)="onBacksplashVideosSelected()"
-                    class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
-                  >
-                    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span class="text-sm font-medium text-charcoal">Select Videos</span>
-                  </button>
+                  <!-- Videos Menu -->
+                  <app-media-picker-menu
+                    mediaType="video"
+                    (captureFromCamera)="onBacksplashVideosCaptureFromCamera()"
+                    (selectFromGallery)="onBacksplashVideosSelectFromGallery()"
+                  />
 
                   <!-- Files Button -->
                   <button
@@ -1070,29 +1050,19 @@
             <label class="mb-2 block text-sm font-medium text-charcoal">Photos & Videos</label>
             <!-- Three separate buttons for Images, Videos, and Files -->
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <!-- Images Button -->
-              <button
-                type="button"
-                (click)="onAdditionalImagesSelected()"
-                class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
-              >
-                <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span class="text-sm font-medium text-charcoal">Select Images</span>
-              </button>
+              <!-- Images Menu -->
+              <app-media-picker-menu
+                mediaType="image"
+                (captureFromCamera)="onAdditionalImagesCaptureFromCamera()"
+                (selectFromGallery)="onAdditionalImagesSelectFromGallery()"
+              />
 
-              <!-- Videos Button -->
-              <button
-                type="button"
-                (click)="onAdditionalVideosSelected()"
-                class="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
-              >
-                <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                <span class="text-sm font-medium text-charcoal">Select Videos</span>
-              </button>
+              <!-- Videos Menu -->
+              <app-media-picker-menu
+                mediaType="video"
+                (captureFromCamera)="onAdditionalVideosCaptureFromCamera()"
+                (selectFromGallery)="onAdditionalVideosSelectFromGallery()"
+              />
 
               <!-- Files Button -->
               <button

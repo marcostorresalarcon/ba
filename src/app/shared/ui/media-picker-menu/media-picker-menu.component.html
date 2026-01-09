@@ -1,0 +1,92 @@
+<div class="relative">
+  <button
+    type="button"
+    (click)="toggleMenu()"
+    class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-fog/60 bg-fog/10 px-4 py-3 transition hover:border-pine/60 hover:bg-fog/20"
+  >
+    @if (mediaType === 'image') {
+    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+    <span class="text-sm font-medium text-charcoal">Select Images</span>
+    } @else {
+    <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+      />
+    </svg>
+    <span class="text-sm font-medium text-charcoal">Select Videos</span>
+    }
+    <svg
+      class="h-4 w-4 text-clay transition-transform"
+      [class.rotate-180]="isOpen()"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+
+  @if (isOpen()) {
+  <div
+    class="absolute left-0 right-0 z-50 mt-2 rounded-2xl border border-fog/60 bg-white shadow-lg"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="py-2">
+      <button
+        type="button"
+        (click)="onCaptureFromCamera($event)"
+        class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-charcoal transition hover:bg-fog/10"
+      >
+        <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+        @if (mediaType === 'image') {
+        <span>Take Photo</span>
+        } @else {
+        <span>Record Video</span>
+        }
+      </button>
+      <button
+        type="button"
+        (click)="onSelectFromGallery($event)"
+        class="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-charcoal transition hover:bg-fog/10"
+      >
+        <svg class="h-5 w-5 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        @if (mediaType === 'image') {
+        <span>Select Images</span>
+        } @else {
+        <span>Select Videos</span>
+        }
+      </button>
+    </div>
+  </div>
+  }
+</div>

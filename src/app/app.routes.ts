@@ -104,6 +104,11 @@ export const routes: Routes = [
         path: 'invoices/:id',
         loadComponent: () =>
           import('./features/billing/ui/invoice-detail/invoice-detail.component').then((m) => m.InvoiceDetailComponent)
+      },
+      {
+        path: 'users',
+        loadComponent: () =>
+          import('./pages/users/users.page').then((m) => m.UsersPage)
       }
     ]
   },

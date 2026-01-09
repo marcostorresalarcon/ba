@@ -72,7 +72,8 @@ export class PageLayoutComponent {
         { label: 'Customers', route: '/customers' },
         { label: 'Projects', route: '/projects' },
         { label: 'Estimates', route: '/quotes' },
-        { label: 'Invoices', route: '/invoices' }
+        { label: 'Invoices', route: '/invoices' },
+        { label: 'Users', route: '/users' }
       ];
     }
 

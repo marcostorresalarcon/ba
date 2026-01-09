@@ -611,6 +611,183 @@ export class MediaPickerService {
   }
 
   /**
+   * Captura una imagen directamente desde la cámara
+   * @returns Promise<File[]> - Array con un solo archivo de imagen capturado
+   */
+  async captureImageFromCamera(): Promise<File[]> {
+    if (!this.isNative) {
+      // En web, usar input con capture="camera"
+      return this.captureImageFromCameraWeb();
+    }
+
+    try {
+      // Solicitar permisos de cámara
+      const hasPermission = await this.permissionsService.requestCameraPermission();
+      if (!hasPermission) {
+        throw new Error('Camera permission denied');
+      }
+
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.Uri,
+        source: CameraSource.Camera,
+        width: 1920,
+        correctOrientation: true
+      });
+
+      const file = await this.photoToFile(photo);
+      return [file];
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled' ||
+          error.message === 'Camera permission denied')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Captura un video directamente desde la cámara
+   * @returns Promise<File[]> - Array con un solo archivo de video capturado
+   * 
+   * NOTA: Capacitor Camera API solo soporta fotos, no videos.
+   * Para iOS nativo, FilePicker mostrará el selector nativo que incluye la opción
+   * de "Tomar foto o video" que permite capturar directamente desde la cámara.
+   */
+  async captureVideoFromCamera(): Promise<File[]> {
+    if (!this.isNative) {
+      // En web, usar input con capture="camera" que funciona nativamente en iOS Safari
+      return this.captureVideoFromCameraWeb();
+    }
+
+    try {
+      // Solicitar permisos de cámara
+      const hasPermission = await this.permissionsService.requestCameraPermission();
+      if (!hasPermission) {
+        throw new Error('Camera permission denied');
+      }
+
+      // En iOS, FilePicker con tipos de video mostrará el selector nativo de iOS
+      // que incluye la opción "Tomar foto o video" para captura directa desde la cámara
+      if (this.platform === 'ios') {
+        const result = await FilePicker.pickFiles({
+          types: [
+            'public.movie',           // UTI genérico para videos
+            'com.apple.quicktime-movie', // MOV (QuickTime)
+            'public.mpeg-4',          // MP4
+            'video/mp4',
+            'video/quicktime',
+            'video/x-m4v'
+          ],
+          readData: true
+        });
+
+        if (!result.files || result.files.length === 0) {
+          return [];
+        }
+
+        // Validar que sea un video
+        const videoFiles = result.files.filter(file => {
+          const mimeType = file.mimeType || '';
+          return mimeType.startsWith('video/') || 
+                 file.name?.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm)$/);
+        });
+
+        if (videoFiles.length === 0) {
+          return [];
+        }
+
+        return await this.convertPickedFilesToFiles(videoFiles.slice(0, 1), true);
+      }
+
+      // Android: usar FilePicker que puede abrir la cámara
+      const result = await FilePicker.pickFiles({
+        types: ['video/mp4', 'video/*'],
+        readData: true
+      });
+
+      if (!result.files || result.files.length === 0) {
+        return [];
+      }
+
+      return await this.convertPickedFilesToFiles(result.files.slice(0, 1), true);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error &&
+        (error.message === 'User cancelled' || error.message === 'User canceled' ||
+          error.message === 'Camera permission denied')) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Captura imagen desde la cámara en web usando input con capture
+   */
+  private captureImageFromCameraWeb(): Promise<File[]> {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment'; // Usar cámara trasera en móviles
+
+      input.onchange = (event: Event) => {
+        const target = event.target as HTMLInputElement;
+        const files = target.files;
+        if (files && files.length > 0) {
+          resolve(Array.from(files));
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.oncancel = () => {
+        resolve([]);
+      };
+
+      input.onerror = (error) => {
+        reject(error);
+      };
+
+      input.click();
+    });
+  }
+
+  /**
+   * Captura video desde la cámara en web usando input con capture
+   */
+  private captureVideoFromCameraWeb(): Promise<File[]> {
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'video/*';
+      input.capture = 'environment'; // Usar cámara trasera en móviles
+
+      input.onchange = (event: Event) => {
+        const target = event.target as HTMLInputElement;
+        const files = target.files;
+        if (files && files.length > 0) {
+          resolve(Array.from(files));
+        } else {
+          resolve([]);
+        }
+      };
+
+      input.oncancel = () => {
+        resolve([]);
+      };
+
+      input.onerror = (error) => {
+        reject(error);
+      };
+
+      input.click();
+    });
+  }
+
+  /**
    * Selecciona imágenes en iOS nativo usando Camera (permite Photo Library y Camera)
    */
   private async pickImagesNativeIOS(allowMultiple: boolean): Promise<File[]> {

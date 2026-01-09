@@ -45,6 +45,7 @@ import { LoadingService } from '../../../../core/services/loading/loading.servic
 import { DynamicFormFieldComponent } from './dynamic-form-field/dynamic-form-field.component';
 import { MaterialsTabComponent } from './tabs/materials-tab/materials-tab.component';
 import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
+import { MediaPickerMenuComponent } from '../../../../shared/ui/media-picker-menu/media-picker-menu.component';
 import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quote-form.types';
 
 @Component({
@@ -56,6 +57,7 @@ import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quo
     DynamicFormFieldComponent,
     MaterialsTabComponent,
     MediaPreviewModalComponent,
+    MediaPickerMenuComponent,
   ],
   templateUrl: './kitchen-quote-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -1183,15 +1185,49 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of images for countertops
+   * Handles capture from camera for countertops images
    */
-  protected async onCountertopsImagesSelected(): Promise<void> {
+  protected async onCountertopsImagesCaptureFromCamera(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
           'Permissions Required',
-          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
+          'Camera access is needed to take photos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureImageFromCamera();
+      if (files.length === 0) return;
+
+      void this.processCountertopsFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture image');
+      await this.logService.logError('Error capturing countertops image', error, {
+        severity: 'medium',
+        description: 'Error capturing countertops image in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onCountertopsImagesCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for countertops images
+   */
+  protected async onCountertopsImagesSelectFromGallery(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
@@ -1208,7 +1244,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onCountertopsImagesSelected',
+          action: 'onCountertopsImagesSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },
@@ -1217,9 +1253,43 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of videos for countertops
+   * Handles capture from camera for countertops videos
    */
-  protected async onCountertopsVideosSelected(): Promise<void> {
+  protected async onCountertopsVideosCaptureFromCamera(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Camera access is needed to record videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureVideoFromCamera();
+      if (files.length === 0) return;
+
+      void this.processCountertopsFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture video');
+      await this.logService.logError('Error capturing countertops video', error, {
+        severity: 'medium',
+        description: 'Error capturing countertops video in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onCountertopsVideosCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for countertops videos
+   */
+  protected async onCountertopsVideosSelectFromGallery(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
@@ -1242,7 +1312,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onCountertopsVideosSelected',
+          action: 'onCountertopsVideosSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },
@@ -1391,15 +1461,49 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of images for backsplash
+   * Handles capture from camera for backsplash images
    */
-  protected async onBacksplashImagesSelected(): Promise<void> {
+  protected async onBacksplashImagesCaptureFromCamera(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
           'Permissions Required',
-          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
+          'Camera access is needed to take photos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureImageFromCamera();
+      if (files.length === 0) return;
+
+      void this.processBacksplashFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture image');
+      await this.logService.logError('Error capturing backsplash image', error, {
+        severity: 'medium',
+        description: 'Error capturing backsplash image in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onBacksplashImagesCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for backsplash images
+   */
+  protected async onBacksplashImagesSelectFromGallery(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
@@ -1416,7 +1520,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onBacksplashImagesSelected',
+          action: 'onBacksplashImagesSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },
@@ -1425,9 +1529,43 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of videos for backsplash
+   * Handles capture from camera for backsplash videos
    */
-  protected async onBacksplashVideosSelected(): Promise<void> {
+  protected async onBacksplashVideosCaptureFromCamera(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Camera access is needed to record videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureVideoFromCamera();
+      if (files.length === 0) return;
+
+      void this.processBacksplashFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture video');
+      await this.logService.logError('Error capturing backsplash video', error, {
+        severity: 'medium',
+        description: 'Error capturing backsplash video in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onBacksplashVideosCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for backsplash videos
+   */
+  protected async onBacksplashVideosSelectFromGallery(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
@@ -1450,7 +1588,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onBacksplashVideosSelected',
+          action: 'onBacksplashVideosSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },
@@ -2047,15 +2185,49 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of images for additional comments
+   * Handles capture from camera for additional images
    */
-  protected async onAdditionalImagesSelected(): Promise<void> {
+  protected async onAdditionalImagesCaptureFromCamera(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
           'Permissions Required',
-          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
+          'Camera access is needed to take photos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureImageFromCamera();
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture image');
+      await this.logService.logError('Error capturing additional image', error, {
+        severity: 'medium',
+        description: 'Error capturing additional image in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onAdditionalImagesCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for additional images
+   */
+  protected async onAdditionalImagesSelectFromGallery(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
@@ -2072,7 +2244,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onAdditionalImagesSelected',
+          action: 'onAdditionalImagesSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },
@@ -2081,9 +2253,43 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of videos for additional comments
+   * Handles capture from camera for additional videos
    */
-  protected async onAdditionalVideosSelected(): Promise<void> {
+  protected async onAdditionalVideosCaptureFromCamera(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Camera access is needed to record videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureVideoFromCamera();
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture video');
+      await this.logService.logError('Error capturing additional video', error, {
+        severity: 'medium',
+        description: 'Error capturing additional video in kitchen form',
+        source: 'kitchen-quote-form',
+        metadata: {
+          component: 'KitchenQuoteFormComponent',
+          action: 'onAdditionalVideosCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for additional videos
+   */
+  protected async onAdditionalVideosSelectFromGallery(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
@@ -2106,7 +2312,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'kitchen-quote-form',
         metadata: {
           component: 'KitchenQuoteFormComponent',
-          action: 'onAdditionalVideosSelected',
+          action: 'onAdditionalVideosSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },

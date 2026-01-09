@@ -42,6 +42,7 @@ import { LoadingService } from '../../../../core/services/loading/loading.servic
 import { DynamicFormFieldComponent } from '../kitchen-quote-form/dynamic-form-field/dynamic-form-field.component';
 import { MaterialsTabComponent } from '../kitchen-quote-form/tabs/materials-tab/materials-tab.component';
 import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
+import { MediaPickerMenuComponent } from '../../../../shared/ui/media-picker-menu/media-picker-menu.component';
 import type { AdditionalWorkQuoteFormValue, AdditionalWorkQuoteFormGroup } from './additional-work-quote-form.types';
 
 @Component({
@@ -52,7 +53,8 @@ import type { AdditionalWorkQuoteFormValue, AdditionalWorkQuoteFormGroup } from 
     ReactiveFormsModule,
     DynamicFormFieldComponent,
     MaterialsTabComponent,
-    MediaPreviewModalComponent
+    MediaPreviewModalComponent,
+    MediaPickerMenuComponent
   ],
   templateUrl: './additional-work-quote-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -1270,15 +1272,49 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of images for additional comments
+   * Handles capture from camera for additional images
    */
-  protected async onAdditionalImagesSelected(): Promise<void> {
+  protected async onAdditionalImagesCaptureFromCamera(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
         this.notificationService.error(
           'Permissions Required',
-          'Camera and photo library access is needed to select images. Please enable permissions in your device settings.'
+          'Camera access is needed to take photos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureImageFromCamera();
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture image');
+      await this.logService.logError('Error capturing additional image', error, {
+        severity: 'medium',
+        description: 'Error capturing additional image in additional-work form',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'onAdditionalImagesCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for additional images
+   */
+  protected async onAdditionalImagesSelectFromGallery(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Photo library access is needed to select images. Please enable permissions in your device settings.'
         );
         return;
       }
@@ -1295,7 +1331,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'additional-work-quote-form',
         metadata: {
           component: 'AdditionalWorkQuoteFormComponent',
-          action: 'onAdditionalImagesSelected',
+          action: 'onAdditionalImagesSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },
@@ -1304,9 +1340,43 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Handles selection and upload of videos for additional comments
+   * Handles capture from camera for additional videos
    */
-  protected async onAdditionalVideosSelected(): Promise<void> {
+  protected async onAdditionalVideosCaptureFromCamera(): Promise<void> {
+    try {
+      const hasPermission = await this.permissionsService.requestMediaPermissions();
+      if (!hasPermission) {
+        this.notificationService.error(
+          'Permissions Required',
+          'Camera access is needed to record videos. Please enable permissions in your device settings.'
+        );
+        return;
+      }
+
+      const files = await this.mediaPickerService.captureVideoFromCamera();
+      if (files.length === 0) return;
+
+      void this.processAdditionalMediaFiles(files);
+    } catch (error) {
+      this.notificationService.error('Error', 'Could not capture video');
+      await this.logService.logError('Error capturing additional video', error, {
+        severity: 'medium',
+        description: 'Error capturing additional video in additional-work form',
+        source: 'additional-work-quote-form',
+        metadata: {
+          component: 'AdditionalWorkQuoteFormComponent',
+          action: 'onAdditionalVideosCaptureFromCamera',
+          projectId: this.project._id,
+          customerId: this.customer._id,
+        },
+      });
+    }
+  }
+
+  /**
+   * Handles selection from gallery for additional videos
+   */
+  protected async onAdditionalVideosSelectFromGallery(): Promise<void> {
     try {
       const hasPermission = await this.permissionsService.requestMediaPermissions();
       if (!hasPermission) {
@@ -1329,7 +1399,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         source: 'additional-work-quote-form',
         metadata: {
           component: 'AdditionalWorkQuoteFormComponent',
-          action: 'onAdditionalVideosSelected',
+          action: 'onAdditionalVideosSelectFromGallery',
           projectId: this.project._id,
           customerId: this.customer._id,
         },

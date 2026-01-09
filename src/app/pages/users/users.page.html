@@ -1,0 +1,131 @@
+<section class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="font-display text-3xl text-charcoal">User Management</h1>
+      <p class="mt-1 text-sm text-slate">Manage platform users and their roles</p>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
+    <div class="relative">
+      <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+        <svg
+          class="h-5 w-5 text-slate"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+      </div>
+      <input
+        type="text"
+        [value]="searchQuery()"
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Search users by name, email, or role..."
+        class="w-full rounded-full border-0 bg-alabaster py-3 pl-12 pr-4 text-sm text-charcoal placeholder-slate focus:ring-2 focus:ring-pine"
+      />
+    </div>
+  </div>
+
+  <!-- Users List -->
+  <div class="rounded-[2.5rem] bg-white p-6 shadow-brand">
+    @if (isLoading()) {
+    <div class="flex items-center justify-center py-12">
+      <span class="text-slate animate-pulse">Loading users...</span>
+    </div>
+    } @else {
+    <div class="overflow-x-auto">
+      <table class="w-full text-left">
+        <thead>
+          <tr class="border-b border-fog/40">
+            <th class="pb-4 text-xs font-semibold uppercase tracking-wider text-slate">User</th>
+            <th class="pb-4 text-xs font-semibold uppercase tracking-wider text-slate">Email</th>
+            <th class="pb-4 text-xs font-semibold uppercase tracking-wider text-slate">Role</th>
+            <th class="pb-4 text-xs font-semibold uppercase tracking-wider text-slate">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-fog/40">
+          @for (user of filteredUsers(); track user._id) {
+          <tr class="transition-colors hover:bg-fog/5">
+            <td class="py-4">
+              <div class="flex items-center gap-3">
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded-full bg-pine text-sm font-semibold text-white"
+                >
+                  {{ user.name.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <p class="font-medium text-charcoal">{{ user.name }}</p>
+                  @if (user._id) {
+                  <p class="text-xs text-slate">ID: {{ user._id.slice(0, 8) }}...</p>
+                  }
+                </div>
+              </div>
+            </td>
+            <td class="py-4 text-sm text-slate">{{ user.email }}</td>
+            <td class="py-4">
+              <span
+                class="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase"
+                [ngClass]="getRoleBadgeClass(user.role)"
+              >
+                {{ user.role || 'N/A' }}
+              </span>
+            </td>
+            <td class="py-4">
+              <span
+                class="inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase"
+                [ngClass]="getStatusBadgeClass(user.active)"
+              >
+                {{ user.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="4" class="py-12 text-center text-slate">
+              @if (searchQuery()) {
+              No users found matching your search.
+              } @else {
+              No users found.
+              }
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </div>
+
+  <!-- Stats Summary -->
+  @if (!isLoading() && users().length > 0) {
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="rounded-3xl bg-white p-6 shadow-brand">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate">Total Users</p>
+      <p class="mt-2 text-3xl font-display text-charcoal">{{ users().length }}</p>
+    </div>
+    <div class="rounded-3xl bg-white p-6 shadow-brand">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate">Active Users</p>
+      <p class="mt-2 text-3xl font-display text-pine">
+        {{ activeUsersCount() }}
+      </p>
+    </div>
+    <div class="rounded-3xl bg-white p-6 shadow-brand">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate">Roles</p>
+      <p class="mt-2 text-3xl font-display text-charcoal">
+        {{ uniqueRolesCount() }}
+      </p>
+    </div>
+  </div>
+  }
+</section>
+
