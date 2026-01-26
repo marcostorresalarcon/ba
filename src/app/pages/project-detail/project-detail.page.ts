@@ -17,6 +17,7 @@ import type { Quote } from '../../core/models/quote.model';
 import { ProjectService } from '../../core/services/project/project.service';
 import { QuoteService } from '../../core/services/quote/quote.service';
 import { CompanyContextService } from '../../core/services/company/company-context.service';
+import { AuthService } from '../../core/services/auth/auth.service';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
@@ -36,6 +37,7 @@ export class ProjectDetailPage {
   private readonly projectService = inject(ProjectService);
   private readonly quoteService = inject(QuoteService);
   private readonly companyContext = inject(CompanyContextService);
+  private readonly authService = inject(AuthService);
   private readonly errorService = inject(HttpErrorService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly notificationService = inject(NotificationService);
@@ -50,7 +52,10 @@ export class ProjectDetailPage {
 
   protected readonly selectedCompany = this.companyContext.selectedCompany;
   protected readonly companyId = computed(() => this.selectedCompany()?._id ?? null);
-  protected readonly isReadOnly = signal(false);
+  
+  // Customer solo puede ver, aprobar o rechazar cotizaciones
+  protected readonly isCustomer = computed(() => this.authService.user()?.role === 'customer');
+  protected readonly isReadOnly = computed(() => this.isCustomer());
 
   protected readonly breadcrumbs = computed<LayoutBreadcrumb[]>(() => {
     const company = this.selectedCompany();

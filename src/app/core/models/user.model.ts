@@ -7,14 +7,19 @@ export interface Role {
   updatedAt?: string;
 }
 
+export interface UserRole {
+  name: string;
+  active: boolean;
+}
+
 export interface User {
   _id: string;
-  id: string;
+  id?: string;
   email: string;
   name: string;
-  role?: string;
-  roleId?: string;
-  active?: boolean;
+  roles: UserRole[];
+  role?: string; // Computed: primer rol activo o primer rol
+  active?: boolean; // Computed: si tiene algún rol activo
   createdAt?: string;
   updatedAt?: string;
 }
@@ -25,3 +30,8 @@ export interface UserPayload {
   active?: boolean;
 }
 
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  roles?: UserRole[];
+}

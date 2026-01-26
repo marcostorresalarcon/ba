@@ -27,3 +27,14 @@ export interface InvoiceKpiResponse {
   };
 }
 
+export interface SalesDashboardResponse {
+  revenue: number;
+  pipeline: Record<string, number>;
+  conversionRate: number;
+  averageTicket: number;
+  timesPerStage: {
+    quote: Record<string, number>;
+    project: Record<string, number>;
+  };
+}
+

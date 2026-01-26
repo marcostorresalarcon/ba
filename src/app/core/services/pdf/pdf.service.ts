@@ -451,15 +451,20 @@ export class PdfService {
   }
 
 
-  async generateQuotePdf(quote: Quote, customer: QuoteCustomer | null, groupedInputs: {
-    id: string;
-    title: string;
-    subcategories: {
+  async generateQuotePdf(
+    quote: Quote, 
+    customer: QuoteCustomer | null, 
+    groupedInputs: {
       id: string;
       title: string;
-      inputs: KitchenInput[];
-    }[];
-  }[]): Promise<void> {
+      subcategories: {
+        id: string;
+        title: string;
+        inputs: KitchenInput[];
+      }[];
+    }[],
+    userRole?: string
+  ): Promise<void> {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -471,6 +476,10 @@ export class PdfService {
     const margin = 20; // Aumentado para mejor espaciado
     const contentWidth = pageWidth - margin * 2;
     let yPosition = margin;
+
+    // Determinar si es customer (ocultar anotaciones y audios)
+    const isCustomer = userRole === 'customer';
+    const showFullDetails = !isCustomer; // estimator/admin ven todo
 
     // Colores de la marca
     const primaryColorR = 58;
@@ -501,9 +510,15 @@ export class PdfService {
       // Si hay título, dibujar header con fondo
       if (title && titleBgColor) {
         const headerHeight = 8;
+        // Establecer color de relleno
         doc.setFillColor(titleBgColor[0], titleBgColor[1], titleBgColor[2]);
-        doc.roundedRect(x, y, width, headerHeight, 3, 3, 'F');
+        // Establecer color del borde del header
+        doc.setDrawColor(titleBgColor[0] - 20, titleBgColor[1] - 20, titleBgColor[2] - 20);
+        doc.setLineWidth(0.3);
+        // Dibujar fondo y borde del header juntos
+        doc.roundedRect(x, y, width, headerHeight, 3, 3, 'FD');
         
+        // Establecer color del texto DESPUÉS de dibujar el fondo
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
@@ -513,26 +528,35 @@ export class PdfService {
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.2);
         doc.line(x, y + headerHeight, x + width, y + headerHeight);
+        
+        // Resetear color del texto
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
       }
     };
 
     const drawSectionTitle = (title: string) => {
       addPageIfNeeded(20);
       
-      // Fondo de sección con borde
+      // Fondo de sección con borde - usar FD (Fill and Draw) para mejor resultado
       const sectionHeight = 12;
-      doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-      doc.roundedRect(margin, yPosition, contentWidth, sectionHeight, 2, 2, 'F');
       
-      // Borde más visible
+      // Primero establecer el color de relleno
+      doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
+      // Establecer el color del borde
       doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
       doc.setLineWidth(0.8);
-      doc.roundedRect(margin, yPosition, contentWidth, sectionHeight, 2, 2, 'S');
+      // Dibujar fondo y borde juntos
+      doc.roundedRect(margin, yPosition, contentWidth, sectionHeight, 2, 2, 'FD');
       
+      // Establecer color del texto DESPUÉS de dibujar el fondo (blanco sobre fondo verde)
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
+      // Dibujar el texto centrado verticalmente en el header
       doc.text(title.toUpperCase(), margin + 8, yPosition + 8);
+      
+      // Resetear color del texto para el contenido siguiente
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
       yPosition += sectionHeight + 8; // Más espacio después del título
     };
 
@@ -746,15 +770,14 @@ export class PdfService {
 
     yPosition += infoBoxHeight + 12;
 
-    // Total Price destacado con borde
+    // Total Price destacado con borde - usar FD para mejor resultado
     doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-    doc.roundedRect(margin, yPosition, contentWidth, 18, 3, 3, 'F');
-    
-    // Borde más visible
     doc.setDrawColor(primaryColorR - 30, primaryColorG - 30, primaryColorB - 30);
     doc.setLineWidth(0.8);
-    doc.roundedRect(margin, yPosition, contentWidth, 18, 3, 3, 'S');
+    // Dibujar fondo y borde juntos
+    doc.roundedRect(margin, yPosition, contentWidth, 18, 3, 3, 'FD');
     
+    // Establecer color del texto DESPUÉS de dibujar el fondo
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
@@ -767,11 +790,14 @@ export class PdfService {
       margin + 8,
       yPosition + 16
     );
+    
+    // Resetear color del texto
+    doc.setTextColor(darkColorR, darkColorG, darkColorB);
 
     yPosition += 26;
 
-    // Notas si existen - Con borde
-    if (quote.notes) {
+    // Notas si existen - Con borde (solo para estimator/admin)
+    if (quote.notes && showFullDetails) {
       addPageIfNeeded(30);
       
       const notesHeight = 25;
@@ -807,28 +833,26 @@ export class PdfService {
           yPosition = margin;
         }
 
-        // Título de categoría - Estilo de sección principal
-        // Línea divisoria superior con título
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
-        doc.line(margin, yPosition + 8, margin + contentWidth, yPosition + 8);
+        // Título de categoría - Diseño simplificado
+        const categoryTitleHeight = 12;
         
-        // Fondo del título
+        // Dibujar fondo de la barra de título (verde oscuro) - diseño simple
         doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-        doc.path([
-          { op: 'm', c: [margin, yPosition + 8] },
-          { op: 'l', c: [margin, yPosition + 2] },
-          { op: 'c', c: [margin, yPosition, margin, yPosition, margin + 2, yPosition] },
-          { op: 'l', c: [margin + contentWidth/2, yPosition] }, // Ancho parcial para estilo moderno
-          { op: 'l', c: [margin + contentWidth/2 + 5, yPosition + 8] }, // Corte diagonal
-          { op: 'l', c: [margin, yPosition + 8] }
-        ], 'F');
+        doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(margin, yPosition, contentWidth, categoryTitleHeight, 2, 2, 'FD');
         
+        // Establecer color del texto (blanco sobre fondo verde)
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text(categoryGroup.title.toUpperCase(), margin + 6, yPosition + 6);
-        yPosition += 14;
+        // Dibujar el texto centrado verticalmente en la barra
+        const titleText = categoryGroup.title.toUpperCase();
+        doc.text(titleText, margin + 8, yPosition + 8);
+        
+        // Resetear color del texto para el contenido siguiente
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
+        yPosition += categoryTitleHeight + 8;
 
         for (const subcategoryGroup of categoryGroup.subcategories) {
           const hasSubData = subcategoryGroup.inputs.some(input => {
@@ -853,7 +877,9 @@ export class PdfService {
             yPosition += 5;
           }
 
-          // Items de la subcategoría - Con bordes y mejor espaciado
+          // Items de la subcategoría - Tabla mejorada y más ordenada
+          // Primero recopilar todos los items válidos
+          const validItems: Array<{ input: KitchenInput; value: unknown; displayValue: string }> = [];
           
           for (const input of subcategoryGroup.inputs) {
             const value = quote.kitchenInformation?.[input.name];
@@ -861,48 +887,96 @@ export class PdfService {
               continue;
             }
 
-            addPageIfNeeded(12);
-
-            // Fondo sutil para cada fila
-            doc.setFillColor(250, 250, 250);
-            doc.roundedRect(margin, yPosition, contentWidth, 10, 1, 1, 'F');
-            
-            // Borde de la fila
-            doc.setDrawColor(220, 220, 220);
-            doc.setLineWidth(0.3);
-            doc.roundedRect(margin, yPosition, contentWidth, 10, 1, 1, 'S');
-
-            // Label
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            
-            const labelWidth = contentWidth * 0.65;
-            const labelLines = doc.splitTextToSize(input.label, labelWidth);
-            doc.text(labelLines, margin + 4, yPosition + 6.5);
-
-            // Valor
-            doc.setFont('helvetica', 'bold');
             let displayValue = '';
             if (value === true) {
               displayValue = 'Yes';
-              doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
             } else if (value === false) {
               displayValue = 'No';
-              doc.setTextColor(150, 150, 150);
             } else {
               displayValue = String(value);
               if (input.unit) {
                 displayValue += ` ${input.unit}`;
               }
-              doc.setTextColor(darkColorR, darkColorG, darkColorB);
             }
-            
-            const valueWidth = doc.getTextWidth(displayValue);
-            doc.text(displayValue, margin + contentWidth - valueWidth - 4, yPosition + 6.5);
 
-            const rowHeight = Math.max(10, labelLines.length * 4 + 6);
-            yPosition += rowHeight + 2; // Espacio entre filas
+            validItems.push({ input, value, displayValue });
+          }
+
+          // Si hay items válidos, crear tabla
+          if (validItems.length > 0) {
+            addPageIfNeeded(20);
+
+            // Definir columnas de la tabla
+            const colLabelWidth = contentWidth * 0.65;
+            const colValueWidth = contentWidth * 0.30;
+            const rowHeight = 8;
+            const headerHeight = 10;
+
+            // Header de la tabla - usar FD para mejor resultado
+            doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
+            doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
+            doc.setLineWidth(0.5);
+            // Dibujar fondo y borde juntos
+            doc.roundedRect(margin, yPosition, colLabelWidth, headerHeight, 2, 2, 'FD');
+            doc.roundedRect(margin + colLabelWidth + 2, yPosition, colValueWidth, headerHeight, 2, 2, 'FD');
+
+            // Establecer color del texto DESPUÉS de dibujar el fondo
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Item', margin + 4, yPosition + 6.5);
+            doc.text('Value', margin + colLabelWidth + 6, yPosition + 6.5);
+            
+            // Resetear color del texto para las filas de datos
+            doc.setTextColor(darkColorR, darkColorG, darkColorB);
+
+            yPosition += headerHeight + 1;
+
+            // Filas de datos
+            for (let i = 0; i < validItems.length; i++) {
+              const item = validItems[i];
+              addPageIfNeeded(rowHeight + 2);
+
+              // Alternar color de fondo para mejor legibilidad
+              const isEven = i % 2 === 0;
+              doc.setFillColor(isEven ? 255 : 250, isEven ? 255 : 250, isEven ? 255 : 250);
+              doc.roundedRect(margin, yPosition, colLabelWidth, rowHeight, 1, 1, 'F');
+              doc.roundedRect(margin + colLabelWidth + 2, yPosition, colValueWidth, rowHeight, 1, 1, 'F');
+
+              // Bordes de las celdas
+              doc.setDrawColor(220, 220, 220);
+              doc.setLineWidth(0.2);
+              doc.roundedRect(margin, yPosition, colLabelWidth, rowHeight, 1, 1, 'S');
+              doc.roundedRect(margin + colLabelWidth + 2, yPosition, colValueWidth, rowHeight, 1, 1, 'S');
+
+              // Label (columna izquierda)
+              doc.setTextColor(100, 100, 100);
+              doc.setFontSize(8.5);
+              doc.setFont('helvetica', 'normal');
+              const labelLines = doc.splitTextToSize(item.input.label, colLabelWidth - 8);
+              doc.text(labelLines, margin + 4, yPosition + 5.5);
+
+              // Valor (columna derecha)
+              doc.setFont('helvetica', 'bold');
+              if (item.value === true) {
+                doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+              } else if (item.value === false) {
+                doc.setTextColor(150, 150, 150);
+              } else {
+                doc.setTextColor(darkColorR, darkColorG, darkColorB);
+              }
+              
+              const valueLines = doc.splitTextToSize(item.displayValue, colValueWidth - 8);
+              doc.text(valueLines, margin + colLabelWidth + 6, yPosition + 5.5);
+
+              // Calcular altura de la fila basada en el contenido más alto
+              const maxLines = Math.max(labelLines.length, valueLines.length);
+              const actualRowHeight = Math.max(rowHeight, maxLines * 4 + 4);
+              
+              yPosition += actualRowHeight + 1; // Espacio entre filas
+            }
+
+            yPosition += 4; // Espacio después de la tabla
           }
         }
 
@@ -1217,8 +1291,8 @@ export class PdfService {
       }
     }
 
-    // === SECCIÓN 4: Audio Notes ===
-    if (audioNotesArray && audioNotesArray.length > 0) {
+    // === SECCIÓN 4: Audio Notes === (solo para estimator/admin)
+    if (audioNotesArray && audioNotesArray.length > 0 && showFullDetails) {
       console.log('[PDF] Rendering audio notes, count:', audioNotesArray.length);
       drawSectionTitle('Audio Notes');
 
@@ -1333,8 +1407,8 @@ export class PdfService {
       }
     }
 
-    // === SECCIÓN 6: Additional Comments & Media ===
-    if (additionalCommentText || (additionalMedia && additionalMedia.length > 0)) {
+    // === SECCIÓN 6: Additional Comments & Media === (solo para estimator/admin)
+    if ((additionalCommentText || (additionalMedia && additionalMedia.length > 0)) && showFullDetails) {
       drawSectionTitle('Additional Comments & Media');
       
       // Additional Comment Text

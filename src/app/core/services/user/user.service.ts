@@ -1,9 +1,9 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import type { Observable } from 'rxjs';
+import { map, type Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import type { Role, User, UserPayload } from '../../models/user.model';
+import type { Role, User, UserPayload, UpdateUserPayload, UserRole } from '../../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -63,7 +63,46 @@ export class UserService {
       params = params.set('companyId', companyId);
     }
     
-    return this.http.get<User[]>(endpoint, { params });
+    return this.http.get<User[]>(endpoint, { params }).pipe(
+      map((users) => {
+        // Transformar usuarios para calcular role y active desde roles array
+        return users.map((user) => {
+          const activeRole = user.roles?.find((r: UserRole) => r.active) || user.roles?.[0];
+          return {
+            ...user,
+            id: user.id || user._id,
+            role: activeRole?.name,
+            active: user.roles?.some((r: UserRole) => r.active) ?? false
+          };
+        });
+      })
+    );
+  }
+
+  /**
+   * Actualiza un usuario existente
+   */
+  updateUser(userId: string, payload: UpdateUserPayload): Observable<User> {
+    const endpoint = `${this.baseUrl}/users/${userId}`;
+    return this.http.patch<User>(endpoint, payload).pipe(
+      map((user) => {
+        const activeRole = user.roles?.find((r: UserRole) => r.active) || user.roles?.[0];
+        return {
+          ...user,
+          id: user.id || user._id,
+          role: activeRole?.name,
+          active: user.roles?.some((r: UserRole) => r.active) ?? false
+        };
+      })
+    );
+  }
+
+  /**
+   * Elimina un usuario del sistema
+   */
+  deleteUser(userId: string): Observable<void> {
+    const endpoint = `${this.baseUrl}/users/${userId}`;
+    return this.http.delete<void>(endpoint);
   }
 }
 

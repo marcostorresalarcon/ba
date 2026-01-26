@@ -66,6 +66,47 @@ export class QuoteService {
   }
 
   /**
+   * Aprueba una cotización que está en estado 'pending'. Cambia el estado a 'approved'.
+   * @param id ID de la cotización
+   * @param approvedBy ID del usuario que aprueba (opcional)
+   */
+  approveQuote(id: string, approvedBy?: string): Observable<Quote> {
+    const endpoint = `${this.baseUrl}/quote/${id}/approve`;
+    return this.http.post<Quote>(endpoint, { approvedBy });
+  }
+
+  /**
+   * Rechaza una cotización que está en estado 'sent'. Cambia el estado a 'rejected' y requiere comentarios.
+   * @param id ID de la cotización
+   * @param comment Comentario obligatorio explicando el motivo del rechazo
+   * @param rejectedBy ID del usuario que rechaza (opcional)
+   * @param mediaFiles Array de URLs de archivos adjuntos (opcional)
+   */
+  rejectQuote(
+    id: string,
+    comment: string,
+    rejectedBy?: string,
+    mediaFiles?: string[]
+  ): Observable<Quote> {
+    const endpoint = `${this.baseUrl}/quote/${id}/reject`;
+    return this.http.post<Quote>(endpoint, {
+      comment,
+      rejectedBy,
+      mediaFiles
+    });
+  }
+
+  /**
+   * Envía una cotización aprobada al cliente. Cambia el estado de 'approved' a 'sent'.
+   * @param id ID de la cotización
+   * @param sentBy ID del usuario que envía (opcional)
+   */
+  sendQuote(id: string, sentBy?: string): Observable<Quote> {
+    const endpoint = `${this.baseUrl}/quote/${id}/send`;
+    return this.http.post<Quote>(endpoint, { sentBy });
+  }
+
+  /**
    * @deprecated Este endpoint no existe en la API. Para crear una nueva versión,
    * simplemente crea un nuevo quote con el mismo projectId y category usando createQuote().
    * El backend calculará automáticamente el versionNumber.

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -9,6 +9,8 @@ import { InvoiceService } from '../../core/services/invoice/invoice.service';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 import { LayoutService } from '../../core/services/layout/layout.service';
 import { MediaPreviewModalComponent } from '../../shared/ui/media-preview-modal/media-preview-modal.component';
+import { RejectionCommentsModalComponent, type RejectionCommentData } from '../../shared/ui/rejection-comments-modal/rejection-comments-modal.component';
+import { QuoteApprovalActionsComponent } from '../../features/quotes/ui/quote-approval-actions/quote-approval-actions.component';
 import type { Quote, QuoteCustomer, Materials, MaterialItem } from '../../core/models/quote.model';
 import type { Invoice } from '../../core/models/invoice.model';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
@@ -19,7 +21,12 @@ import { PdfService } from '../../core/services/pdf/pdf.service';
 @Component({
   selector: 'app-quote-detail-page',
   standalone: true,
-  imports: [CommonModule, MediaPreviewModalComponent],
+  imports: [
+    CommonModule,
+    MediaPreviewModalComponent,
+    RejectionCommentsModalComponent,
+    QuoteApprovalActionsComponent
+  ],
   templateUrl: './quote-detail.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -34,14 +41,17 @@ export class QuoteDetailPage {
   private readonly inputsService = inject(KitchenInputsService);
   private readonly pdfService = inject(PdfService);
   private readonly layoutService = inject(LayoutService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly isLoading = signal(true);
   protected readonly quote = signal<Quote | null>(null);
   protected readonly invoices = signal<Invoice[]>([]);
   protected readonly activeTab = signal<string>('kitchen-details');
   protected readonly previewMediaUrl = signal<string | null>(null);
+  protected readonly showRejectionModal = signal(false);
 
   protected readonly isCustomer = computed(() => this.authService.user()?.role === 'customer');
+  protected readonly userRole = computed(() => this.authService.user()?.role);
 
   // Estructura agrupada de inputs
   protected readonly groupedInputs = computed<CategoryGroup[]>(() => {
@@ -55,16 +65,24 @@ export class QuoteDetailPage {
   protected readonly breadcrumbs = computed<LayoutBreadcrumb[]>(() => {
     const quote = this.quote();
     const projectId = quote?.projectId;
+    const isCustomer = this.isCustomer();
     
     if (!quote) {
+      return isCustomer
+        ? [{ label: 'My Projects', route: '/my-projects' }, { label: 'Quote Detail' }]
+        : [{ label: 'Projects', route: '/customers' }, { label: 'Quote Detail' }];
+    }
+
+    if (isCustomer) {
       return [
-        { label: 'Projects', route: '/customers' },
-        { label: 'Quote Detail' }
+        { label: 'My Projects', route: '/my-projects' },
+        { label: 'Project Detail', route: `/projects/${projectId}` },
+        { label: `Estimate v${quote.versionNumber}` }
       ];
     }
 
     return [
-      { label: 'Projects', route: '/customers' }, // Asumiendo navegación desde lista de proyectos
+      { label: 'Projects', route: '/customers' },
       { label: 'Project Detail', route: `/projects/${projectId}` },
       { label: `Estimate v${quote.versionNumber}` }
     ];
@@ -88,7 +106,7 @@ export class QuoteDetailPage {
   private loadQuote(id: string): void {
     this.isLoading.set(true);
     this.quoteService.getQuote(id)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (quote) => {
           this.quote.set(quote);
@@ -277,7 +295,8 @@ export class QuoteDetailPage {
 
     try {
       this.notificationService.info('Generating PDF', 'Please wait...');
-      await this.pdfService.generateQuotePdf(quote, this.customer, this.groupedInputs());
+      const userRole = this.userRole();
+      await this.pdfService.generateQuotePdf(quote, this.customer, this.groupedInputs(), userRole);
       this.notificationService.success('PDF Generated', 'Your estimate PDF has been downloaded');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -302,4 +321,119 @@ export class QuoteDetailPage {
   protected closeMediaPreview(): void {
     this.previewMediaUrl.set(null);
   }
+
+  // Métodos para acciones de aprobación
+  protected handleApprove(): void {
+    const quote = this.quote();
+    if (!quote) return;
+
+    // Solo el customer puede aprobar cuando está en 'sent'
+    if (quote.status === 'sent') {
+      this.quoteService.updateQuote(quote._id, { status: 'approved' })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (updatedQuote) => {
+            this.quote.set(updatedQuote);
+            this.notificationService.success('Quote Approved', 'You have successfully approved the quote.');
+          },
+          error: (error) => {
+            const message = this.errorService.handle(error);
+            this.notificationService.error('Error', `Could not approve the quote: ${message}`);
+          }
+        });
+    }
+  }
+
+  protected handleReject(): void {
+    this.showRejectionModal.set(true);
+  }
+
+  protected handleRejectionConfirm(data: RejectionCommentData): void {
+    const quote = this.quote();
+    if (!quote) return;
+
+    // Solo el customer puede rechazar cuando está en 'sent'
+    if (quote.status === 'sent') {
+      this.quoteService.updateQuote(quote._id, {
+        status: 'rejected',
+        rejectionComments: {
+          comment: data.comment,
+          mediaFiles: data.mediaFiles
+        }
+      })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (updatedQuote) => {
+            this.quote.set(updatedQuote);
+            this.showRejectionModal.set(false);
+            const isCustomer = this.isCustomer();
+            const message = isCustomer
+              ? 'You have rejected the quote with the provided comments. The estimator will be notified.'
+              : 'The quote has been rejected with the provided comments.';
+            this.notificationService.success('Quote Rejected', message);
+          },
+          error: (error) => {
+            const message = this.errorService.handle(error);
+            this.notificationService.error('Error', `Could not reject the quote: ${message}`);
+          }
+        });
+    }
+  }
+
+  protected handleRejectionCancel(): void {
+    this.showRejectionModal.set(false);
+    // El modal se resetea automáticamente en su componente
+  }
+
+  protected handleSend(): void {
+    // Ya no se necesita - las cotizaciones se crean directamente en 'sent'
+    // Este método se mantiene por compatibilidad pero no hace nada
+    const quote = this.quote();
+    if (!quote) return;
+    
+    this.notificationService.info('Information', 'Quotes are created directly in "sent" status and are automatically sent to the client.');
+  }
+
+  protected handleStartWork(): void {
+    const quote = this.quote();
+    if (!quote) return;
+
+    // Estimator/Admin puede iniciar trabajo desde 'sent' o 'approved'
+    if (quote.status === 'sent' || quote.status === 'approved') {
+      this.quoteService.updateQuote(quote._id, { status: 'in_progress' })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (updatedQuote) => {
+            this.quote.set(updatedQuote);
+            this.notificationService.success('Work Started', 'The work has been marked as in progress.');
+          },
+          error: (error) => {
+            const message = this.errorService.handle(error);
+            this.notificationService.error('Error', `Could not start work: ${message}`);
+          }
+        });
+    }
+  }
+
+  protected handleCompleteWork(): void {
+    const quote = this.quote();
+    if (!quote) return;
+
+    // Estimator/Admin puede marcar como completado desde 'in_progress'
+    if (quote.status === 'in_progress') {
+      this.quoteService.updateQuote(quote._id, { status: 'completed' })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (updatedQuote) => {
+            this.quote.set(updatedQuote);
+            this.notificationService.success('Work Completed', 'The work has been marked as completed.');
+          },
+          error: (error) => {
+            const message = this.errorService.handle(error);
+            this.notificationService.error('Error', `Could not complete work: ${message}`);
+          }
+        });
+    }
+  }
+
 }

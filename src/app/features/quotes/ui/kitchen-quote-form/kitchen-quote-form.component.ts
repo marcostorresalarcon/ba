@@ -129,6 +129,9 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   // Flag para controlar si ya se cargaron los datos guardados
   private hasLoadedSavedData = false;
 
+  // Flag para saber si es un draft explícito (cuando se hace clic en "Save as Draft")
+  private isExplicitDraft = false;
+
   // Estados para la sección de estimación
   protected readonly showBudgetDetails = signal<boolean>(false);
   protected readonly showSummary = signal<boolean>(false);
@@ -170,8 +173,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
 
   protected readonly statusOptions = [
     'draft',
-    'sent',
     'approved',
+    'sent',
     'rejected',
     'in_progress',
     'completed',
@@ -861,6 +864,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     }
 
     // Si ya se mostró el resumen, llamar al método real de envío
+    // El status se establecerá en onRecipientsSelected() o en actuallySubmit()
     this.actuallySubmit();
   }
 
@@ -904,12 +908,19 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       versionNumber = this.originalQuote.versionNumber + 1;
     }
 
+    // Determinar el status final
+    // Si es 'draft' y no fue establecido explícitamente (saveAsDraft), cambiarlo a 'sent'
+    let finalStatus = formValue.status as QuotePayload['status'];
+    if (finalStatus === 'draft' && !this.isExplicitDraft) {
+      finalStatus = 'sent';
+    }
+
     const quotePayload: QuotePayload = {
       customerId: this.customer._id,
       companyId: this.companyId,
       projectId: this.project._id,
       category: 'kitchen',
-      status: formValue.status as QuotePayload['status'],
+      status: finalStatus,
       experience: experience || 'basic',
       totalPrice: this.totalCost(),
       notes: formValue.notes ?? undefined,
@@ -932,6 +943,9 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         // Limpiar datos guardados después de enviar exitosamente
         this.clearSavedFormData();
 
+        // Resetear flag de draft explícito
+        this.isExplicitDraft = false;
+
         // Cerrar la vista de recipients
         this.showRecipientsView.set(false);
 
@@ -950,6 +964,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   protected saveAsDraft(): void {
+    this.isExplicitDraft = true;
     this.form.controls.status.setValue('draft');
     this.submit();
   }
@@ -2598,7 +2613,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.notificationService.error('Error', 'Please select at least one recipient');
       return;
     }
-    // Proceder con el envío
+    
+    // Proceder con el envío (el status se manejará en actuallySubmit)
     this.actuallySubmit();
   }
 

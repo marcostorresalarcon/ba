@@ -1,9 +1,20 @@
 <section class="space-y-8">
     <div class="flex items-center justify-between">
       <h2 class="font-display text-2xl text-charcoal">Dashboard</h2>
-      @if (isLoading()) {
-      <span class="text-sm text-slate animate-pulse">Loading data...</span>
-      }
+      <div class="flex items-center gap-4">
+        <button 
+          routerLink="/sales-intelligence"
+          class="flex items-center gap-2 rounded-2xl bg-pine/10 px-4 py-2 text-sm font-bold text-pine transition hover:bg-pine hover:text-white"
+        >
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          Sales Intelligence
+        </button>
+        @if (isLoading()) {
+        <span class="text-sm text-slate animate-pulse">Loading data...</span>
+        }
+      </div>
     </div>
 
     <!-- KPI Cards Section -->

@@ -19,12 +19,12 @@ import type { Customer } from '../../core/models/customer.model';
 import type { Project } from '../../core/models/project.model';
 import type { Quote } from '../../core/models/quote.model';
 import type { Invoice } from '../../core/models/invoice.model';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-admin-dashboard-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './admin-dashboard.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

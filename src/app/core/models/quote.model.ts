@@ -18,10 +18,17 @@ export interface Materials {
   _id?: string; // ID adicional que puede venir del backend
 }
 
+export interface RejectionComments {
+  comment: string; // Requerido si status es rejected
+  rejectedBy?: string; // MongoDB ObjectId del usuario que rechaza
+  rejectedAt?: string; // Fecha de rechazo (ISO 8601)
+  mediaFiles?: string[]; // Array de URLs de archivos adjuntos
+}
+
 export interface Quote {
   _id: string;
   customerId: QuoteCustomer | string; // Puede ser el ID o el objeto poblado
-  companyId: string | { _id: string; name: string; [key: string]: unknown }; // Puede ser ID o objeto poblado
+  companyId: string | { _id: string; name: string;[key: string]: unknown }; // Puede ser ID o objeto poblado
   projectId: string;
   category: QuoteCategory;
   versionNumber: number;
@@ -38,6 +45,8 @@ export interface Quote {
   userId: string;
   status: QuoteStatus;
   notes?: string;
+  // Comentarios de rechazo (requerido si status es rejected)
+  rejectionComments?: RejectionComments | null;
   // Notas de audio (múltiples)
   audioNotes?: {
     url: string;

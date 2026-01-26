@@ -31,6 +31,11 @@ export const routes: Routes = [
           import('./pages/admin-dashboard/admin-dashboard.page').then((m) => m.AdminDashboardPage)
       },
       {
+        path: 'sales-intelligence',
+        loadComponent: () =>
+          import('./pages/sales-dashboard/sales-dashboard.page').then((m) => m.SalesDashboardPage)
+      },
+      {
         path: 'my-projects',
         loadComponent: () =>
           import('./pages/my-projects/my-projects.page').then((m) => m.MyProjectsPage)

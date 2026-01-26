@@ -1,0 +1,104 @@
+@if (isOpen) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    (click)="handleBackdropClick($event)"
+  >
+    <div
+      class="w-full max-w-lg rounded-3xl border border-fog/60 bg-white shadow-xl"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="p-6">
+        <!-- Icon -->
+        <div class="mb-4 flex justify-center">
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+            <svg
+              class="h-6 w-6 text-red-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <h3 class="mb-2 text-center text-lg font-semibold text-charcoal">{{ title }}</h3>
+
+        <!-- Message -->
+        <p class="mb-6 text-center text-sm text-slate">{{ message }}</p>
+
+        <!-- Form -->
+        <form [formGroup]="form" (ngSubmit)="handleConfirm()">
+          <!-- Comment Field -->
+          <div class="mb-4">
+            <label
+              for="rejection-comment"
+              class="mb-2 block text-sm font-semibold text-charcoal"
+            >
+              Comentario <span class="text-red-600">*</span>
+            </label>
+            <textarea
+              id="rejection-comment"
+              formControlName="comment"
+              rows="4"
+              class="w-full rounded-2xl border border-fog/60 bg-white px-4 py-3 text-sm text-charcoal placeholder:text-slate/50 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine/20"
+              placeholder="Explica el motivo del rechazo..."
+              [class.border-red-500]="commentError"
+              [class.focus:border-red-500]="commentError"
+              [class.focus:ring-red-500/20]="commentError"
+            ></textarea>
+            @if (commentError) {
+              <p class="mt-1 text-xs text-red-600">{{ commentError }}</p>
+            }
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-3">
+            <button
+              type="button"
+              (click)="handleCancel()"
+              [disabled]="isSubmitting()"
+              class="flex-1 rounded-2xl border border-fog/60 bg-white px-4 py-3 text-sm font-semibold text-charcoal transition hover:bg-fog/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              [disabled]="form.invalid || isSubmitting()"
+              class="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              @if (isSubmitting()) {
+                <span class="flex items-center justify-center gap-2">
+                  <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Procesando...
+                </span>
+              } @else {
+                Rechazar
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}

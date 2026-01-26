@@ -100,6 +100,9 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   // Flag para controlar si ya se cargaron los datos guardados
   private hasLoadedSavedData = false;
 
+  // Flag para saber si es un draft explícito (cuando se hace clic en "Save as Draft")
+  private isExplicitDraft = false;
+
   // Estado de grabación de audio
   protected readonly isRecording = this.audioRecorderService.isRecording;
   protected readonly isUploadingAudio = signal(false);
@@ -721,13 +724,20 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       versionNumber = this.originalQuote.versionNumber + 1;
     }
 
+    // Determinar el status final
+    // Si es 'draft' y no fue establecido explícitamente (saveAsDraft), cambiarlo a 'sent'
+    let finalStatus = formValue.status as QuotePayload['status'];
+    if (finalStatus === 'draft' && !this.isExplicitDraft) {
+      finalStatus = 'sent';
+    }
+
     // Construir el payload base
     const quotePayload: QuotePayload = {
       customerId: this.customer._id,
       companyId: this.companyId,
       projectId: this.project._id,
       category: this.category,
-      status: formValue.status as QuotePayload['status'],
+      status: finalStatus,
       experience: 'basic', // Para bathroom y basement usar 'basic' por defecto
       totalPrice: this.totalCost(),
       notes: formValue.notes ?? undefined,
@@ -757,6 +767,9 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
           // Limpiar datos guardados después de enviar exitosamente
           this.clearSavedFormData();
           
+          // Resetear flag de draft explícito
+          this.isExplicitDraft = false;
+          
           // Cerrar la vista de recipients
           this.showRecipientsView.set(false);
           
@@ -775,6 +788,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   protected saveAsDraft(): void {
+    this.isExplicitDraft = true;
     this.form.controls.status.setValue('draft');
     this.submit();
   }
