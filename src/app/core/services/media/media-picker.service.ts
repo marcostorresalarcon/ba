@@ -669,37 +669,17 @@ export class MediaPickerService {
         throw new Error('Camera permission denied');
       }
 
-      // En iOS, FilePicker con tipos de video mostrará el selector nativo de iOS
-      // que incluye la opción "Tomar foto o video" para captura directa desde la cámara
       if (this.platform === 'ios') {
-        const result = await FilePicker.pickFiles({
-          types: [
-            'public.movie',           // UTI genérico para videos
-            'com.apple.quicktime-movie', // MOV (QuickTime)
-            'public.mpeg-4',          // MP4
-            'video/mp4',
-            'video/quicktime',
-            'video/x-m4v'
-          ],
-          readData: true
-        });
-
-        if (!result.files || result.files.length === 0) {
-          return [];
-        }
-
-        // Validar que sea un video
-        const videoFiles = result.files.filter(file => {
-          const mimeType = file.mimeType || '';
-          return mimeType.startsWith('video/') || 
-                 file.name?.toLowerCase().match(/\.(mp4|mov|m4v|avi|mkv|webm)$/);
-        });
-
-        if (videoFiles.length === 0) {
-          return [];
-        }
-
-        return await this.convertPickedFilesToFiles(videoFiles.slice(0, 1), true);
+        /**
+         * iOS nativo (Capacitor):
+         * La API de Camera de Capacitor no soporta video directamente.
+         * Sin embargo, dentro del WebView sí funciona un `<input type="file" accept="video/*" capture="environment">`,
+         * que abre la cámara nativa de iOS en modo video.
+         *
+         * Para garantizar la experiencia \"igual a Take Photo\", reutilizamos el flujo web
+         * que abre directamente la cámara en lugar del FilePicker.
+         */
+        return this.captureVideoFromCameraWeb();
       }
 
       // Android: usar FilePicker que puede abrir la cámara
