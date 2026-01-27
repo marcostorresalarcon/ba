@@ -1688,97 +1688,36 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
    * Convierte un valor a número para usar en el pipe number
    */
   /**
-   * Formatea un número como moneda USD (ej: 1234.56 -> "1,234.56")
-   */
-  protected formatCurrency(value: number | null | undefined): string {
-    if (value === null || value === undefined || isNaN(value)) {
-      return '';
-    }
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value);
-  }
-
-  /**
-   * Parsea un string formateado como moneda a número (ej: "1,234.56" -> 1234.56)
-   */
-  protected parseCurrency(value: string): number | null {
-    if (!value || value.trim() === '') {
-      return null;
-    }
-    // Remover comas y espacios, luego parsear
-    const cleaned = value.replace(/,/g, '').trim();
-    const parsed = parseFloat(cleaned);
-    return isNaN(parsed) ? null : parsed;
-  }
-
-  /**
-   * Maneja el evento input para formatear el valor mientras el usuario escribe
+   * Maneja el evento input para roughQuote / clientBudget.
+   * Misma lógica que en KitchenQuoteForm: permitir escritura natural,
+   * limitar a 2 decimales y NO aplicar formato de moneda completo mientras se escribe.
    */
   protected onCurrencyInput(event: Event, controlName: 'roughQuote' | 'clientBudget'): void {
     const input = event.target as HTMLInputElement;
-    const cursorPosition = input.selectionStart || 0;
-    const value = input.value;
-    
-    // Contar cuántos caracteres no numéricos había antes del cursor
-    const beforeCursor = value.substring(0, cursorPosition);
-    const nonNumericBefore = (beforeCursor.match(/[^0-9.]/g) || []).length;
-    
-    // Remover todo excepto números y punto decimal
-    const cleaned = value.replace(/[^0-9.]/g, '');
-    
-    // Permitir solo un punto decimal
-    const parts = cleaned.split('.');
-    let numericValue = parts[0];
-    if (parts.length > 1) {
-      numericValue += '.' + parts.slice(1).join('').substring(0, 2); // Máximo 2 decimales
-    }
-    
-    // Parsear y formatear
-    const parsed = this.parseCurrency(numericValue);
-    if (parsed !== null) {
-      const formattedValue = this.formatCurrency(parsed);
-      input.value = formattedValue;
-      
-      // Calcular nueva posición del cursor
-      // Contar dígitos antes del cursor original
-      const digitsBefore = (beforeCursor.match(/[0-9]/g) || []).length;
-      // Encontrar la posición en el valor formateado que corresponde a esos dígitos
-      let newPosition = 0;
-      let digitCount = 0;
-      for (let i = 0; i < formattedValue.length; i++) {
-        if (/\d/.test(formattedValue[i])) {
-          digitCount++;
-          if (digitCount > digitsBefore) {
-            break;
-          }
-        }
-        newPosition = i + 1;
-      }
-      
-      // Asegurar que el cursor esté en una posición válida
-      newPosition = Math.min(newPosition, formattedValue.length);
-      input.setSelectionRange(newPosition, newPosition);
-      
-      // Actualizar el FormControl con el valor numérico
-      this.form.controls[controlName].setValue(parsed, { emitEvent: false });
-    } else if (numericValue === '' || numericValue === '.') {
-      input.value = '';
-      this.form.controls[controlName].setValue(null, { emitEvent: false });
-      input.setSelectionRange(0, 0);
-    }
+    const raw = (input.value || '').replace(/[^0-9.,]/g, '');
+    input.value = raw;
   }
 
   /**
-   * Maneja el evento blur para asegurar que el valor esté formateado correctamente
+   * Al hacer blur, redondeamos a 2 decimales y dejamos que el binding
+   * se encargue de mostrarlo.
    */
   protected onCurrencyBlur(controlName: 'roughQuote' | 'clientBudget'): void {
     const control = this.form.controls[controlName];
-    const value = control.value;
-    if (value !== null && value !== undefined) {
-      // El valor ya está como número, solo necesitamos actualizar el input visualmente
-      // Esto se manejará automáticamente con el binding
+    const raw = control.value;
+    if (raw === null || raw === undefined) {
+      control.setValue(null, { emitEvent: false });
+      return;
+    }
+
+    const normalized = String(raw).replace(/,/g, '').trim();
+    const parsed = parseFloat(normalized);
+
+    if (isNaN(parsed)) {
+      control.setValue(null, { emitEvent: false });
+    } else {
+      const rounded = Number(parsed.toFixed(2));
+      control.setValue(rounded, { emitEvent: false });
     }
   }
 
