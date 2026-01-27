@@ -67,8 +67,9 @@ Después de configurar el perfil en Appflow:
 
 1. El proyecto está configurado con:
    - `CODE_SIGN_IDENTITY = "iPhone Developer"` para Debug ✅
+   - `CODE_SIGN_IDENTITY = "Apple Distribution"` para Release (App Store) ✅
    - `CODE_SIGN_STYLE = Manual` ✅
-   - Sin `PROVISIONING_PROFILE_SPECIFIER` en Debug (permite que Appflow lo inyecte) ✅
+   - Sin `PROVISIONING_PROFILE_SPECIFIER` en Debug ni en Release (permite que Appflow inyecte el perfil en Development y App Store) ✅
 
 2. Al crear el build en Appflow:
    - Selecciona tipo **"Development"**
