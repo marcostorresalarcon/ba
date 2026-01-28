@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.bakitchenandbathdesigns.app"
+    namespace "com.bakitchenandbathdesigns.appprod"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.bakitchenandbathdesigns.app"
+        applicationId "com.bakitchenandbathdesigns.appprod"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -1,4 +1,4 @@
-package com.bakitchenandbathdesigns.app;
+package com.bakitchenandbathdesigns.appprod;
 
 import com.getcapacitor.BridgeActivity;
 
