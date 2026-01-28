@@ -1,6 +1,7 @@
 export const environment = {
     production: false,
     apiUrl: 'https://ba-back.marcostorresalarcon.com',
+    // apiUrl: 'http://localhost:3022',
     s3BucketName: 'ba-bucket-aws',
     s3AccessKeyId: 'AKIAWYSDDOVTLZNIRXTH',
     s3SecretAccessKey: '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',

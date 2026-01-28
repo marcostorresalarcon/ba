@@ -16,6 +16,8 @@ export class ProjectListComponent {
   @Input({ required: true }) isLoading = false;
   @Input({ required: false }) isDeleting = false;
   @Input({ required: false }) readonly = false;
+  @Input({ required: false }) showContainer = true;
+  @Input({ required: false }) showHeader = true;
 
   @Output() readonly editProject = new EventEmitter<ProjectWithQuoteCount>();
   @Output() readonly deleteProject = new EventEmitter<ProjectWithQuoteCount>();

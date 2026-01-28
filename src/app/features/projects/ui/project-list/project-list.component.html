@@ -1,82 +1,146 @@
+@if (showContainer) {
 <section class="mt-5 rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+  @if (showHeader) {
   <div class="mb-4 flex items-center justify-between">
     <div>
       <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Directory</p>
       <h2 class="mt-1 font-display text-2xl text-charcoal">Projects</h2>
     </div>
   </div>
-
-  @if (isLoading) {
-    <div class="space-y-3">
-      @for (_ of [1, 2, 3]; track $index) {
-        <div class="h-20 rounded-2xl bg-fog/30"></div>
-      }
-    </div>
+  } @if (isLoading) {
+  <div class="space-y-3">
+    @for (_ of [1, 2, 3]; track $index) {
+    <div class="h-20 rounded-2xl bg-fog/30"></div>
+    }
+  </div>
+  } @else { @if (projects.length === 0) {
+  <div class="rounded-2xl border-2 border-dashed border-fog bg-sand/30 p-8 text-center">
+    <p class="text-sm font-medium text-charcoal">No projects yet.</p>
+    <p class="mt-1 text-xs text-slate">Create the first one using the form.</p>
+  </div>
   } @else {
-    @if (projects.length === 0) {
-      <div class="rounded-2xl border-2 border-dashed border-fog bg-sand/30 p-8 text-center">
-        <p class="text-sm font-medium text-charcoal">No projects yet.</p>
-        <p class="mt-1 text-xs text-slate">Create the first one using the form.</p>
-      </div>
-    } @else {
-      <div class="space-y-3">
-        @for (project of projects; track trackById($index, project)) {
-          <div
-            class="group flex items-center justify-between rounded-2xl border border-fog/60 bg-white px-5 py-4 shadow-sm transition hover:border-pine/40 hover:shadow-raised"
-            [class.opacity-60]="isDeleting"
+  <div class="space-y-3">
+    @for (project of projects; track trackById($index, project)) {
+    <div
+      class="group flex items-center justify-between rounded-2xl border border-fog/60 bg-white px-5 py-4 shadow-sm transition hover:border-pine/40 hover:shadow-raised"
+      [class.opacity-60]="isDeleting"
+    >
+      <a [routerLink]="['/projects', project._id]" class="flex-1">
+        <div class="flex flex-wrap items-center gap-3">
+          <h3 class="font-semibold text-charcoal group-hover:text-pine">{{ project.name }}</h3>
+          <span
+            class="rounded-full px-2.5 py-0.5 text-xs font-medium"
+            [ngClass]="getStatusColor(project.status)"
           >
-            <a
-              [routerLink]="['/projects', project._id]"
-              class="flex-1"
-            >
-              <div class="flex flex-wrap items-center gap-3">
-                <h3 class="font-semibold text-charcoal group-hover:text-pine">{{ project.name }}</h3>
-                <span
-                  class="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  [ngClass]="getStatusColor(project.status)"
-                >
-                  {{ project.status.replace('_', ' ') }}
-                </span>
-              </div>
-              @if (project.description) {
-                <p class="mt-1 text-sm text-slate line-clamp-1">{{ project.description }}</p>
-              }
-              <div class="mt-2 flex items-center gap-2 text-sm text-slate">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span class="font-medium">{{ project.quoteCount }}</span>
-                <span class="text-xs">estimates</span>
-              </div>
-            </a>
-            <div class="ml-4 flex items-center gap-2">
-              @if (!readonly) {
-              <button
-                type="button"
-                class="rounded-full border border-charcoal/40 px-3 py-1.5 text-xs font-semibold text-charcoal transition hover:bg-charcoal hover:text-alabaster"
-                (click)="edit(project, $event)"
-                [disabled]="isDeleting"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                class="rounded-full border border-red-500/40 bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                (click)="remove(project, $event)"
-                [disabled]="isDeleting"
-              >
-                Delete
-              </button>
-              }
-            </div>
-          </div>
+            {{ project.status.replace('_', ' ') }}
+          </span>
+        </div>
+        @if (project.description) {
+        <p class="mt-1 text-sm text-slate line-clamp-1">{{ project.description }}</p>
+        }
+        <div class="mt-2 flex items-center gap-2 text-sm text-slate">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <span class="font-medium">{{ project.quoteCount }}</span>
+          <span class="text-xs">estimates</span>
+        </div>
+      </a>
+      <div class="ml-4 flex items-center gap-2">
+        @if (!readonly) {
+        <button
+          type="button"
+          class="rounded-full border border-charcoal/40 px-3 py-1.5 text-xs font-semibold text-charcoal transition hover:bg-charcoal hover:text-alabaster"
+          (click)="edit(project, $event)"
+          [disabled]="isDeleting"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          class="rounded-full border border-red-500/40 bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+          (click)="remove(project, $event)"
+          [disabled]="isDeleting"
+        >
+          Delete
+        </button>
         }
       </div>
+    </div>
     }
-  }
+  </div>
+  } }
 </section>
+} @else { @if (isLoading) {
+<div class="space-y-3">
+  @for (_ of [1, 2, 3]; track $index) {
+  <div class="h-20 rounded-2xl bg-fog/30"></div>
+  }
+</div>
+} @else { @if (projects.length === 0) {
+<div class="rounded-2xl border-2 border-dashed border-fog bg-sand/30 p-8 text-center">
+  <p class="text-sm font-medium text-charcoal">No projects yet.</p>
+  <p class="mt-1 text-xs text-slate">Create the first one using the form.</p>
+</div>
+} @else {
+<div class="space-y-3">
+  @for (project of projects; track trackById($index, project)) {
+  <div
+    class="group flex items-center justify-between rounded-2xl border border-fog/60 bg-white px-5 py-4 shadow-sm transition hover:border-pine/40 hover:shadow-raised"
+    [class.opacity-60]="isDeleting"
+  >
+    <a [routerLink]="['/projects', project._id]" class="flex-1">
+      <div class="flex flex-wrap items-center gap-3">
+        <h3 class="font-semibold text-charcoal group-hover:text-pine">{{ project.name }}</h3>
+        <span
+          class="rounded-full px-2.5 py-0.5 text-xs font-medium"
+          [ngClass]="getStatusColor(project.status)"
+        >
+          {{ project.status.replace('_', ' ') }}
+        </span>
+      </div>
+      @if (project.description) {
+      <p class="mt-1 text-sm text-slate line-clamp-1">{{ project.description }}</p>
+      }
+      <div class="mt-2 flex items-center gap-2 text-sm text-slate">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        <span class="font-medium">{{ project.quoteCount }}</span>
+        <span class="text-xs">estimates</span>
+      </div>
+    </a>
+    <div class="ml-4 flex items-center gap-2">
+      @if (!readonly) {
+      <button
+        type="button"
+        class="rounded-full border border-charcoal/40 px-3 py-1.5 text-xs font-semibold text-charcoal transition hover:bg-charcoal hover:text-alabaster"
+        (click)="edit(project, $event)"
+        [disabled]="isDeleting"
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        class="rounded-full border border-red-500/40 bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+        (click)="remove(project, $event)"
+        [disabled]="isDeleting"
+      >
+        Delete
+      </button>
+      }
+    </div>
+  </div>
+  }
+</div>
+} } }

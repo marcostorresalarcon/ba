@@ -29,6 +29,8 @@ Esta documentación describe todos los endpoints disponibles en la API del proye
 
 Registra un nuevo usuario en el sistema. Automáticamente crea un role "customer" asociado al usuario.
 
+> **Nota**: Este endpoint está disponible para compatibilidad, pero se recomienda usar el nuevo flujo de registro con verificación por código de 6 dígitos (`POST /auth/register/request-code` y `POST /auth/register/confirm`).
+
 **Autenticación**: No requerida
 
 **Body**:
@@ -54,6 +56,82 @@ Registra un nuevo usuario en el sistema. Automáticamente crea un role "customer
   }
 }
 ```
+
+---
+
+### POST `/auth/register/request-code`
+
+Inicia el proceso de registro enviando un código de verificación de 6 dígitos al correo electrónico del usuario. Este es el primer paso del flujo de registro con verificación por email.
+
+**Autenticación**: No requerida
+
+**Body**:
+
+```json
+{
+  "email": "string (requerido, formato email válido)",
+  "name": "string (requerido)",
+  "password": "string (requerido, mínimo 6 caracteres)"
+}
+```
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "message": "Código de verificación enviado al correo electrónico"
+}
+```
+
+**Errores posibles**:
+
+- `400 Bad Request`: Si el correo ya está registrado en el sistema
+- `400 Bad Request`: Si los datos de validación no son correctos
+
+> **Nota**: El código expira en 15 minutos. Si el código expira o es inválido, el usuario debe solicitar un nuevo código.
+
+---
+
+### POST `/auth/register/confirm`
+
+Confirma el código de verificación enviado al correo y completa el registro del usuario. Este es el segundo paso del flujo de registro con verificación por email.
+
+**Autenticación**: No requerida
+
+**Body**:
+
+```json
+{
+  "email": "string (requerido, formato email válido)",
+  "code": "string (requerido, código de 6 dígitos enviado al correo)"
+}
+```
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "access_token": "jwt_token_here",
+  "user": {
+    "id": "user_id",
+    "email": "usuario@example.com",
+    "name": "Juan Pérez",
+    "role": "customer"
+  }
+}
+```
+
+**Errores posibles**:
+
+- `400 Bad Request`: Si el código es inválido o ha expirado
+- `400 Bad Request`: Si el correo ya está registrado (puede ocurrir si se registró entre la solicitud del código y la confirmación)
+
+**Flujo de registro con verificación**:
+
+1. El usuario envía sus datos (nombre, email, contraseña) a `POST /auth/register/request-code`
+2. El sistema envía un código de 6 dígitos al correo del usuario
+3. El usuario ingresa el código recibido en `POST /auth/register/confirm`
+4. Si el código es válido, se completa el registro y se retorna el token JWT
 
 ---
 
@@ -427,25 +505,16 @@ Elimina un cliente del sistema.
 
 El sistema implementa un flujo de aprobación con los siguientes estados y transiciones:
 
-**Estados disponibles**: `draft`, `sent`, `approved`, `rejected`, `in_progress`, `completed`
-
-**⚠️ IMPORTANTE:** `pending` NO EXISTE - es igual a `draft`. Solo usar `draft`.
+**Estados disponibles**: `draft`, `pending`, `approved`, `sent`, `rejected`, `in_progress`, `completed`
 
 **Flujo de transiciones válidas**:
-- `draft` → `sent` (al hacer submit/crear cotización)
-- `sent` → `approved` (cliente aprueba) o `rejected` (cliente rechaza con comentario obligatorio) o `in_progress` (cliente inicia trabajo)
-- `approved` → `in_progress` (cliente inicia trabajo)
-- `rejected` → `draft` (volver a editar)
-- `in_progress` → `completed` (cliente marca como completado)
-- `completed` (estado final)
 
-**Flujo completo**:
-1. **DRAFT**: Cuando se presiona "Save as Draft" (borrador interno)
-2. **SENT**: Cuando se hace submit (crear cotización) - se envía al cliente automáticamente
-3. **APPROVED**: Cuando el cliente aprueba la cotización
-4. **REJECTED**: Cuando el cliente rechaza (debe ingresar comentario obligatorio)
-5. **IN_PROGRESS**: Cuando el customer inicia el trabajo
-6. **COMPLETED**: Cuando el Customer marca el trabajo como completado
+- `draft` → `pending` (enviar para revisión) o `sent` (enviar directamente al cliente)
+- `pending` → `approved` (aprobación interna) o `rejected` (rechazo con comentarios obligatorios)
+- `approved` → `sent` (enviar al cliente) o `in_progress` (iniciar proyecto)
+- `sent` → `approved`, `rejected` o `in_progress`
+- `rejected` → `draft` (volver a editar) o `pending` (reenviar para revisión)
+- `in_progress` → `completed`
 
 **Nota sobre rechazos**: Cuando una cotización se rechaza (`status: "rejected"`), el campo `rejectionComments.comment` es **obligatorio** para documentar el motivo del rechazo.
 
@@ -775,11 +844,13 @@ Actualiza una cotización existente (se usa para generar nuevas versiones increm
 **Body**: Todos los campos son opcionales, incluyendo `materials` que puede actualizarse como objeto con `file` e `items`.
 
 **Validaciones de transición de estado**:
+
 - El sistema valida que las transiciones de estado sean válidas según el flujo definido
 - Si se intenta cambiar a `rejected`, el campo `rejectionComments.comment` es obligatorio
 - Si se cambia a un estado diferente de `rejected`, el campo `rejectionComments` se limpia automáticamente
 
 **Ejemplo de actualización con rechazo**:
+
 ```json
 {
   "status": "rejected",
@@ -851,9 +922,11 @@ Aprueba una cotización que está en estado `pending`. Cambia el estado a `appro
 **Autenticación**: No especificada
 
 **Parámetros**:
+
 - `id` (string, requerido): ID de la cotización
 
 **Body**:
+
 ```json
 {
   "approvedBy": "string (opcional, MongoDB ObjectId del usuario que aprueba)"
@@ -861,10 +934,12 @@ Aprueba una cotización que está en estado `pending`. Cambia el estado a `appro
 ```
 
 **Validaciones**:
+
 - La cotización debe estar en estado `pending`
 - Si no está en `pending`, se retorna un error 400
 
 **Respuesta exitosa** (200):
+
 ```json
 {
   "_id": "quote_id",
@@ -882,9 +957,11 @@ Rechaza una cotización que está en estado `pending`. Cambia el estado a `rejec
 **Autenticación**: No especificada
 
 **Parámetros**:
+
 - `id` (string, requerido): ID de la cotización
 
 **Body**:
+
 ```json
 {
   "comment": "string (requerido, motivo del rechazo)",
@@ -894,11 +971,13 @@ Rechaza una cotización que está en estado `pending`. Cambia el estado a `rejec
 ```
 
 **Validaciones**:
+
 - La cotización debe estar en estado `pending`
 - El campo `comment` es obligatorio
 - Si no está en `pending`, se retorna un error 400
 
 **Respuesta exitosa** (200):
+
 ```json
 {
   "_id": "quote_id",
@@ -922,9 +1001,11 @@ Envía una cotización aprobada al cliente. Cambia el estado de `approved` a `se
 **Autenticación**: No especificada
 
 **Parámetros**:
+
 - `id` (string, requerido): ID de la cotización
 
 **Body**:
+
 ```json
 {
   "sentBy": "string (opcional, MongoDB ObjectId del usuario que envía)"
@@ -932,10 +1013,12 @@ Envía una cotización aprobada al cliente. Cambia el estado de `approved` a `se
 ```
 
 **Validaciones**:
+
 - La cotización debe estar en estado `approved`
 - Si no está en `approved`, se retorna un error 400
 
 **Respuesta exitosa** (200):
+
 ```json
 {
   "_id": "quote_id",
@@ -1976,6 +2059,7 @@ El token se obtiene al hacer login o registro exitoso en los endpoints de autent
 8. **Categorías de Cotizaciones**: Las cotizaciones pueden ser `kitchen`, `bathroom`, `basement` o `additional-work`. Cada tipo tiene campos dedicados (`kitchenInformation`, `bathroomInformation`, `basementInformation`, `additionalWorkInformation`) con nombres estandarizados.
 
 9. **Estados de Cotizaciones**: `draft`, `pending`, `approved`, `sent`, `rejected`, `in_progress`, `completed`
+
    - **Flujo de aprobación**: `draft` → `pending` → `approved` → `sent`
    - **Rechazo**: `pending` → `rejected` (requiere `rejectionComments.comment`)
    - **Reintento**: `rejected` → `draft` o `pending`
@@ -2245,6 +2329,7 @@ Obtiene el historial de pagos de una factura específica.
 ## Historial de Estados y Auditoría
 
 El sistema registra automáticamente cada cambio de estado en cotizaciones y proyectos. Esto permite:
+
 1. Calcular el **tiempo promedio por etapa** en el dashboard de ventas.
 2. Auditar quién realizó cada cambio y cuándo.
 3. Analizar cuellos de botella en el proceso comercial.

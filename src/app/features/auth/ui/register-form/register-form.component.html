@@ -1,0 +1,162 @@
+<section
+  class="w-full rounded-[2.5rem] bg-white/90 p-6 shadow-brand backdrop-blur-xl sm:p-8"
+  data-interactive="true"
+>
+  <header class="text-center">
+    <p class="text-xs uppercase tracking-[0.35em] text-clay">BA Platform</p>
+    @if (currentStep() === 'data') {
+    <h2 class="mt-3 font-display text-3xl text-charcoal sm:text-4xl">Create your account</h2>
+    <p class="mt-2 text-sm text-slate">
+      Join BA Platform to access your estimates, projects, and KPIs.
+    </p>
+    } @else {
+    <h2 class="mt-3 font-display text-3xl text-charcoal sm:text-4xl">Verify your email</h2>
+    <p class="mt-2 text-sm text-slate">
+      We sent a 6-digit code to <strong>{{ userEmail() }}</strong>
+    </p>
+    }
+  </header>
+
+  @if (currentStep() === 'data') {
+  <form class="mt-6 space-y-5" (ngSubmit)="submitDataForm()" [formGroup]="dataForm">
+    @if (errorMessage) {
+    <div class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+      <p class="font-semibold">Registration Error</p>
+      <p class="mt-1">{{ errorMessage }}</p>
+    </div>
+    }
+
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Full name
+      <input
+        data-interactive="true"
+        type="text"
+        formControlName="name"
+        placeholder="John Doe"
+        class="rounded-2xl border border-fog/60 bg-white/80 px-4 py-3 text-base text-charcoal shadow-sm placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+      />
+    </label>
+    @if (controlInvalid(dataForm, 'name')) {
+    <p class="text-xs text-red-600">Enter your full name (at least 2 characters).</p>
+    }
+
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Email address
+      <input
+        data-interactive="true"
+        type="email"
+        formControlName="email"
+        placeholder="customer@example.com"
+        class="rounded-2xl border border-fog/60 bg-white/80 px-4 py-3 text-base text-charcoal shadow-sm placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+      />
+    </label>
+    @if (controlInvalid(dataForm, 'email')) {
+    <p class="text-xs text-red-600">Enter a valid email address.</p>
+    }
+
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Password
+      <div class="relative flex items-center">
+        <input
+          data-interactive="true"
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          placeholder="••••••••"
+          class="w-full rounded-2xl border border-fog/60 bg-white/80 px-4 py-3 pr-12 text-base text-charcoal shadow-sm placeholder:text-slate focus:border-pine focus:ring-1 focus:ring-pine"
+        />
+        <button
+          type="button"
+          data-interactive="true"
+          class="absolute right-3 text-sm font-semibold text-pine hover:text-pine-dark"
+          (click)="togglePasswordVisibility()"
+        >
+          {{ showPassword() ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+    </label>
+    @if (controlInvalid(dataForm, 'password')) {
+    <p class="text-xs text-red-600">Password must contain at least 6 characters.</p>
+    }
+
+    <button
+      type="submit"
+      data-interactive="true"
+      class="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-pine px-4 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+      [disabled]="isSubmitting"
+    >
+      {{ isSubmitting ? 'Sending code...' : 'Continue' }}
+    </button>
+  </form>
+  } @else {
+  <form class="mt-6 space-y-5" (ngSubmit)="submitCodeForm()" [formGroup]="codeForm">
+    @if (errorMessage) {
+    <div class="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+      <p class="font-semibold">Verification Error</p>
+      <p class="mt-1">{{ errorMessage }}</p>
+    </div>
+    }
+
+    <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
+      Verification code
+      <input
+        data-interactive="true"
+        type="text"
+        formControlName="code"
+        placeholder="000000"
+        maxlength="6"
+        inputmode="numeric"
+        class="rounded-2xl border border-fog/60 bg-white/80 px-4 py-3 text-center text-2xl font-mono tracking-widest text-charcoal shadow-sm placeholder:text-slate/40 focus:border-pine focus:ring-1 focus:ring-pine"
+        (input)="onCodeInput($event)"
+      />
+    </label>
+    @if (controlInvalid(codeForm, 'code')) {
+    <p class="text-xs text-red-600">Enter the 6-digit code sent to your email.</p>
+    }
+
+    <div class="flex flex-col gap-3">
+      <button
+        type="submit"
+        data-interactive="true"
+        class="inline-flex w-full items-center justify-center rounded-2xl bg-pine px-4 py-3 text-base font-semibold text-white shadow-raised transition hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-slate/60"
+        [disabled]="isSubmitting"
+      >
+        {{ isSubmitting ? 'Verifying...' : 'Verify code' }}
+      </button>
+
+      <div class="flex items-center justify-center gap-2 text-sm text-slate">
+        <span>Didn't receive the code?</span>
+        <button
+          type="button"
+          data-interactive="true"
+          class="font-semibold text-pine hover:text-pine-dark disabled:cursor-not-allowed disabled:text-slate/60"
+          [disabled]="isSubmitting"
+          (click)="handleResendCode()"
+        >
+          Resend code
+        </button>
+      </div>
+
+      <button
+        type="button"
+        data-interactive="true"
+        class="text-sm font-semibold text-charcoal underline-offset-4 hover:underline"
+        [disabled]="isSubmitting"
+        (click)="goBackToDataStep()"
+      >
+        ← Change email address
+      </button>
+    </div>
+  </form>
+  }
+
+  <p class="mt-6 text-center text-sm text-slate">
+    Already have an account?
+    <a
+      class="font-semibold text-charcoal underline-offset-4 hover:underline"
+      href="/login"
+      data-interactive="true"
+    >
+      Sign in
+    </a>
+  </p>
+</section>

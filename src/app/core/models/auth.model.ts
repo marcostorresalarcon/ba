@@ -24,3 +24,18 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export interface RegisterRequestPayload {
+  email: string;
+  name: string;
+  password: string;
+}
+
+export interface RegisterConfirmPayload {
+  email: string;
+  code: string;
+}
+
+export interface RegisterRequestResponse {
+  message: string;
+}
+

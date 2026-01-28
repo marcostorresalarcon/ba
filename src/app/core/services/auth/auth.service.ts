@@ -4,7 +4,14 @@ import type { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
-import type { AuthResponse, AuthUser, LoginPayload } from '../../models/auth.model';
+import type {
+  AuthResponse,
+  AuthUser,
+  LoginPayload,
+  RegisterRequestPayload,
+  RegisterConfirmPayload,
+  RegisterRequestResponse
+} from '../../models/auth.model';
 import { CredentialsStorageService } from './credentials-storage.service';
 
 @Injectable({
@@ -38,6 +45,21 @@ export class AuthService {
     localStorage.removeItem(this.storageKey);
     this.credentialsStorage.clearCredentials();
     this.user.set(null);
+  }
+
+  registerRequestCode(payload: RegisterRequestPayload): Observable<RegisterRequestResponse> {
+    const endpoint = `${this.baseUrl}/auth/register/request-code`;
+    return this.http.post<RegisterRequestResponse>(endpoint, payload);
+  }
+
+  registerConfirm(payload: RegisterConfirmPayload): Observable<AuthResponse> {
+    const endpoint = `${this.baseUrl}/auth/register/confirm`;
+    return this.http.post<AuthResponse>(endpoint, payload).pipe(
+      tap((response) => {
+        this.user.set(response.user);
+        localStorage.setItem(this.storageKey, JSON.stringify(response.user));
+      })
+    );
   }
 
   private restoreUser(): AuthUser | null {

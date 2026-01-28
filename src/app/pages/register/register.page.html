@@ -1,0 +1,47 @@
+<section
+  class="relative isolate flex min-h-screen flex-col overflow-hidden bg-sand px-4 py-10 sm:px-8 lg:px-12"
+>
+  <div class="pointer-events-none absolute inset-0 bg-login-hero opacity-80"></div>
+  <div
+    class="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-alabaster/90 via-sand/60 to-transparent"
+  ></div>
+
+  <div
+    class="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 lg:flex-row lg:items-center"
+  >
+    <article class="flex-1 space-y-6 text-center lg:text-left">
+      <p class="text-xs uppercase tracking-[0.35em] text-clay">
+        BA Kitchen &amp; Bath Design · Stones · Exteriors
+      </p>
+      <h1 class="font-display text-4xl leading-tight text-charcoal sm:text-5xl">
+        Build estimates with confidence and keep every project on track.
+      </h1>
+      <p class="text-base text-slate">
+        The BA platform centralizes quotes, customers, and KPIs across every company in the group.
+        Create your account to get started.
+      </p>
+
+      <div
+        class="flex flex-col items-center justify-center gap-6 rounded-[3rem] bg-white/85 px-10 py-8 text-center shadow-brand lg:items-start lg:text-left"
+      >
+        <img src="logo.png" alt="BA Platform" class="h-auto w-40 object-contain" />
+        <div>
+          <p class="text-xs uppercase tracking-[0.4em] text-slate">BA Platform</p>
+          <p class="text-sm font-semibold text-charcoal">Kitchen · Stones · Exteriors</p>
+        </div>
+      </div>
+    </article>
+
+    <div class="flex-1">
+      <app-register-form
+        #registerForm
+        [isSubmitting]="isSubmitting()"
+        [errorMessage]="errorMessage()"
+        (submitRegisterData)="handleRegisterData($event)"
+        (submitCode)="handleCodeConfirmation($event)"
+        (resendCode)="handleResendCode($event)"
+        (clearError)="errorMessage.set(null)"
+      />
+    </div>
+  </div>
+</section>
