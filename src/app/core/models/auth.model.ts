@@ -38,4 +38,3 @@ export interface RegisterConfirmPayload {
 export interface RegisterRequestResponse {
   message: string;
 }
-

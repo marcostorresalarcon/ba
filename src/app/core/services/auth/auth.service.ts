@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import type { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -45,6 +45,21 @@ export class AuthService {
     localStorage.removeItem(this.storageKey);
     this.credentialsStorage.clearCredentials();
     this.user.set(null);
+  }
+
+  /**
+   * Elimina la cuenta del usuario autenticado (borrado físico).
+   * Requiere JWT en Authorization header.
+   * Ruta configurable por environment (authDeleteAccountPath) por si el backend usa prefijo (ej. api/auth/account).
+   */
+  deleteAccount(): Observable<{ message: string }> {
+    const token = localStorage.getItem('access_token');
+    const headers = new HttpHeaders(
+      token ? { Authorization: `Bearer ${token}` } : {}
+    );
+    const path = (environment as { authDeleteAccountPath?: string }).authDeleteAccountPath ?? 'auth/account';
+    const endpoint = `${this.baseUrl}/${path.replace(/^\//, '')}`;
+    return this.http.delete<{ message: string }>(endpoint, { headers });
   }
 
   registerRequestCode(payload: RegisterRequestPayload): Observable<RegisterRequestResponse> {

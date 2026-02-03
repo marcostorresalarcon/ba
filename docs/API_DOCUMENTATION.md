@@ -25,6 +25,26 @@ Esta documentación describe todos los endpoints disponibles en la API del proye
 
 ## Autenticación
 
+### Resumen de endpoints
+
+| Método | Endpoint                       | Descripción                                                                       |
+| ------ | ------------------------------ | --------------------------------------------------------------------------------- |
+| POST   | `/auth/register`               | Registro directo (legacy). Se recomienda el flujo con verificación por email.     |
+| POST   | `/auth/register/request-code`  | Envía código de 6 dígitos al email para completar el registro (paso 1).           |
+| POST   | `/auth/register/confirm`       | Confirma el código y completa el registro (paso 2).                               |
+| DELETE | `/auth/account`                | **Borrado físico**: elimina usuario, roles y Customer asociado (requiere JWT).    |
+| POST   | `/auth/account/anonymize`      | **Anonimización**: mantiene registros pero borra datos personales (requiere JWT). |
+| POST   | `/auth/login`                  | Inicio de sesión con email y contraseña.                                          |
+| GET    | `/auth/profile`                | Perfil del usuario autenticado (requiere JWT).                                    |
+| GET    | `/auth/google`                 | Inicia OAuth con Google.                                                          |
+| GET    | `/auth/google/callback`        | Callback de Google OAuth.                                                         |
+| POST   | `/auth/login-with-google`      | Login con datos de Google.                                                        |
+| POST   | `/auth/refresh-token`          | Refresca el JWT.                                                                  |
+| POST   | `/auth/password-reset/request` | Solicita código para restablecer contraseña.                                      |
+| POST   | `/auth/password-reset/confirm` | Confirma código y define nueva contraseña.                                        |
+
+---
+
 ### POST `/auth/register`
 
 Registra un nuevo usuario en el sistema. Automáticamente crea un role "customer" asociado al usuario.
@@ -132,6 +152,64 @@ Confirma el código de verificación enviado al correo y completa el registro de
 2. El sistema envía un código de 6 dígitos al correo del usuario
 3. El usuario ingresa el código recibido en `POST /auth/register/confirm`
 4. Si el código es válido, se completa el registro y se retorna el token JWT
+
+---
+
+### DELETE `/auth/account`
+
+Elimina la cuenta del usuario autenticado de forma **física**: se borran el usuario, sus roles y el registro de cliente (Customer) asociado. No se eliminan cotizaciones, proyectos, facturas ni pagos (pueden quedar referencias huérfanas o anonimizadas según política).
+
+**Autenticación**: Requerida (JWT Token)
+
+**Headers**:
+
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Body**: No requerido (el usuario se identifica por el token).
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "message": "Account deleted successfully"
+}
+```
+
+**Errores posibles**:
+
+- `401 Unauthorized`: Token inválido o no enviado
+- `400 Bad Request`: Usuario no encontrado
+
+---
+
+### POST `/auth/account/anonymize`
+
+**Anonimiza** la cuenta del usuario autenticado: se mantienen los registros (para facturas u obligaciones legales) pero se borran o reemplazan todos los datos personales (nombre, email, teléfono, dirección, etc.) en User y en Customer. El usuario no podrá volver a iniciar sesión.
+
+**Autenticación**: Requerida (JWT Token)
+
+**Headers**:
+
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Body**: No requerido.
+
+**Respuesta exitosa** (200):
+
+```json
+{
+  "message": "Account anonymized successfully"
+}
+```
+
+**Errores posibles**:
+
+- `401 Unauthorized`: Token inválido o no enviado
+- `400 Bad Request`: Usuario no encontrado
 
 ---
 
@@ -2322,7 +2400,14 @@ Obtiene el historial de pagos de una factura específica.
 
 ---
 
-**Última actualización**: 22 de Enero de 2026
+**Última actualización**: 28 de Enero de 2026
+
+**Endpoints añadidos recientemente**:
+
+- `POST /auth/register/request-code` – Solicitar código de verificación para registro.
+- `POST /auth/register/confirm` – Confirmar código y completar registro.
+- `DELETE /auth/account` – Borrado físico de la cuenta (requiere JWT).
+- `POST /auth/account/anonymize` – Anonimización de la cuenta (requiere JWT).
 
 ---
 
