@@ -103,38 +103,52 @@ export class CustomerFormComponent implements OnChanges, AfterViewInit, OnDestro
     if (changes['customer']) {
       const value = changes['customer'].currentValue as Customer | null;
       if (value) {
-        // Formatear el teléfono si existe
-        const formattedPhone = value.phone ? this.formatPhoneNumber(value.phone) : '';
-        
-        this.form.patchValue({
-          name: value.name,
-          lastName: value.lastName,
-          phone: formattedPhone,
-          date: value.date ?? '',
-          email: value.email ?? '',
-          address: value.address ?? '',
-          city: value.city ?? '',
-          zipCode: value.zipCode ?? '',
-          state: value.state ?? '',
-          leadSource: value.leadSource ?? '',
-          description: value.description ?? ''
-        });
+        this.patchFormFromCustomer(value);
       } else {
-        this.form.reset({
-          name: '',
-          lastName: '',
-          phone: '',
-          date: '',
-          email: '',
-          address: '',
-          city: '',
-          zipCode: '',
-          state: '',
-          leadSource: '',
-          description: ''
-        });
+        this.resetForm();
       }
     }
+  }
+
+  /**
+   * Restaura el formulario a su estado inicial vacío.
+   * Se usa cuando no hay cliente seleccionado o después de crear uno nuevo.
+   */
+  resetForm(): void {
+    this.form.reset({
+      name: '',
+      lastName: '',
+      phone: '',
+      date: '',
+      email: '',
+      address: '',
+      city: '',
+      zipCode: '',
+      state: '',
+      leadSource: '',
+      description: ''
+    });
+  }
+
+  /**
+   * Rellena el formulario a partir de un Customer existente.
+   */
+  private patchFormFromCustomer(value: Customer): void {
+    const formattedPhone = value.phone ? this.formatPhoneNumber(value.phone) : '';
+
+    this.form.patchValue({
+      name: value.name,
+      lastName: value.lastName,
+      phone: formattedPhone,
+      date: value.date ?? '',
+      email: value.email ?? '',
+      address: value.address ?? '',
+      city: value.city ?? '',
+      zipCode: value.zipCode ?? '',
+      state: value.state ?? '',
+      leadSource: value.leadSource ?? '',
+      description: value.description ?? ''
+    });
   }
 
   async ngAfterViewInit(): Promise<void> {

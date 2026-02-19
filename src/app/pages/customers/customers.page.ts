@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ViewChild,
   computed,
   effect,
   inject,
@@ -101,6 +102,8 @@ export class CustomersPage {
   protected readonly isSubmitting = signal(false);
   protected readonly isDeleting = signal(false);
 
+  @ViewChild(CustomerFormComponent) private readonly customerFormComponent?: CustomerFormComponent;
+
   constructor() {
     // Actualizar breadcrumbs en el layout service
     effect(() => {
@@ -151,7 +154,15 @@ export class CustomersPage {
         next: () => {
           const verb = customer ? 'updated' : 'created';
           this.notificationService.success(`Customer ${verb}`, `${payload.name} ${payload.lastName}`);
+
+          // Siempre limpiamos el estado seleccionado
           this.selectedCustomer.set(null);
+
+          // Si se trata de una creación, reseteamos explícitamente el formulario
+          if (!customer) {
+            this.customerFormComponent?.resetForm();
+          }
+
           this.loadCustomers(companyId);
         },
         error: (error) => {
