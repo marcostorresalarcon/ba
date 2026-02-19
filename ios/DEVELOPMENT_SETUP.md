@@ -69,7 +69,7 @@ Después de configurar el perfil en Appflow:
    - `CODE_SIGN_IDENTITY = "iPhone Developer"` para Debug ✅
    - `CODE_SIGN_IDENTITY = "Apple Distribution"` para Release (App Store) ✅
    - `CODE_SIGN_STYLE = Manual` ✅
-   - `PROVISIONING_PROFILE_SPECIFIER = "Bakitcheandbathdesigns Profile Dev"` en Debug ✅
+   - `PROVISIONING_PROFILE = "7dbcd6fc-fa2d-4df8-b36c-74acf323fc48"` en Debug (UUID del perfil que instala Appflow) ✅
    - `CODE_SIGN_STYLE = Automatic` en Release (permite que Appflow gestione el perfil para App Store) ✅
 
 2. Al crear el build en Appflow:
@@ -79,26 +79,23 @@ Después de configurar el perfil en Appflow:
 
 ## 📝 Configuración en Repositorio
 
-El proyecto usa **firma manual en Debug** con `PROVISIONING_PROFILE_SPECIFIER` configurado explícitamente. Esto requiere que el nombre del perfil de desarrollo esté sincronizado en tres lugares:
+El proyecto usa **firma manual en Debug** con el perfil identificado por **UUID** para que coincida con el perfil que Appflow instala en el build.
 
-### 1. Apple Developer Portal
-El nombre del perfil de tipo "iOS App Development" para `com.bakitchenandbathdesigns.appprod` debe ser exactamente: **`Bakitcheandbathdesigns Profile Dev`**
+### Perfil por UUID en project.pbxproj
 
-### 2. Archivos del Repositorio
-El nombre del perfil debe aparecer exactamente igual en:
-- **`ios/App/App.xcodeproj/project.pbxproj`**: En la configuración Debug del target App, dentro de `buildSettings`, la línea `PROVISIONING_PROFILE_SPECIFIER`
-- **`ios/App/App/exportOptions-development.plist`**: En la clave `provisioningProfiles`, dentro del diccionario para `com.bakitchenandbathdesigns.appprod`
+En **`ios/App/App.xcodeproj/project.pbxproj`**, en la configuración **Debug** del target App, está configurado:
 
-### 3. Ionic Appflow Signing Config
-Cuando subes el archivo `.mobileprovision` del perfil de desarrollo en Appflow, el nombre interno del perfil (que viene del archivo .mobileprovision) debe coincidir exactamente con el nombre usado en los archivos del repositorio.
+- **`PROVISIONING_PROFILE = "7dbcd6fc-fa2d-4df8-b36c-74acf323fc48"`**
 
-### ⚠️ Importante: Sincronización del Nombre
+Ese UUID debe ser el del perfil de desarrollo que usas en el **Signing Config** de Appflow para builds de tipo Development. Appflow instala el `.mobileprovision` y Xcode lo resuelve por ese UUID.
 
-Si cambias el nombre del perfil en Apple Developer Portal:
-1. **Actualiza** `PROVISIONING_PROFILE_SPECIFIER` en `project.pbxproj` (configuración Debug)
-2. **Actualiza** el valor en `exportOptions-development.plist` dentro de `provisioningProfiles`
-3. **Descarga** el nuevo perfil y súbelo a Appflow
-4. **Verifica** que el nombre interno del perfil en el .mobileprovision coincida con el nombre usado en el repositorio
+### Si cambias de perfil en Appflow
+
+Si en Appflow usas otro Signing Config (otro perfil) para Development:
+
+1. Anota el **UUID** del nuevo perfil (en Appflow o en el nombre del archivo `.mobileprovision`).
+2. **Actualiza** en `project.pbxproj` la línea `PROVISIONING_PROFILE` en la sección Debug del target App con ese UUID.
+3. En **`exportOptions-development.plist`** el valor de `provisioningProfiles` puede seguir siendo el **nombre** del perfil para la fase de export; si el export falla por perfil, ajusta ahí el nombre para que coincida con el perfil que estás usando.
 
 ## 🚀 Instalación en Dispositivo
 
