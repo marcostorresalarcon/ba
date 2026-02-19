@@ -69,12 +69,36 @@ Después de configurar el perfil en Appflow:
    - `CODE_SIGN_IDENTITY = "iPhone Developer"` para Debug ✅
    - `CODE_SIGN_IDENTITY = "Apple Distribution"` para Release (App Store) ✅
    - `CODE_SIGN_STYLE = Manual` ✅
-   - Sin `PROVISIONING_PROFILE_SPECIFIER` en Debug ni en Release (permite que Appflow inyecte el perfil en Development y App Store) ✅
+   - `PROVISIONING_PROFILE_SPECIFIER = "Bakitcheandbathdesigns Profile Dev"` en Debug ✅
+   - `CODE_SIGN_STYLE = Automatic` en Release (permite que Appflow gestione el perfil para App Store) ✅
 
 2. Al crear el build en Appflow:
    - Selecciona tipo **"Development"**
    - Selecciona el Signing Config de desarrollo
    - El build debería completarse exitosamente
+
+## 📝 Configuración en Repositorio
+
+El proyecto usa **firma manual en Debug** con `PROVISIONING_PROFILE_SPECIFIER` configurado explícitamente. Esto requiere que el nombre del perfil de desarrollo esté sincronizado en tres lugares:
+
+### 1. Apple Developer Portal
+El nombre del perfil de tipo "iOS App Development" para `com.bakitchenandbathdesigns.appprod` debe ser exactamente: **`Bakitcheandbathdesigns Profile Dev`**
+
+### 2. Archivos del Repositorio
+El nombre del perfil debe aparecer exactamente igual en:
+- **`ios/App/App.xcodeproj/project.pbxproj`**: En la configuración Debug del target App, dentro de `buildSettings`, la línea `PROVISIONING_PROFILE_SPECIFIER`
+- **`ios/App/App/exportOptions-development.plist`**: En la clave `provisioningProfiles`, dentro del diccionario para `com.bakitchenandbathdesigns.appprod`
+
+### 3. Ionic Appflow Signing Config
+Cuando subes el archivo `.mobileprovision` del perfil de desarrollo en Appflow, el nombre interno del perfil (que viene del archivo .mobileprovision) debe coincidir exactamente con el nombre usado en los archivos del repositorio.
+
+### ⚠️ Importante: Sincronización del Nombre
+
+Si cambias el nombre del perfil en Apple Developer Portal:
+1. **Actualiza** `PROVISIONING_PROFILE_SPECIFIER` en `project.pbxproj` (configuración Debug)
+2. **Actualiza** el valor en `exportOptions-development.plist` dentro de `provisioningProfiles`
+3. **Descarga** el nuevo perfil y súbelo a Appflow
+4. **Verifica** que el nombre interno del perfil en el .mobileprovision coincida con el nombre usado en el repositorio
 
 ## 🚀 Instalación en Dispositivo
 

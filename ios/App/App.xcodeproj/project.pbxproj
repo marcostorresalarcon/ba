@@ -352,6 +352,7 @@
 				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 5G8B5KR88X;
 				INFOPLIST_FILE = App/Info.plist;
+				PROVISIONING_PROFILE_SPECIFIER = "Bakitcheandbathdesigns Profile Dev";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				MARKETING_VERSION = 1.0.3;
