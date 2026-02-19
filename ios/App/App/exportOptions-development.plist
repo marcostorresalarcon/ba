@@ -8,8 +8,8 @@
 	<string>5G8B5KR88X</string>
 	<key>provisioningProfiles</key>
 	<dict>
-		<key>com.bakitchenandbathdesigns.appprod</key>
-		<string>Bakitcheandbathdesigns Profile Dev</string>
+		<key>com.bakitchenandbathdesigns.app</key>
+		<string>development</string>
 	</dict>
 	<key>signingStyle</key>
 	<string>manual</string>
