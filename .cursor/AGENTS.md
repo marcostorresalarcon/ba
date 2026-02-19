@@ -394,6 +394,26 @@ Cuando agregues o modifiques estados de Quote, revisa estos archivos:
 
 ---
 
+## 📱 Configuración de Builds iOS
+
+Para cambios en la configuración de builds iOS (Development, Production, Ad Hoc), consulta:
+
+- **Documento centralizado:** `ios/IOS_BUILD_CONFIG.md` - Referencia completa de todas las configuraciones
+- **Skill de Cursor:** `.cursor/skills/ios-build-config.md` - Guía rápida para modificar configuraciones
+
+**Archivos clave:**
+- `ios/App/App.xcodeproj/project.pbxproj` - Configuración del proyecto Xcode
+- `ios/App/App/exportOptions.plist` - Configuración App Store (Production)
+- `ios/App/App/exportOptions-development.plist` - Configuración Development
+- `ios/App/App/exportOptions-adhoc.plist` - Configuración Ad Hoc
+
+**Valores constantes:**
+- Bundle ID: `com.bakitchenandbathdesigns.appprod`
+- Team ID: `5G8B5KR88X`
+- Development Profile UUID: `7dbcd6fc-fa2d-4df8-b36c-74acf323fc48` (actualizar si cambias de perfil en Appflow)
+
+---
+
 **Última actualización:** 25 de Enero de 2026
 **Contexto:** Flujo de cotizaciones: DRAFT (Save as Draft) → SENT (Submit) → APPROVED/REJECTED (Customer) → IN_PROGRESS → COMPLETED
 **IMPORTANTE:** PENDING NO EXISTE - es igual a DRAFT. Solo usar DRAFT.

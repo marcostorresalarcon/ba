@@ -119,6 +119,34 @@ Una vez que el build termine:
 
 ## 🆘 Solución de Problemas
 
+### Error: "Provisioning profile has app ID ... which does not match the bundle ID ..."
+
+**Mensaje típico:**  
+`Provisioning profile "development" has app ID "com.bakitchenandbathdesigns.app", which does not match the bundle ID "com.bakitchenandbathdesigns.appprod".`
+
+**Causa:** El perfil de desarrollo que está usando el Signing Config de Appflow fue creado para otro App ID (`com.bakitchenandbathdesigns.app`). El proyecto usa **solo** el bundle ID `com.bakitchenandbathdesigns.appprod`.
+
+**Solución (obligatoria en Appflow/Apple Developer):**
+
+1. **En Apple Developer Portal**
+   - Ve a [Identifiers](https://developer.apple.com/account/resources/identifiers/list) y confirma que existe el App ID **`com.bakitchenandbathdesigns.appprod`**.
+   - Ve a [Profiles](https://developer.apple.com/account/resources/profiles/list).
+   - Crea un perfil de tipo **iOS App Development** (o usa uno existente) que esté asociado al App ID **`com.bakitchenandbathdesigns.appprod`** (no `com.bakitchenandbathdesigns.app`).
+   - Incluye tu certificado "iPhone Developer" y los dispositivos donde quieres instalar.
+   - Descarga el `.mobileprovision`.
+
+2. **En Ionic Appflow**
+   - Ve a **Settings > Certificates**.
+   - Edita el **Signing Config** que usas para builds de tipo **Development** (o crea uno nuevo).
+   - En **Provisioning Profile**, sube el nuevo archivo `.mobileprovision` que creaste para `com.bakitchenandbathdesigns.appprod`.
+   - Guarda y asigna este Signing Config a los builds de tipo Development.
+
+3. **En el repositorio (solo si cambió el UUID del perfil)**
+   - Tras el primer build con el nuevo perfil, en el log de Appflow aparece `DOWNLOAD_CERTS_PROVISION_FILE_UUID` con el nuevo UUID.
+   - Si es distinto a `7dbcd6fc-fa2d-4df8-b36c-74acf323fc48`, actualiza en `ios/App/App.xcodeproj/project.pbxproj` (configuración Debug del target App) la línea `PROVISIONING_PROFILE` con ese nuevo UUID.
+
+No se puede “arreglar” este error solo cambiando código: el perfil debe ser para `com.bakitchenandbathdesigns.appprod`.
+
 ### Error: "No profile for team matching..."
 - Verifica que el perfil de desarrollo esté activo en Apple Developer Portal
 - Verifica que el bundle ID del perfil coincida exactamente con `com.bakitchenandbathdesigns.appprod`
