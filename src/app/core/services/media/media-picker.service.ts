@@ -928,10 +928,11 @@ export class MediaPickerService {
 
       // 2. Usar FilePicker.pickVideos() - Este método específico abre la galería nativa usando PHPickerViewController
       // En iOS, esto abre la galería de fotos nativa mostrando videos (no el selector de archivos)
+      // IMPORTANTE: habilitar skipTranscoding para evitar que iOS recodifique y reduzca la calidad del video.
       const result = await FilePicker.pickVideos({
         limit: allowMultiple ? 10 : 1, // Número máximo de videos a seleccionar
         readData: true,
-        // skipTranscoding: true // Opcional: evita transcodificación automática en iOS para mantener calidad original
+        skipTranscoding: true
       });
 
       console.log('[MediaPickerService] FilePicker.pickVideos() completado. Archivos seleccionados:', result.files?.length || 0);
