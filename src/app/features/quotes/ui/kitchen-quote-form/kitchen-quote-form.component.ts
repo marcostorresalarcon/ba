@@ -242,7 +242,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
     // Verificar si es un nuevo estimado (sin quoteId y con flag isNewQuote)
     const isNewQuote = sessionStorage.getItem('isNewQuote') === 'true';
     const hasPendingCanvasResult = sessionStorage.getItem('drawingCanvasResult') !== null;
-    
+
     // Si es un nuevo estimado y no hay resultado pendiente del canvas, limpiar localStorage
     // No limpiar si:
     // - Hay quoteId (es una nueva versión de un estimado existente)
@@ -353,7 +353,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           const shouldScroll = sessionStorage.getItem('drawingCanvasShouldScroll') === 'true';
           sessionStorage.removeItem('drawingCanvasShouldScroll');
           console.log('[KitchenQuote] processPendingCanvasResult - Llamando a onSketchSaved, shouldScroll:', shouldScroll);
-          
+
           // Esperar a que Angular termine de restaurar la posición de scroll con withInMemoryScrolling
           // Usar un delay suficiente para que la restauración de scroll se complete primero
           // Si shouldScroll es false, no hacer scroll y dejar que Angular maneje la restauración
@@ -2124,7 +2124,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       }
 
       this.notificationService.success('Success', 'Sketch saved successfully');
-      
+
       // Solo hacer scroll a la sección de notas si se guardó desde el canvas (no al restaurar la página)
       // Esto evita sobrescribir la posición de scroll que Angular está restaurando con withInMemoryScrolling
       if (shouldScrollToNotes) {
@@ -2164,15 +2164,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       // Guardar el scroll-behavior actual del HTML para restaurarlo después
       const htmlElement = document.documentElement;
       const originalScrollBehavior = htmlElement.style.scrollBehavior;
-      
+
       // Deshabilitar temporalmente scroll-behavior smooth del CSS
       htmlElement.style.scrollBehavior = 'auto';
-      
+
       // Calcular la posición exacta con offset
       const offset = 20;
       const elementPosition = notesSection.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
-      
+
       // Usar scrollTop directamente para scroll instantáneo sin transición
       // Esto no se ve afectado por el CSS scroll-behavior
       if (window.scrollTo) {
@@ -2182,7 +2182,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
         document.documentElement.scrollTop = offsetPosition;
         document.body.scrollTop = offsetPosition;
       }
-      
+
       // Restaurar el scroll-behavior original después de un pequeño delay
       setTimeout(() => {
         htmlElement.style.scrollBehavior = originalScrollBehavior;
@@ -2559,15 +2559,14 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Navega a la pantalla de previsualización de media (patrón nativo iOS)
+   * Abre el modal de previsualización de media sobre la página actual.
    */
   protected openMediaPreview(url: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.mediaPreview.setPreview(url);
-    this.router.navigateByUrl('/media-preview');
+    this.mediaPreview.open(url);
   }
 
   /**
@@ -2604,7 +2603,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
       this.notificationService.error('Error', 'Please select at least one recipient');
       return;
     }
-    
+
     // Proceder con el envío (el status se manejará en actuallySubmit)
     this.actuallySubmit();
   }

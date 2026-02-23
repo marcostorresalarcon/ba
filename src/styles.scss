@@ -23,9 +23,6 @@ body {
   /* Mejorar rendimiento de scroll */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Aceleración de hardware para mejor rendimiento */
-  transform: translateZ(0);
-  will-change: scroll-position;
 }
 
 ::selection {
@@ -62,9 +59,6 @@ select:focus-visible {
   -webkit-overflow-scrolling: touch;
   overflow-scrolling: touch;
   overscroll-behavior: contain;
-  /* Mejorar rendimiento */
-  transform: translateZ(0);
-  will-change: scroll-position;
 }
 
 /* Prevenir rebote en iOS */

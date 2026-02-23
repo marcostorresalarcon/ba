@@ -56,7 +56,7 @@ export class QuoteDetailPage {
   protected readonly groupedInputs = computed<CategoryGroup[]>(() => {
     const quote = this.quote();
     if (!quote) return [];
-    
+
     const experience = quote.experience?.toLowerCase() || 'basic';
     return this.inputsService.getOrderedGroupedInputs(experience);
   });
@@ -65,7 +65,7 @@ export class QuoteDetailPage {
     const quote = this.quote();
     const projectId = quote?.projectId;
     const isCustomer = this.isCustomer();
-    
+
     if (!quote) {
       return isCustomer
         ? [{ label: 'My Projects', route: '/my-projects' }, { label: 'Quote Detail' }]
@@ -164,9 +164,9 @@ export class QuoteDetailPage {
 
   protected formatDate(dateString?: string): string {
     if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
       year: 'numeric',
       hour: 'numeric',
       minute: 'numeric'
@@ -174,16 +174,16 @@ export class QuoteDetailPage {
   }
 
   protected getKitchenInfoKeys(info: Record<string, unknown>): string[] {
-    return Object.keys(info).filter(key => 
+    return Object.keys(info).filter(key =>
       !['countertopsFiles', 'backsplashFiles', 'audioNotes', 'sketchFiles', 'sketchFile', 'additionalComments', 'type'].includes(key)
     );
   }
 
   protected hasCategoryData(categoryGroup: CategoryGroup, quote: Quote): boolean {
     if (!quote.kitchenInformation) return false;
-    
+
     // Verificar si alguna subcategoría tiene datos
-    return categoryGroup.subcategories.some(sub => 
+    return categoryGroup.subcategories.some(sub =>
       sub.inputs.some(input => {
         const value = quote.kitchenInformation?.[input.name];
         // Consideramos que tiene datos si el valor no es null/undefined/false
@@ -234,15 +234,15 @@ export class QuoteDetailPage {
     if (!quote || !quote.materials) {
       return null;
     }
-    
+
     // El backend puede enviar materials con _id adicional, lo ignoramos
     const materials = quote.materials as Materials;
-    
+
     // Verificar que tenga al menos file o items
     if (!materials.file && (!materials.items || materials.items.length === 0)) {
       return null;
     }
-    
+
     return materials;
   }
 
@@ -304,15 +304,14 @@ export class QuoteDetailPage {
   }
 
   /**
-   * Navega a la pantalla de previsualización de media (patrón nativo iOS)
+   * Abre el modal de previsualización de media sobre la página actual.
    */
   protected openMediaPreview(url: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.mediaPreview.setPreview(url);
-    this.router.navigateByUrl('/media-preview');
+    this.mediaPreview.open(url);
   }
 
   // Métodos para acciones de aprobación
@@ -383,7 +382,7 @@ export class QuoteDetailPage {
     // Este método se mantiene por compatibilidad pero no hace nada
     const quote = this.quote();
     if (!quote) return;
-    
+
     this.notificationService.info('Information', 'Quotes are created directly in "sent" status and are automatically sent to the client.');
   }
 

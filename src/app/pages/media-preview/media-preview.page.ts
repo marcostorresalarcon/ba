@@ -1,6 +1,5 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
-import { Location } from '@angular/common';
 import { MediaPreviewService } from '../../core/services/media-preview/media-preview.service';
 
 @Component({
@@ -8,11 +7,25 @@ import { MediaPreviewService } from '../../core/services/media-preview/media-pre
   standalone: true,
   imports: [CommonModule],
   templateUrl: './media-preview.page.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
+    :host {
+      display: block;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      z-index: 2147483647 !important;
+      background-color: #1a1a1a; /* Charcoal background for the overlay */
+    }
+  `]
 })
 export class MediaPreviewPage implements OnInit {
   private readonly mediaPreview = inject(MediaPreviewService);
-  private readonly location = inject(Location);
 
   protected readonly url = this.mediaPreview.url;
   protected readonly type = this.mediaPreview.type;
@@ -29,9 +42,12 @@ export class MediaPreviewPage implements OnInit {
   });
 
   ngOnInit(): void {
+    // Si no hay URL al inicializar, cerramos (seguridad)
+    /*
     if (!this.mediaPreview.url()) {
-      this.goBack();
+      this.handleClose();
     }
+    */
   }
 
   protected getMediaType(): 'image' | 'video' {
@@ -45,8 +61,7 @@ export class MediaPreviewPage implements OnInit {
     return 'image';
   }
 
-  protected goBack(): void {
-    this.mediaPreview.clear();
-    this.location.back();
+  protected handleClose(): void {
+    this.mediaPreview.close();
   }
 }

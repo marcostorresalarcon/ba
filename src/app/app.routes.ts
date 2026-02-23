@@ -7,11 +7,6 @@ export const routes: Routes = [
     redirectTo: 'login'
   },
   {
-    path: 'media-preview',
-    loadComponent: () =>
-      import('./pages/media-preview/media-preview.page').then((m) => m.MediaPreviewPage)
-  },
-  {
     path: 'login',
     loadComponent: () => import('./pages/login/login.page').then((m) => m.LoginPage)
   },

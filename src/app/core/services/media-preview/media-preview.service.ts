@@ -3,8 +3,8 @@ import { Injectable, signal, computed } from '@angular/core';
 export type MediaType = 'image' | 'video' | 'auto';
 
 /**
- * Servicio para abrir la previsualización de medios en pantalla completa.
- * Patrón nativo iOS: navegar a una pantalla dedicada en lugar de modales.
+ * Servicio para abrir la previsualización de medios como un modal overlay
+ * sobre el formulario actual, sin cambiar de ruta ni resetear el scroll.
  */
 @Injectable({
   providedIn: 'root'
@@ -12,18 +12,28 @@ export type MediaType = 'image' | 'video' | 'auto';
 export class MediaPreviewService {
   private readonly _url = signal<string | null>(null);
   private readonly _type = signal<MediaType>('auto');
+  private readonly _isOpen = signal<boolean>(false);
 
   readonly url = this._url.asReadonly();
   readonly type = this._type.asReadonly();
+  readonly isOpen = this._isOpen.asReadonly();
   readonly hasMedia = computed(() => this._url() !== null);
 
   /**
-   * Configura la URL y tipo para la pantalla de previsualización.
-   * Llamar antes de navegar a /media-preview.
+   * Abre el modal de previsualización sin modificar la posición de scroll.
    */
-  setPreview(url: string, type: MediaType = 'auto'): void {
+  open(url: string, type: MediaType = 'auto'): void {
     this._url.set(url);
     this._type.set(type);
+    this._isOpen.set(true);
+  }
+
+  /**
+   * Cierra el modal de previsualización y limpia el estado.
+   */
+  close(): void {
+    this._isOpen.set(false);
+    this.clear();
   }
 
   /** Limpia el estado al salir de la pantalla. */

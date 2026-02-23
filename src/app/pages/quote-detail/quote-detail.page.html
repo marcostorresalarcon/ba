@@ -129,10 +129,19 @@
                           [alt]="file.split('/').pop()"
                         />
                       } @else if (isVideoUrl(file)) {
-                        <div class="h-32 w-full flex items-center justify-center bg-red-100 text-red-600">
-                          <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
+                        <video
+                          [src]="file"
+                          class="h-32 w-full object-cover"
+                          preload="metadata"
+                          muted
+                          playsinline
+                        ></video>
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                          <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                            <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </span>
                         </div>
                       } @else {
                         <div class="h-32 w-full flex items-center justify-center bg-red-100 text-red-600">
@@ -323,10 +332,19 @@
               alt="Countertop file"
             />
             } @else if (isVideoUrl(file)) {
-            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
-              <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+            <video
+              [src]="file"
+              class="h-32 w-full object-cover"
+              preload="metadata"
+              muted
+              playsinline
+            ></video>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+              <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </span>
             </div>
             } @else {
             <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
@@ -370,10 +388,19 @@
               alt="Backsplash file"
             />
             } @else if (isVideoUrl(file)) {
-            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
-              <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+            <video
+              [src]="file"
+              class="h-32 w-full object-cover"
+              preload="metadata"
+              muted
+              playsinline
+            ></video>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+              <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </span>
             </div>
             } @else {
             <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
@@ -532,10 +559,19 @@
                       [alt]="file.split('/').pop()"
                     />
                   } @else if (isVideoUrl(file)) {
-                    <div class="h-32 w-full flex items-center justify-center bg-fog/20 text-charcoal">
-                      <svg class="h-12 w-12 text-clay" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
+                    <video
+                      [src]="file"
+                      class="h-32 w-full object-cover"
+                      preload="metadata"
+                      muted
+                      playsinline
+                    ></video>
+                    <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                      <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                        <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </span>
                     </div>
                   } @else {
                     <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">

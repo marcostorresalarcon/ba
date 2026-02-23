@@ -93,7 +93,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
   // Referencia al componente de materiales
   @ViewChild(MaterialsTabComponent, { static: false }) protected materialsTabComponent: MaterialsTabComponent | null = null;
-  
+
   // Quote original para obtener versionNumber
   private originalQuote: Quote | null = null;
 
@@ -183,7 +183,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       const inputs = this.inputsService.inputs();
       if (inputs.length > 0) {
         this.generateDynamicFormFields(inputs);
-        
+
         // Cargar datos guardados después de generar los campos dinámicos
         // Solo si no hay quoteId y aún no se han cargado los datos guardados
         if (!this.quoteId && !this.hasLoadedSavedData) {
@@ -201,7 +201,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     // Verificar si es un nuevo estimado (sin quoteId y con flag isNewQuote)
     const isNewQuote = sessionStorage.getItem('isNewQuote') === 'true';
     const hasPendingCanvasResult = sessionStorage.getItem('drawingCanvasResult') !== null;
-    
+
     // Si es un nuevo estimado y no hay resultado pendiente del canvas, limpiar localStorage
     // No limpiar si:
     // - Hay quoteId (es una nueva versión de un estimado existente)
@@ -216,7 +216,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Establecer la categoría en el formulario
     this.form.controls.category.setValue(this.category);
-    
+
     this.form.patchValue({
       customer: {
         name: `${this.customer.name} ${this.customer.lastName}`,
@@ -271,7 +271,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         const navEnd = event as NavigationEnd;
         console.log('[AdditionalWork] NavigationEnd - URL:', navEnd.url);
         console.log('[AdditionalWork] NavigationEnd - Verificando resultado pendiente');
-        
+
         // Procesar resultado del canvas si hay uno pendiente después de navegar
         setTimeout(() => {
           this.processPendingCanvasResult();
@@ -286,16 +286,16 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     console.log('[AdditionalWork] processPendingCanvasResult - Verificando resultado pendiente');
     const hasPending = this.drawingCanvasService.hasPendingResult();
     console.log('[AdditionalWork] processPendingCanvasResult - hasPendingResult:', hasPending);
-    
+
     if (hasPending) {
       const resultStr = sessionStorage.getItem('drawingCanvasResult');
       console.log('[AdditionalWork] processPendingCanvasResult - resultStr existe:', !!resultStr);
-      
+
       if (resultStr) {
         const result = JSON.parse(resultStr);
         console.log('[AdditionalWork] processPendingCanvasResult - result.action:', result.action);
         console.log('[AdditionalWork] processPendingCanvasResult - result.dataUrl existe:', !!result.dataUrl);
-        
+
         if (result.action === 'save' && result.dataUrl) {
           // Limpiar el resultado ANTES de procesarlo para evitar procesamiento duplicado
           console.log('[AdditionalWork] processPendingCanvasResult - Limpiando sessionStorage antes de procesar');
@@ -330,7 +330,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       this.processPendingCanvasResult();
     }, 100);
   }
-  
+
   /**
    * Configura la sincronización de materiales con el formulario
    */
@@ -340,7 +340,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       this.materialsTabComponent.setUpdateCallback((value) => {
         this.form.controls.materials.setValue(value, { emitEvent: false });
       });
-      
+
       // Si hay materiales cargados, establecerlos en el componente
       if (this.form.controls.materials.value) {
         this.materialsTabComponent.setMaterialsValue(this.form.controls.materials.value);
@@ -520,14 +520,14 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         // Hacer merge de sketchFiles: combinar los existentes con los del quote (sin duplicados)
         const existingSketches = this.form.controls.sketchFiles.value ?? [];
         const quoteSketches = quote.sketchFiles ?? [];
-        
+
         // Combinar ambos arrays sin duplicados
         const mergedSketches = [...new Set([...existingSketches, ...quoteSketches])];
         console.log('[AdditionalWork] loadQuoteForEdit - Merging sketches');
         console.log('[AdditionalWork] loadQuoteForEdit - Existing sketches:', existingSketches);
         console.log('[AdditionalWork] loadQuoteForEdit - Quote sketches:', quoteSketches);
         console.log('[AdditionalWork] loadQuoteForEdit - Merged sketches:', mergedSketches);
-        
+
         if (mergedSketches.length > 0) {
           this.form.controls.sketchFiles.setValue(mergedSketches, { emitEvent: false });
         }
@@ -575,7 +575,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Normalizar el título (case insensitive, sin espacios extra)
     const normalizedTitle = subcategoryGroup.title.trim().toLowerCase();
-    
+
     // Verificar si todos los inputs tienen el mismo label que el título
     const allLabelsMatch = subcategoryGroup.inputs.every(input => {
       const normalizedLabel = input.label.trim().toLowerCase();
@@ -597,10 +597,10 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Normalizar el título de la categoría
     const normalizedCategoryTitle = categoryGroup.title.trim().toLowerCase();
-    
+
     // Obtener todos los inputs de todas las subcategorías
     const allInputs = categoryGroup.subcategories.flatMap(sub => sub.inputs);
-    
+
     if (allInputs.length === 0) {
       return true;
     }
@@ -704,11 +704,11 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
     // Obtener materials: primero intentar del componente si está disponible, sino del formulario
     let materials: Materials | null = null;
-    
+
     if (this.materialsTabComponent) {
       materials = this.materialsTabComponent.getMaterialsValue();
     }
-    
+
     if (materials === null || materials === undefined) {
       materials = formValue.materials ?? null;
     }
@@ -750,7 +750,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     } else if (this.category === 'basement') {
       quotePayload.basementInformation = additionalWorkInformation;
     }
-    
+
     // Agregar materials solo si tiene valor
     if (materials !== null && materials !== undefined) {
       quotePayload.materials = materials;
@@ -763,13 +763,13 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
         next: (quote) => {
           // Limpiar datos guardados después de enviar exitosamente
           this.clearSavedFormData();
-          
+
           // Resetear flag de draft explícito
           this.isExplicitDraft = false;
-          
+
           // Cerrar la vista de recipients
           this.showRecipientsView.set(false);
-          
+
           // Guardar el quote creado para mostrar en la pantalla de confirmación
           this.submittedQuote.set(quote);
           // Mostrar pantalla de confirmación
@@ -1071,15 +1071,15 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
           const currentAudios = this.form.controls.audioNotes.value || [];
           const newAudio = response.success
             ? {
-                url,
-                transcription: response.data.transcription,
-                summary: response.data.summary,
-              }
+              url,
+              transcription: response.data.transcription,
+              summary: response.data.summary,
+            }
             : { url };
-          
+
           // Agregar el nuevo audio al inicio del array (más reciente primero)
           this.form.controls.audioNotes.setValue([newAudio, ...currentAudios], { emitEvent: true });
-          
+
           if (response.success) {
             this.notificationService.success('Success', 'Audio processed successfully');
           } else {
@@ -1163,11 +1163,11 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
     console.log('[AdditionalWork] openDrawingCanvas - Iniciando');
     const currentSketches = this.form.controls.sketchFiles.value ?? [];
     console.log('[AdditionalWork] openDrawingCanvas - Sketches actuales:', currentSketches.length, currentSketches);
-    
+
     // Obtener la URL actual para regresar después
     const currentUrl = this.router.url;
     console.log('[AdditionalWork] openDrawingCanvas - URL actual:', currentUrl);
-    
+
     // Abrir el canvas navegando a la nueva página
     this.drawingCanvasService.openCanvas(currentUrl, (dataUrl) => this.onSketchSaved(dataUrl));
   }
@@ -1178,7 +1178,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   protected async onSketchSaved(dataUrl: string): Promise<void> {
     console.log('[AdditionalWork] onSketchSaved - Iniciando guardado de sketch');
     console.log('[AdditionalWork] onSketchSaved - dataUrl recibido:', dataUrl.substring(0, 50) + '...');
-    
+
     this.isUploadingSketch.set(true);
 
     try {
@@ -1199,12 +1199,12 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       const currentSketches = this.form.controls.sketchFiles.value ?? [];
       console.log('[AdditionalWork] onSketchSaved - Sketches actuales ANTES de agregar:', currentSketches.length, currentSketches);
       console.log('[AdditionalWork] onSketchSaved - URL ya existe?', currentSketches.includes(url));
-      
+
       if (!currentSketches.includes(url)) {
         const newSketches = [...currentSketches, url];
         console.log('[AdditionalWork] onSketchSaved - Nuevos sketches:', newSketches.length, newSketches);
         this.form.controls.sketchFiles.setValue(newSketches, { emitEvent: true });
-        
+
         // Verificar inmediatamente después de setValue
         const afterSetValue = this.form.controls.sketchFiles.value ?? [];
         console.log('[AdditionalWork] onSketchSaved - Sketches DESPUÉS de setValue:', afterSetValue.length, afterSetValue);
@@ -1218,11 +1218,11 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
           const beforeSave = this.form.controls.sketchFiles.value ?? [];
           console.log('[AdditionalWork] onSketchSaved - Sketches ANTES de saveFormData:', beforeSave.length, beforeSave);
           this.saveFormData();
-          
+
           // Verificar después de guardar
           const afterSave = this.form.controls.sketchFiles.value ?? [];
           console.log('[AdditionalWork] onSketchSaved - Sketches DESPUÉS de saveFormData:', afterSave.length, afterSave);
-          
+
           // Forzar otra vez la detección de cambios después de guardar
           this.cdr.markForCheck();
         }, 100);
@@ -1231,7 +1231,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       }
 
       this.notificationService.success('Success', 'Sketch saved successfully');
-      
+
       // Hacer scroll suave hacia la sección de notas después de guardar
       setTimeout(() => {
         this.scrollToNotesSection();
@@ -1625,15 +1625,14 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Navega a la pantalla de previsualización de media (patrón nativo iOS)
+   * Abre el modal de previsualización de media sobre la página actual.
    */
   protected openMediaPreview(url: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.mediaPreview.setPreview(url);
-    this.router.navigateByUrl('/media-preview');
+    this.mediaPreview.open(url);
   }
 
   /**
@@ -1742,9 +1741,9 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       console.log('[AdditionalWork] saveFormData - Guardando formulario');
       console.log('[AdditionalWork] saveFormData - sketchFiles en formValue:', sketchFiles.length, sketchFiles);
       console.log('[AdditionalWork] saveFormData - storageKey:', storageKey);
-      
+
       localStorage.setItem(storageKey, JSON.stringify(formValue));
-      
+
       // Verificar que se guardó correctamente
       const saved = localStorage.getItem(storageKey);
       if (saved) {
@@ -1768,22 +1767,22 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
       console.log('[AdditionalWork] loadSavedFormData - storageKey:', storageKey);
       const savedData = localStorage.getItem(storageKey);
       console.log('[AdditionalWork] loadSavedFormData - savedData existe:', !!savedData);
-      
+
       if (savedData) {
         const formValue = JSON.parse(savedData);
         const savedSketches = formValue.sketchFiles ?? [];
         console.log('[AdditionalWork] loadSavedFormData - sketchFiles en datos guardados:', savedSketches.length, savedSketches);
-        
+
         // Restaurar valores del formulario, pero mantener los valores iniciales si no hay guardados
         this.form.patchValue(formValue, { emitEvent: false });
-        
+
         // Verificar después de patchValue
         const afterPatch = this.form.controls.sketchFiles.value ?? [];
         console.log('[AdditionalWork] loadSavedFormData - sketchFiles DESPUÉS de patchValue:', afterPatch.length, afterPatch);
 
         // Actualizar trigger para recalcular el costo total
         this.formChangeTrigger.update((val) => val + 1);
-        
+
         // Forzar detección de cambios para actualizar la UI
         this.cdr.markForCheck();
       } else {

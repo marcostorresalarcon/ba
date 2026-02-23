@@ -57,8 +57,15 @@ export class MediaPickerService {
 
       const files: File[] = [];
       for (const pickedFile of result.files) {
-        if (pickedFile.data) {
-          // Convertir base64 a Blob
+        if (pickedFile.path) {
+          const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+            type: pickedFile.mimeType || blob.type || 'application/octet-stream'
+          });
+          files.push(file);
+        } else if (pickedFile.data) {
           const base64Data = pickedFile.data;
           const byteCharacters = atob(base64Data);
           const byteNumbers = new Array(byteCharacters.length);
@@ -67,18 +74,8 @@ export class MediaPickerService {
           }
           const byteArray = new Uint8Array(byteNumbers);
           const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
-
           const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
             type: pickedFile.mimeType || 'application/octet-stream'
-          });
-          files.push(file);
-        } else if (pickedFile.path) {
-          // Si no hay data pero hay path, usar fetch
-          const fileUri = Capacitor.convertFileSrc(pickedFile.path);
-          const response = await fetch(fileUri);
-          const blob = await response.blob();
-          const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
-            type: pickedFile.mimeType || blob.type || 'application/octet-stream'
           });
           files.push(file);
         }
@@ -168,12 +165,13 @@ export class MediaPickerService {
 
   /**
    * Selecciona medios usando FilePicker (para videos y archivos)
+   * readData: false preserva la calidad original
    */
   private async pickMediaNativeWithFilePicker(): Promise<File[]> {
     try {
       const result = await FilePicker.pickFiles({
         types: ['image/*', 'video/*', 'application/*', 'text/*'],
-        readData: true
+        readData: false
       });
 
       if (!result.files || result.files.length === 0) {
@@ -930,8 +928,8 @@ export class MediaPickerService {
       // En iOS, esto abre la galería de fotos nativa mostrando videos (no el selector de archivos)
       // IMPORTANTE: habilitar skipTranscoding para evitar que iOS recodifique y reduzca la calidad del video.
       const result = await FilePicker.pickVideos({
-        limit: allowMultiple ? 10 : 1, // Número máximo de videos a seleccionar
-        readData: true,
+        limit: allowMultiple ? 10 : 1,
+        readData: false,
         skipTranscoding: true
       });
 
@@ -942,8 +940,7 @@ export class MediaPickerService {
         return [];
       }
 
-      // 3. Procesar archivos - ACEPTAR CUALQUIER ARCHIVO (sin restricciones de formato)
-      // pickVideos() ya filtra por videos, pero procesamos todos sin restricciones adicionales
+      // 3. Procesar archivos - readData:false + skipTranscoding preservan calidad original
       const allFiles = await this.convertPickedFilesToFiles(result.files, false);
 
       // Aceptar todos los archivos retornados por pickVideos() sin filtros adicionales
@@ -1063,7 +1060,7 @@ export class MediaPickerService {
     try {
       const result = await FilePicker.pickFiles({
         types: ['application/*', 'text/*'],
-        readData: true
+        readData: false
       });
 
       if (!result.files || result.files.length === 0) {
@@ -1160,8 +1157,7 @@ export class MediaPickerService {
 
   /**
    * Convierte archivos seleccionados por FilePicker a File[]
-   * @param pickedFiles - Array de archivos seleccionados por FilePicker
-   * @param validateVideoType - Si es true, valida que todos los archivos sean videos
+   * Prioriza path sobre data para preservar calidad original (evita transcodificación)
    */
   private async convertPickedFilesToFiles(pickedFiles: any[], validateVideoType = false): Promise<File[]> {
     const files: File[] = [];
@@ -1169,7 +1165,12 @@ export class MediaPickerService {
       let mimeType = pickedFile.mimeType || 'application/octet-stream';
       let blob: Blob;
 
-      if (pickedFile.data) {
+      if (pickedFile.path) {
+        const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+        const response = await fetch(fileUri);
+        blob = await response.blob();
+        mimeType = blob.type || mimeType;
+      } else if (pickedFile.data) {
         const base64Data = pickedFile.data;
         const byteCharacters = atob(base64Data);
         const byteNumbers = new Array(byteCharacters.length);
@@ -1178,13 +1179,6 @@ export class MediaPickerService {
         }
         const byteArray = new Uint8Array(byteNumbers);
         blob = new Blob([byteArray], { type: mimeType });
-      } else if (pickedFile.path) {
-        // Si no hay data pero hay path, usar fetch
-        const fileUri = Capacitor.convertFileSrc(pickedFile.path);
-        const response = await fetch(fileUri);
-        blob = await response.blob();
-        // Usar el tipo MIME del blob si está disponible
-        mimeType = blob.type || mimeType;
       } else {
         continue; // Saltar archivos sin data ni path
       }
@@ -1218,7 +1212,7 @@ export class MediaPickerService {
       try {
         const result = await FilePicker.pickFiles({
           types: ['image/*', 'video/*', 'application/*', 'text/*'],
-          readData: true
+          readData: false
         });
 
         if (!result.files || result.files.length === 0) {
@@ -1230,7 +1224,15 @@ export class MediaPickerService {
         const files: File[] = [];
 
         for (const pickedFile of filesToProcess) {
-          if (pickedFile.data) {
+          if (pickedFile.path) {
+            const fileUri = Capacitor.convertFileSrc(pickedFile.path);
+            const response = await fetch(fileUri);
+            const blob = await response.blob();
+            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
+              type: pickedFile.mimeType || blob.type || 'application/octet-stream'
+            });
+            files.push(file);
+          } else if (pickedFile.data) {
             const base64Data = pickedFile.data;
             const byteCharacters = atob(base64Data);
             const byteNumbers = new Array(byteCharacters.length);
@@ -1239,17 +1241,8 @@ export class MediaPickerService {
             }
             const byteArray = new Uint8Array(byteNumbers);
             const blob = new Blob([byteArray], { type: pickedFile.mimeType || 'application/octet-stream' });
-
             const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
               type: pickedFile.mimeType || 'application/octet-stream'
-            });
-            files.push(file);
-          } else if (pickedFile.path) {
-            const fileUri = Capacitor.convertFileSrc(pickedFile.path);
-            const response = await fetch(fileUri);
-            const blob = await response.blob();
-            const file = new File([blob], pickedFile.name || `file-${Date.now()}`, {
-              type: pickedFile.mimeType || blob.type || 'application/octet-stream'
             });
             files.push(file);
           }
