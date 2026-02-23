@@ -41,7 +41,7 @@ import { LogService } from '../../../../core/services/log/log.service';
 import { LoadingService } from '../../../../core/services/loading/loading.service';
 import { DynamicFormFieldComponent } from '../kitchen-quote-form/dynamic-form-field/dynamic-form-field.component';
 import { MaterialsTabComponent } from '../kitchen-quote-form/tabs/materials-tab/materials-tab.component';
-import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
+import { MediaPreviewService } from '../../../../core/services/media-preview/media-preview.service';
 import { MediaPickerMenuComponent } from '../../../../shared/ui/media-picker-menu/media-picker-menu.component';
 import type { AdditionalWorkQuoteFormValue, AdditionalWorkQuoteFormGroup } from './additional-work-quote-form.types';
 
@@ -53,7 +53,6 @@ import type { AdditionalWorkQuoteFormValue, AdditionalWorkQuoteFormGroup } from 
     ReactiveFormsModule,
     DynamicFormFieldComponent,
     MaterialsTabComponent,
-    MediaPreviewModalComponent,
     MediaPickerMenuComponent
   ],
   templateUrl: './additional-work-quote-form.component.html',
@@ -78,6 +77,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   private readonly loadingService = inject(LoadingService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly mediaPreview = inject(MediaPreviewService);
 
   @Input({ required: true }) project!: Project;
   @Input({ required: true }) customer!: Customer;
@@ -90,7 +90,7 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
 
   protected readonly activeTab = signal<string>('additional-work-details');
   protected readonly showCostCounter = signal<boolean>(false);
-  
+
   // Referencia al componente de materiales
   @ViewChild(MaterialsTabComponent, { static: false }) protected materialsTabComponent: MaterialsTabComponent | null = null;
   
@@ -113,9 +113,6 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   protected readonly uploadingAdditionalMedia = signal<
     Map<string, { file: File; preview: string; progress: number }>
   >(new Map());
-
-  // Estado de previsualización de media
-  protected readonly previewMediaUrl = signal<string | null>(null);
 
   // Estados para la sección de estimación
   protected readonly showBudgetDetails = signal<boolean>(false);
@@ -1628,21 +1625,15 @@ export class AdditionalWorkQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Abre el modal de previsualización de media
+   * Navega a la pantalla de previsualización de media (patrón nativo iOS)
    */
   protected openMediaPreview(url: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.previewMediaUrl.set(url);
-  }
-
-  /**
-   * Cierra el modal de previsualización
-   */
-  protected closeMediaPreview(): void {
-    this.previewMediaUrl.set(null);
+    this.mediaPreview.setPreview(url);
+    this.router.navigateByUrl('/media-preview');
   }
 
   /**

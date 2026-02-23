@@ -8,7 +8,7 @@ import { QuoteService } from '../../core/services/quote/quote.service';
 import { InvoiceService } from '../../core/services/invoice/invoice.service';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 import { LayoutService } from '../../core/services/layout/layout.service';
-import { MediaPreviewModalComponent } from '../../shared/ui/media-preview-modal/media-preview-modal.component';
+import { MediaPreviewService } from '../../core/services/media-preview/media-preview.service';
 import { RejectionCommentsModalComponent, type RejectionCommentData } from '../../shared/ui/rejection-comments-modal/rejection-comments-modal.component';
 import { QuoteApprovalActionsComponent } from '../../features/quotes/ui/quote-approval-actions/quote-approval-actions.component';
 import type { Quote, QuoteCustomer, Materials, MaterialItem } from '../../core/models/quote.model';
@@ -23,7 +23,6 @@ import { PdfService } from '../../core/services/pdf/pdf.service';
   standalone: true,
   imports: [
     CommonModule,
-    MediaPreviewModalComponent,
     RejectionCommentsModalComponent,
     QuoteApprovalActionsComponent
   ],
@@ -42,12 +41,12 @@ export class QuoteDetailPage {
   private readonly pdfService = inject(PdfService);
   private readonly layoutService = inject(LayoutService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly mediaPreview = inject(MediaPreviewService);
 
   protected readonly isLoading = signal(true);
   protected readonly quote = signal<Quote | null>(null);
   protected readonly invoices = signal<Invoice[]>([]);
   protected readonly activeTab = signal<string>('kitchen-details');
-  protected readonly previewMediaUrl = signal<string | null>(null);
   protected readonly showRejectionModal = signal(false);
 
   protected readonly isCustomer = computed(() => this.authService.user()?.role === 'customer');
@@ -305,21 +304,15 @@ export class QuoteDetailPage {
   }
 
   /**
-   * Abre el modal de previsualización de media
+   * Navega a la pantalla de previsualización de media (patrón nativo iOS)
    */
   protected openMediaPreview(url: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.previewMediaUrl.set(url);
-  }
-
-  /**
-   * Cierra el modal de previsualización
-   */
-  protected closeMediaPreview(): void {
-    this.previewMediaUrl.set(null);
+    this.mediaPreview.setPreview(url);
+    this.router.navigateByUrl('/media-preview');
   }
 
   // Métodos para acciones de aprobación

@@ -152,7 +152,8 @@ export class IosMediaService {
 
     // En web, intentar comprimir usando MediaRecorder
     try {
-      return await this.compressVideoWeb(file, targetBitrate, maxSizeBytes);
+      // Aumentar bitrate y resolución para mejor calidad (1080p, 5Mbps)
+      return await this.compressVideoWeb(file, 5000000, maxSizeBytes);
     } catch (error) {
       // Si la compresión falla, validar y retornar el original si es aceptable
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -182,9 +183,9 @@ export class IosMediaService {
       video.playsInline = true;
 
       video.onloadedmetadata = () => {
-        // Reducir resolución si es muy grande (máximo 1280x720)
-        const maxWidth = 1280;
-        const maxHeight = 720;
+        // Reducir resolución si es muy grande (máximo 1920x1080 - 1080p)
+        const maxWidth = 1920;
+        const maxHeight = 1080;
         let width = video.videoWidth;
         let height = video.videoHeight;
 

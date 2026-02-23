@@ -772,14 +772,6 @@
   </div>
     }
 
-  @if (previewMediaUrl(); as url) {
-    <app-media-preview-modal
-      [url]="url"
-      [alt]="url.split('/').pop() || 'Media preview'"
-      (close)="closeMediaPreview()"
-    />
-  }
-
   <!-- Rejection Comments Modal -->
   <app-rejection-comments-modal
     [isOpen]="showRejectionModal()"

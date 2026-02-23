@@ -1,0 +1,41 @@
+<section class="fixed inset-0 z-[9999] flex flex-col bg-charcoal">
+  <!-- Header con botón atrás - safe area iOS -->
+  <header class="flex shrink-0 items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+    <button
+      type="button"
+      (click)="goBack()"
+      class="flex h-10 w-10 items-center justify-center rounded-full text-white/90 transition active:bg-white/20"
+      aria-label="Cerrar"
+    >
+      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+    <span class="text-sm font-medium text-white/80 truncate max-w-[60%]">{{ fileName() }}</span>
+    <div class="w-10"></div>
+  </header>
+
+  <!-- Contenido a pantalla completa - safe area bottom para home indicator iOS -->
+  <div class="flex flex-1 min-h-0 items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    @if (url(); as mediaUrl) {
+      @if (getMediaType() === 'image') {
+        <img
+          [src]="mediaUrl"
+          [alt]="fileName()"
+          class="max-w-full max-h-full object-contain"
+        />
+      } @else if (getMediaType() === 'video') {
+        <video
+          [src]="mediaUrl"
+          controls
+          playsinline
+          class="max-w-full max-h-full object-contain"
+        >
+          Tu dispositivo no soporta la reproducción de video.
+        </video>
+      }
+    } @else {
+      <p class="text-white/60">No hay contenido para mostrar.</p>
+    }
+  </div>
+</section>

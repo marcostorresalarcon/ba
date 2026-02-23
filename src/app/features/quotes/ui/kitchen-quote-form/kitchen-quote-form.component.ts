@@ -44,7 +44,7 @@ import { LogService } from '../../../../core/services/log/log.service';
 import { LoadingService } from '../../../../core/services/loading/loading.service';
 import { DynamicFormFieldComponent } from './dynamic-form-field/dynamic-form-field.component';
 import { MaterialsTabComponent } from './tabs/materials-tab/materials-tab.component';
-import { MediaPreviewModalComponent } from '../../../../shared/ui/media-preview-modal/media-preview-modal.component';
+import { MediaPreviewService } from '../../../../core/services/media-preview/media-preview.service';
 import { MediaPickerMenuComponent } from '../../../../shared/ui/media-picker-menu/media-picker-menu.component';
 import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quote-form.types';
 
@@ -56,7 +56,6 @@ import type { KitchenQuoteFormValue, KitchenQuoteFormGroup } from './kitchen-quo
     ReactiveFormsModule,
     DynamicFormFieldComponent,
     MaterialsTabComponent,
-    MediaPreviewModalComponent,
     MediaPickerMenuComponent,
   ],
   templateUrl: './kitchen-quote-form.component.html',
@@ -81,6 +80,7 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   private readonly loadingService = inject(LoadingService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly mediaPreview = inject(MediaPreviewService);
 
   @Input({ required: true }) project!: Project;
   @Input({ required: true }) customer!: Customer;
@@ -119,9 +119,6 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   protected readonly uploadingAdditionalMedia = signal<
     Map<string, { file: File; preview: string; progress: number }>
   >(new Map());
-
-  // Estado de previsualización de media
-  protected readonly previewMediaUrl = signal<string | null>(null);
 
   // Quote original para obtener versionNumber
   private originalQuote: Quote | null = null;
@@ -2562,21 +2559,15 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Abre el modal de previsualización de media
+   * Navega a la pantalla de previsualización de media (patrón nativo iOS)
    */
   protected openMediaPreview(url: string, event?: Event): void {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    this.previewMediaUrl.set(url);
-  }
-
-  /**
-   * Cierra el modal de previsualización
-   */
-  protected closeMediaPreview(): void {
-    this.previewMediaUrl.set(null);
+    this.mediaPreview.setPreview(url);
+    this.router.navigateByUrl('/media-preview');
   }
 
   /**

@@ -1037,12 +1037,4 @@
   </form>
   }
 
-  <!-- Modals - Always available, positioned outside normal flow -->
-  @if (previewMediaUrl(); as url) {
-    <app-media-preview-modal
-      [url]="url"
-      [alt]="url.split('/').pop() || 'Media preview'"
-      (close)="closeMediaPreview()"
-    />
-  }
 </section>

@@ -1,5 +1,5 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter, signal, effect, DestroyRef, inject } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter, signal, effect, DestroyRef, inject, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-media-preview-modal',
@@ -8,8 +8,9 @@ import { ChangeDetectionStrategy, Component, Input, Output, EventEmitter, signal
   templateUrl: './media-preview-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MediaPreviewModalComponent {
+export class MediaPreviewModalComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
 
   @Input({ required: true }) url!: string;
   @Input() type: 'image' | 'video' | 'auto' = 'auto';
@@ -17,6 +18,7 @@ export class MediaPreviewModalComponent {
   @Output() close = new EventEmitter<void>();
 
   protected readonly isOpen = signal(true);
+  protected readonly topPosition = signal(0);
 
   constructor() {
     // Cerrar con Escape
@@ -34,6 +36,16 @@ export class MediaPreviewModalComponent {
       }
       return undefined;
     });
+  }
+
+  ngOnInit(): void {
+    // Calcular la posición de scroll actual para mostrar el modal en el viewport correcto
+    // Esto soluciona el problema de que el modal aparezca arriba del todo si el padre tiene transform
+    const scrollY = window.scrollY || this.document.documentElement.scrollTop || this.document.body.scrollTop || 0;
+    this.topPosition.set(scrollY);
+    
+    // Bloquear scroll del body
+    this.document.body.style.overflow = 'hidden';
   }
 
   protected getMediaType(): 'image' | 'video' {
@@ -60,6 +72,7 @@ export class MediaPreviewModalComponent {
   }
 
   protected closeModal(): void {
+    this.document.body.style.overflow = '';
     this.isOpen.set(false);
     this.close.emit();
   }
