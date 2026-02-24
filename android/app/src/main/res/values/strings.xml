@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">BA Kitchen &amp; Bath Design</string>
-    <string name="title_activity_main">BA Kitchen &amp; Bath Design</string>
+    <string name="app_name">BA Kitchen &amp; Bath</string>
+    <string name="title_activity_main">BA Kitchen &amp; Bath</string>
     <string name="package_name">com.bakitchenandbathdesigns.appprod</string>
     <string name="custom_url_scheme">com.bakitchenandbathdesigns.appprod</string>
 </resources>

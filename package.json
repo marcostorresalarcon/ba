@@ -1,15 +1,18 @@
 {
   "name": "ba",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:production": "ng build --configuration=production",
+    "build:appflow": "npm run generate:icons && npm run build:production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "sync:ios": "node scripts/sync-ios-icon.js && npx cap sync ios",
-    "sync:icon": "node scripts/sync-ios-icon.js"
+    "generate:icons": "node scripts/generate-icons.js",
+    "sync:ios": "npm run generate:icons && npx cap sync ios",
+    "sync:icon": "npm run generate:icons"
   },
   "prettier": {
     "printWidth": 100,
