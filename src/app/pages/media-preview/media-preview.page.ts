@@ -22,6 +22,18 @@ import { MediaPreviewService } from '../../core/services/media-preview/media-pre
       z-index: 2147483647 !important;
       background-color: #1a1a1a; /* Charcoal background for the overlay */
     }
+
+    /* Video a pantalla completa: resolución nativa, sin escalado que degrade calidad */
+    .media-preview-video {
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      min-height: 200px;
+      max-height: calc(100vh - 140px);
+      max-height: calc(100dvh - 140px);
+      object-fit: contain;
+      background: #000;
+    }
   `]
 })
 export class MediaPreviewPage implements OnInit {

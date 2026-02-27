@@ -19,12 +19,18 @@
 
   <!-- Contenido a pantalla completa - safe area bottom para home indicator iOS -->
   <div
-    class="flex flex-1 min-h-0 items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+    class="flex flex-1 min-h-0 w-full items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
   >
     @if (url(); as mediaUrl) { @if (getMediaType() === 'image') {
     <img [src]="mediaUrl" [alt]="fileName()" class="max-w-full max-h-full object-contain" />
     } @else if (getMediaType() === 'video') {
-    <video [src]="mediaUrl" controls playsinline class="max-w-full max-h-full object-contain">
+    <video
+      [src]="mediaUrl"
+      controls
+      playsinline
+      preload="auto"
+      class="media-preview-video"
+    >
       Tu dispositivo no soporta la reproducción de video.
     </video>
     } } @else {
