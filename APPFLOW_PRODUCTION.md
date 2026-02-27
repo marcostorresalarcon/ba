@@ -5,7 +5,7 @@ Checklist para verificar que el proyecto está listo para desplegar en App Store
 ## ✅ Verificación de producción
 
 ### 1. Build y entorno
-- [x] **package.json** `version`: 1.1.0
+- [x] **package.json** `version`: 1.2.0
 - [x] **angular.json** `defaultConfiguration`: production
 - [x] **environment.production.ts** con API y S3 de producción
 - [x] **fileReplacements** en producción usa `environment.production.ts`
@@ -19,8 +19,8 @@ Checklist para verificar que el proyecto está listo para desplegar en App Store
 - [x] **project.pbxproj** Release: `PRODUCT_BUNDLE_IDENTIFIER` = com.bakitchenandbathdesigns.appprod
 - [x] **project.pbxproj** Release: `CODE_SIGN_STYLE` = Automatic
 - [x] **project.pbxproj** Release: `CODE_SIGN_IDENTITY` = Apple Distribution
-- [x] **project.pbxproj** `MARKETING_VERSION` = 1.1.0
-- [x] **project.pbxproj** `CURRENT_PROJECT_VERSION` = 6
+- [x] **project.pbxproj** `MARKETING_VERSION` = 1.2.0
+- [x] **project.pbxproj** `CURRENT_PROJECT_VERSION` = 7
 - [x] **Info.plist** `CFBundleDisplayName` = BA Kitchen & Bath
 - [x] **exportOptions.plist** method = app-store
 
