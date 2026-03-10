@@ -1,14 +1,13 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.bakitchenandbathdesigns.appprod',
-  appName: 'BA Kitchen & Bath',
+  appId: 'com.bakitchenandbathdesigns.app',
+  appName: 'BA Kitchen & Bath (Dev)',
   webDir: 'dist/ba/browser',
   server: {
     // Configuraciones para mejorar el rendimiento del webview
     androidScheme: 'https',
     iosScheme: 'https',
-    // Deshabilitar errores de CORS en desarrollo (solo para desarrollo)
     // hostname: 'localhost',
     // Permitir peticiones a dominios externos (S3)
     allowNavigation: [
@@ -19,13 +18,14 @@ const config: CapacitorConfig = {
   },
   android: {
     // Mejoras de rendimiento para Android
-    allowMixedContent: false,
+    allowMixedContent: true,
     captureInput: true,
-    webContentsDebuggingEnabled: false
+    webContentsDebuggingEnabled: true
   },
   ios: {
     // Mejoras de rendimiento para iOS
-    // El scroll se maneja automáticamente por el webview
+    // webContentsDebuggingEnabled es true por defecto en modo debug de Xcode, 
+    // pero en Capacitor 5+ se puede forzar si es necesario.
   },
   plugins: {
     // Configuraciones de plugins que pueden afectar el scroll
