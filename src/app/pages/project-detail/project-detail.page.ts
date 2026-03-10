@@ -8,7 +8,7 @@ import {
   inject,
   signal
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 
@@ -23,11 +23,19 @@ import { NotificationService } from '../../core/services/notification/notificati
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 import { LayoutService } from '../../core/services/layout/layout.service';
 import { QuoteListComponent } from '../../features/quotes/ui/quote-list/quote-list.component';
+import { ProjectCommentsComponent } from '../../features/projects/ui/project-comments/project-comments.component';
+import { ProjectAppointmentsComponent } from '../../features/projects/ui/project-appointments/project-appointments.component';
 
 @Component({
   selector: 'app-project-detail-page',
   standalone: true,
-  imports: [CommonModule, QuoteListComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    QuoteListComponent,
+    ProjectCommentsComponent,
+    ProjectAppointmentsComponent
+  ],
   templateUrl: './project-detail.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -60,12 +68,43 @@ export class ProjectDetailPage {
   protected readonly breadcrumbs = computed<LayoutBreadcrumb[]>(() => {
     const company = this.selectedCompany();
     const project = this.project();
+    const customer = this.isCustomer();
+    if (customer) {
+      return [
+        { label: 'My Projects', route: '/my-projects' },
+        { label: project?.name ?? 'Project' }
+      ];
+    }
     return [
       { label: 'Choose the company', route: '/company' },
       { label: company?.name ?? '—', route: '/customers' },
       { label: 'Customers', route: '/customers' },
       { label: project?.name ?? 'Project' }
     ];
+  });
+
+  /** Próximo paso para customer: quote con status=sent pendiente de revisar */
+  protected readonly nextStep = computed(() => {
+    const quotesList = this.quotes();
+    const sentQuote = quotesList.find((q) => q.status === 'sent');
+    return sentQuote
+      ? { action: 'Revisar propuesta', quoteId: sentQuote._id, label: `Estimado v${sentQuote.versionNumber}` }
+      : null;
+  });
+
+  /** Pipeline: estados combinados para vista customer */
+  protected readonly pipelineSteps = computed(() => {
+    const proj = this.project();
+    const quotesList = this.quotes();
+    const hasSent = quotesList.some((q) => q.status === 'sent');
+    const hasApproved = quotesList.some((q) => q.status === 'approved');
+    const steps: { label: string; active: boolean; done: boolean }[] = [
+      { label: 'Propuesta enviada', active: hasSent && !hasApproved, done: hasSent || hasApproved },
+      { label: 'Revisión', active: hasSent && !hasApproved, done: hasApproved },
+      { label: 'En progreso', active: proj?.status === 'in_progress', done: proj?.status === 'completed' },
+      { label: 'Completado', active: proj?.status === 'completed', done: proj?.status === 'completed' }
+    ];
+    return steps;
   });
 
   constructor() {
@@ -118,7 +157,7 @@ export class ProjectDetailPage {
         error: (error) => {
           const message = this.errorService.handle(error);
           this.notificationService.error('Unable to load project', message);
-          void this.router.navigateByUrl('/customers');
+          void this.router.navigateByUrl(this.authService.user()?.role === 'customer' ? '/my-projects' : '/customers');
         }
       });
   }

@@ -1,0 +1,111 @@
+<div class="relative">
+  <button
+    type="button"
+    (click)="toggle()"
+    class="relative flex h-10 w-10 items-center justify-center rounded-full bg-alabaster text-slate shadow-sm transition-all hover:bg-white hover:text-pine hover:shadow-raised active:scale-95"
+    aria-label="Notifications"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+    </svg>
+    @if (hasUnread()) {
+    <span class="absolute right-0 top-0 flex h-3 w-3">
+      <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-pine opacity-75"></span>
+      <span class="relative inline-flex h-3 w-3 rounded-full bg-pine border-2 border-white"></span>
+    </span>
+    }
+  </button>
+
+  @if (isOpen()) {
+  <div class="fixed inset-0 z-[90]" (click)="toggle()"></div>
+  <div
+    class="absolute right-0 top-full z-[95] mt-3 w-80 sm:w-96 rounded-[1.5rem] border border-fog/60 bg-white/95 shadow-brand ring-1 ring-black/5 backdrop-blur-sm"
+    role="dialog"
+    aria-label="Notification center"
+  >
+    <div class="flex items-center justify-between border-b border-fog/40 px-6 py-4">
+      <h3 class="font-display text-lg font-semibold text-charcoal">Notifications</h3>
+      @if (hasUnread()) {
+      <button
+        type="button"
+        (click)="markAllAsRead()"
+        class="text-xs font-bold uppercase tracking-wider text-pine hover:text-pine-dark hover:underline"
+      >
+        Mark all read
+      </button>
+      }
+    </div>
+
+    <div class="max-h-[28rem] overflow-y-auto overscroll-contain">
+      @if (isLoading()) {
+      <div class="flex justify-center py-12">
+        <div class="h-8 w-8 animate-spin rounded-full border-2 border-pine border-t-transparent"></div>
+      </div>
+      } @else {
+      @for (n of notifications(); track n._id) {
+      <div
+        (click)="markAsRead(n)"
+        class="group cursor-pointer border-b border-fog/20 px-6 py-4 transition-all hover:bg-sand/20 last:border-0"
+        [class.bg-pine/[0.02]]="!n.read"
+      >
+        <div class="flex gap-4">
+          <div 
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors"
+            [class.bg-pine/10]="!n.read"
+            [class.text-pine]="!n.read"
+            [class.bg-fog/20]="n.read"
+            [class.text-slate]="n.read"
+            [class.group-hover:bg-pine]="true"
+            [class.group-hover:text-white]="true"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5" [innerHTML]="getIcon(n.type)">
+            </svg>
+          </div>
+          
+          <div class="min-w-0 flex-1 space-y-1">
+            <div class="flex items-start justify-between gap-2">
+              <p class="font-medium text-charcoal" [class.font-bold]="!n.read">{{ typeLabel(n.type) }}</p>
+              <span class="shrink-0 text-[10px] font-medium text-slate/70">{{ formatDate(n.createdAt) }}</span>
+            </div>
+            
+            @if (n.payload && n.payload['projectName']) {
+            <p class="text-sm text-slate line-clamp-2">
+              <span class="font-medium text-charcoal/80">{{ n.payload['projectName'] }}</span>
+              @if (n.payload['message']) {
+                <span class="mx-1">&middot;</span>
+                <span>{{ n.payload['message'] }}</span>
+              }
+            </p>
+            } @else if (n.payload && n.payload['message']) {
+              <p class="text-sm text-slate line-clamp-2">{{ n.payload['message'] }}</p>
+            }
+          </div>
+          
+          @if (!n.read) {
+          <div class="flex h-full items-center pt-2">
+            <span class="h-2 w-2 rounded-full bg-pine shadow-sm"></span>
+          </div>
+          }
+        </div>
+      </div>
+      } @empty {
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-fog/20 text-slate">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-6 w-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+          </svg>
+        </div>
+        <p class="font-medium text-charcoal">All caught up!</p>
+        <p class="text-xs text-slate mt-1">No new notifications for now.</p>
+      </div>
+      }
+      }
+    </div>
+    
+    <!-- Footer for future actions if needed -->
+    <!-- <div class="border-t border-fog/40 bg-fog/10 px-4 py-2 text-center">
+      <a routerLink="/notifications" class="text-xs font-semibold text-pine hover:underline">View all history</a>
+    </div> -->
+  </div>
+  }
+</div>

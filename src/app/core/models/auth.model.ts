@@ -38,3 +38,13 @@ export interface RegisterConfirmPayload {
 export interface RegisterRequestResponse {
   message: string;
 }
+
+export interface RequestPasswordResetPayload {
+  email: string;
+}
+
+export interface ConfirmPasswordResetPayload {
+  email: string;
+  code: string;
+  newPassword: string;
+}

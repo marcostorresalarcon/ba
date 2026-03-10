@@ -55,6 +55,9 @@ export interface Quote {
   }[] | null;
   // Archivos de dibujo (múltiples)
   sketchFiles?: string[] | null;
+  // Archivos de countertops y backsplash
+  countertopsFiles?: string[] | null;
+  backsplashFiles?: string[] | null;
   // Sección de comentarios adicionales con fotos/videos
   additionalComments?: {
     comment?: string | null;
@@ -65,6 +68,8 @@ export interface Quote {
   clientBudget?: number | null;
   createdAt?: string;
   updatedAt?: string;
+  pdfUrl?: string; // URL al PDF generado en S3
+  isChangeOrder?: boolean;
 }
 
 // Helper para verificar si customerId es un objeto poblado

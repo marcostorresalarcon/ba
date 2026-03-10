@@ -5,6 +5,7 @@ import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScroll
 
 import { routes } from './app.routes';
 import { apiErrorInterceptor } from './core/interceptors/api-error.interceptor';
+import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 
 export const appConfig: ApplicationConfig = {
@@ -19,6 +20,6 @@ export const appConfig: ApplicationConfig = {
         anchorScrolling: 'enabled',            // Permite ir a anclas #seccion
       })
     ),
-    provideHttpClient(withFetch(), withInterceptors([loadingInterceptor, apiErrorInterceptor]))
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor, loadingInterceptor, apiErrorInterceptor]))
   ]
 };

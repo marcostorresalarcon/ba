@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import type { FormControl, FormGroup } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import type { LoginPayload } from '../../../../core/models/auth.model';
@@ -24,7 +25,7 @@ type LoginFormGroup = FormGroup<{
 @Component({
   selector: 'app-login-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './login-form.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })

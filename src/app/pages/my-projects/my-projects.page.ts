@@ -14,6 +14,7 @@ import { ProjectListComponent } from '../../features/projects/ui/project-list/pr
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 import { LayoutService } from '../../core/services/layout/layout.service';
 import type { ProjectWithQuoteCount } from '../../core/models/project.model';
+import type { Customer } from '../../core/models/customer.model';
 
 @Component({
   selector: 'app-my-projects-page',
@@ -128,7 +129,7 @@ export class MyProjectsPage {
       });
   }
 
-  private updateUserWithCustomerInfo(customer: { _id: string; name: string; lastName: string; email?: string; companyId: string }, companyId: string): void {
+  private updateUserWithCustomerInfo(customer: Customer, companyId: string): void {
     const currentUser = this.authService.user();
     if (!currentUser) {
       return;
@@ -139,8 +140,8 @@ export class MyProjectsPage {
       customerId: customer._id,
       customerInfo: {
         _id: customer._id,
-        name: customer.name,
-        lastName: customer.lastName,
+        name: customer.name ?? '',
+        lastName: customer.lastName ?? '',
         email: customer.email,
         companyId: companyId
       }

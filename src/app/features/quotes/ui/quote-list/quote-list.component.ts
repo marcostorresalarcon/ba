@@ -28,6 +28,7 @@ export class QuoteListComponent {
   }
   @Input({ required: true }) isLoading = false;
   @Input() readonly = false;
+  @Input() hidePrices = false;
   @Output() readonly createQuote = new EventEmitter<void>();
   @Output() readonly editQuote = new EventEmitter<Quote>();
   @Output() readonly deleteQuote = new EventEmitter<Quote>();

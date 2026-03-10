@@ -10,7 +10,9 @@ import type {
   LoginPayload,
   RegisterRequestPayload,
   RegisterConfirmPayload,
-  RegisterRequestResponse
+  RegisterRequestResponse,
+  RequestPasswordResetPayload,
+  ConfirmPasswordResetPayload
 } from '../../models/auth.model';
 import { CredentialsStorageService } from './credentials-storage.service';
 
@@ -75,6 +77,16 @@ export class AuthService {
         localStorage.setItem(this.storageKey, JSON.stringify(response.user));
       })
     );
+  }
+
+  requestPasswordReset(payload: RequestPasswordResetPayload): Observable<{ message: string }> {
+    const endpoint = `${this.baseUrl}/auth/password-reset/request`;
+    return this.http.post<{ message: string }>(endpoint, payload);
+  }
+
+  confirmPasswordReset(payload: ConfirmPasswordResetPayload): Observable<{ message: string }> {
+    const endpoint = `${this.baseUrl}/auth/password-reset/confirm`;
+    return this.http.post<{ message: string }>(endpoint, payload);
   }
 
   private restoreUser(): AuthUser | null {

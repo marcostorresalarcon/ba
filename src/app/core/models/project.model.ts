@@ -8,6 +8,14 @@ export interface ProjectMilestone {
   completedDate?: string;
 }
 
+export interface ProjectUpdate {
+  title: string;
+  description: string;
+  date: string;
+  userId: string;
+  attachments?: string[];
+}
+
 export interface Project {
   _id: string;
   name: string;
@@ -30,6 +38,7 @@ export interface Project {
     'additional-work'?: string;
   };
   milestones?: ProjectMilestone[];
+  updates?: ProjectUpdate[];
   photos?: string[];
   notes?: string;
   createdAt?: string;

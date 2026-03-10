@@ -139,8 +139,8 @@ export class CustomersPage {
     const mergedPayload: CustomerPayload = {
       ...payload,
       companyId,
-      name: payload.name.trim(),
-      lastName: payload.lastName.trim()
+      name: payload.name?.trim() ?? '',
+      lastName: payload.lastName?.trim() ?? ''
     };
 
     const customer = this.selectedCustomer();

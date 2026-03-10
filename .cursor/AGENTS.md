@@ -1,6 +1,8 @@
-# AGENTS - Guía de Mejores Prácticas y Errores Comunes
+# AGENTS - Guía de Mejores Prácticas y Errores Comunes (BA)
 
 Este documento define reglas críticas para evitar errores comunes en el desarrollo del proyecto BA. Los agentes de IA deben seguir estas directrices estrictamente.
+
+> **Nota:** Para visión general del monorepo (BA + BA-Back), ver [../../.cursor/AGENTS.md](../../.cursor/AGENTS.md).
 
 ## 🚨 Errores Críticos a Evitar
 

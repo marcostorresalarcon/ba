@@ -1,0 +1,41 @@
+@if (isLoading()) {
+<div class="space-y-4">
+  <div class="h-32 rounded-2xl bg-fog/30"></div>
+  <div class="h-64 rounded-2xl bg-fog/30"></div>
+</div>
+} @else {
+<div class="space-y-6">
+  <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <h1 class="font-display text-2xl text-charcoal">Project Timeline</h1>
+    <p class="mt-1 text-sm text-slate">{{ project()?.name }}</p>
+  </section>
+
+  @if (timeline().length === 0) {
+  <div class="rounded-2xl border-2 border-dashed border-fog bg-sand/30 p-8 text-center">
+    <p class="text-sm font-medium text-charcoal">No timeline events yet.</p>
+    <p class="mt-1 text-xs text-slate">Status changes, updates, and milestones will appear here.</p>
+  </div>
+  } @else {
+  <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <div class="relative flex flex-col gap-0">
+      @for (item of timeline(); track item.date + item.label + item.type) {
+      <div class="flex gap-4 pb-6 last:pb-0">
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pine/10 text-sm text-pine"
+        >
+          {{ getTypeIcon(item.type) }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-charcoal">{{ item.label }}</p>
+          @if (item.description) {
+          <p class="mt-1 text-sm text-slate">{{ item.description }}</p>
+          }
+          <p class="mt-1 text-xs text-slate">{{ formatDate(item.date) }}</p>
+        </div>
+      </div>
+      }
+    </div>
+  </section>
+  }
+</div>
+}

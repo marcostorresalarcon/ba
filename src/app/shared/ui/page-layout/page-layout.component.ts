@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, Input, computed, inject, signal } f
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import type { AuthUser } from '../../../core/models/auth.model';
+import { NotificationCenterComponent } from '../../../features/notifications/ui/notification-center/notification-center.component';
 import { CompanyContextService } from '../../../core/services/company/company-context.service';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { LayoutService } from '../../../core/services/layout/layout.service';
@@ -15,7 +16,7 @@ export interface LayoutBreadcrumb {
 @Component({
   selector: 'app-page-layout',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet, NotificationCenterComponent],
   templateUrl: './page-layout.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -62,7 +63,9 @@ export class PageLayoutComponent {
 
     if (role === 'customer') {
       return [
-        { label: 'My Projects', route: '/my-projects' }
+        { label: 'My Projects', route: '/my-projects' },
+        { label: 'Support', route: '/support' },
+        { label: 'Profile', route: '/profile' }
       ];
     }
 

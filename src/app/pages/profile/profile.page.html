@@ -1,0 +1,90 @@
+<section class="mt-5 space-y-6">
+  @if (!isCustomer()) {
+  <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <p class="text-slate">Profile editing is available for customers only.</p>
+    <a routerLink="/settings" class="mt-4 inline-block text-sm font-medium text-pine hover:underline">
+      Go to Settings
+    </a>
+  </div>
+  } @else if (isLoading()) {
+  <div class="flex justify-center py-12">
+    <div class="h-10 w-10 animate-spin rounded-full border-2 border-pine border-t-transparent"></div>
+  </div>
+  } @else {
+  <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <p class="text-xs font-semibold uppercase tracking-[0.35em] text-clay">Account</p>
+    <h2 class="mt-1 font-display text-2xl text-charcoal">Profile</h2>
+    <p class="mt-2 text-sm text-slate">Update your contact information.</p>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mt-6 space-y-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label class="block text-sm font-medium text-charcoal">First name</label>
+          <input
+            type="text"
+            formControlName="name"
+            class="mt-1 w-full rounded-xl border border-fog/60 bg-white px-4 py-2 text-charcoal"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-charcoal">Last name</label>
+          <input
+            type="text"
+            formControlName="lastName"
+            class="mt-1 w-full rounded-xl border border-fog/60 bg-white px-4 py-2 text-charcoal"
+          />
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-charcoal">Email</label>
+        <input
+          type="email"
+          formControlName="email"
+          class="mt-1 w-full rounded-xl border border-fog/60 bg-white px-4 py-2 text-charcoal"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-charcoal">Phone</label>
+        <input
+          type="tel"
+          formControlName="phone"
+          class="mt-1 w-full rounded-xl border border-fog/60 bg-white px-4 py-2 text-charcoal"
+        />
+      </div>
+      
+      <div class="flex gap-3 pt-4">
+        <button
+          type="submit"
+          [disabled]="form.invalid || isSaving()"
+          class="rounded-full bg-pine px-6 py-2 text-sm font-medium text-white hover:bg-pine/90 disabled:opacity-50"
+        >
+          {{ isSaving() ? 'Saving...' : 'Save' }}
+        </button>
+        <a
+          routerLink="/settings"
+          class="rounded-full border border-fog/60 px-6 py-2 text-sm font-medium text-slate hover:bg-fog/30"
+        >
+          Settings
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <app-address-list
+    [addresses]="profile()?.addresses ?? []"
+    (addAddress)="onAddAddress($event)"
+    (editAddress)="onEditAddress($event)"
+    (deleteAddress)="onDeleteAddress($event)"
+  ></app-address-list>
+
+  <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <h3 class="font-display text-lg text-charcoal">Reset password</h3>
+    <p class="mt-2 text-sm text-slate">
+      Request a password reset link sent to your email.
+    </p>
+    <p class="mt-4 text-sm text-slate">
+      Use "Forgot password?" on the login page to request a reset link.
+    </p>
+  </div>
+  }
+</section>

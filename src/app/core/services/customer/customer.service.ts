@@ -49,6 +49,16 @@ export class CustomerService {
     );
   }
 
+  getMe(): Observable<Customer> {
+    const endpoint = `${this.baseUrl}/customer/me`;
+    return this.http.get<Customer>(endpoint);
+  }
+
+  updateMe(payload: Partial<CustomerPayload>): Observable<Customer> {
+    const endpoint = `${this.baseUrl}/customer/me`;
+    return this.http.patch<Customer>(endpoint, payload);
+  }
+
   getCustomer(id: string): Observable<Customer> {
     const endpoint = `${this.baseUrl}/customer/${id}`;
     return this.http.get<Customer>(endpoint);

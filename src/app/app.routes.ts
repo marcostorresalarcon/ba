@@ -1,5 +1,8 @@
 import type { Routes } from '@angular/router';
 
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+
 export const routes: Routes = [
   {
     path: '',
@@ -15,9 +18,15 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/register/register.page').then((m) => m.RegisterPage)
   },
   {
+    path: 'password-reset',
+    loadComponent: () =>
+      import('./pages/password-reset/password-reset.page').then((m) => m.PasswordResetPage)
+  },
+  {
     path: 'company',
     loadComponent: () =>
-      import('./pages/company-selection/company-selection.page').then((m) => m.CompanySelectionPage)
+      import('./pages/company-selection/company-selection.page').then((m) => m.CompanySelectionPage),
+    canActivate: [authGuard]
   },
   {
     path: 'drawing-canvas',
@@ -28,16 +37,19 @@ export const routes: Routes = [
     path: '',
     loadComponent: () =>
       import('./shared/ui/page-layout/page-layout.component').then((m) => m.PageLayoutComponent),
+    canActivate: [authGuard],
     children: [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('./pages/admin-dashboard/admin-dashboard.page').then((m) => m.AdminDashboardPage)
+          import('./pages/admin-dashboard/admin-dashboard.page').then((m) => m.AdminDashboardPage),
+        canActivate: [roleGuard(['administrator', 'admin'])]
       },
       {
         path: 'sales-intelligence',
         loadComponent: () =>
-          import('./pages/sales-dashboard/sales-dashboard.page').then((m) => m.SalesDashboardPage)
+          import('./pages/sales-dashboard/sales-dashboard.page').then((m) => m.SalesDashboardPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'my-projects',
@@ -47,22 +59,26 @@ export const routes: Routes = [
       {
         path: 'customers',
         loadComponent: () =>
-          import('./pages/customers/customers.page').then((m) => m.CustomersPage)
+          import('./pages/customers/customers.page').then((m) => m.CustomersPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'projects',
         loadComponent: () =>
-          import('./pages/projects/projects.page').then((m) => m.ProjectsPage)
+          import('./pages/projects/projects.page').then((m) => m.ProjectsPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'quotes',
         loadComponent: () =>
-          import('./pages/quotes/quotes.page').then((m) => m.QuotesPage)
+          import('./pages/quotes/quotes.page').then((m) => m.QuotesPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'customers/:customerId/projects',
         loadComponent: () =>
-          import('./pages/customer-projects/customer-projects.page').then((m) => m.CustomerProjectsPage)
+          import('./pages/customer-projects/customer-projects.page').then((m) => m.CustomerProjectsPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'projects/:projectId',
@@ -70,29 +86,44 @@ export const routes: Routes = [
           import('./pages/project-detail/project-detail.page').then((m) => m.ProjectDetailPage)
       },
       {
+        path: 'projects/:projectId/documents',
+        loadComponent: () =>
+          import('./pages/project-documents/project-documents.page').then((m) => m.ProjectDocumentsPage)
+      },
+      {
+        path: 'projects/:projectId/timeline',
+        loadComponent: () =>
+          import('./pages/project-timeline/project-timeline.page').then((m) => m.ProjectTimelinePage)
+      },
+      {
         path: 'projects/:projectId/quotes/select-category',
         loadComponent: () =>
-          import('./pages/quote-select-category/quote-select-category.page').then((m) => m.QuoteSelectCategoryPage)
+          import('./pages/quote-select-category/quote-select-category.page').then((m) => m.QuoteSelectCategoryPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'projects/:projectId/quotes/select-experience',
         loadComponent: () =>
-          import('./pages/quote-select-experience/quote-select-experience.page').then((m) => m.QuoteSelectExperiencePage)
+          import('./pages/quote-select-experience/quote-select-experience.page').then((m) => m.QuoteSelectExperiencePage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'projects/:projectId/quotes/kitchen/create',
         loadComponent: () =>
-          import('./pages/quote-create-kitchen/quote-create-kitchen.page').then((m) => m.QuoteCreateKitchenPage)
+          import('./pages/quote-create-kitchen/quote-create-kitchen.page').then((m) => m.QuoteCreateKitchenPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'projects/:projectId/quotes/additional-work/create',
         loadComponent: () =>
-          import('./pages/quote-create-additional-work/quote-create-additional-work.page').then((m) => m.QuoteCreateAdditionalWorkPage)
+          import('./pages/quote-create-additional-work/quote-create-additional-work.page').then((m) => m.QuoteCreateAdditionalWorkPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'projects/:projectId/quotes/:category/create',
         loadComponent: () =>
-          import('./pages/quote-create-generic/quote-create-generic.page').then((m) => m.QuoteCreateGenericPage)
+          import('./pages/quote-create-generic/quote-create-generic.page').then((m) => m.QuoteCreateGenericPage),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'quotes/:quoteId',
@@ -102,22 +133,36 @@ export const routes: Routes = [
       {
         path: 'quotes/:quoteId/create-invoice',
         loadComponent: () =>
-          import('./features/billing/ui/invoice-create/invoice-create.component').then((m) => m.InvoiceCreateComponent)
+          import('./features/billing/ui/invoice-create/invoice-create.component').then((m) => m.InvoiceCreateComponent),
+        canActivate: [roleGuard(['administrator', 'admin', 'estimator'])]
       },
       {
         path: 'invoices',
         loadComponent: () =>
-          import('./features/billing/ui/invoice-list/invoice-list.component').then((m) => m.InvoiceListComponent)
+          import('./features/billing/ui/invoice-list/invoice-list.component').then((m) => m.InvoiceListComponent),
+        canActivate: [roleGuard(['administrator', 'admin'])]
       },
       {
         path: 'invoices/:id',
         loadComponent: () =>
-          import('./features/billing/ui/invoice-detail/invoice-detail.component').then((m) => m.InvoiceDetailComponent)
+          import('./features/billing/ui/invoice-detail/invoice-detail.component').then((m) => m.InvoiceDetailComponent),
+        canActivate: [roleGuard(['administrator', 'admin'])]
       },
       {
         path: 'users',
         loadComponent: () =>
-          import('./pages/users/users.page').then((m) => m.UsersPage)
+          import('./pages/users/users.page').then((m) => m.UsersPage),
+        canActivate: [roleGuard(['administrator', 'admin'])]
+      },
+      {
+        path: 'support',
+        loadComponent: () =>
+          import('./pages/support/support.page').then((m) => m.SupportPage)
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./pages/profile/profile.page').then((m) => m.ProfilePage)
       },
       {
         path: 'settings',

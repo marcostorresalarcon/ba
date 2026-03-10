@@ -1,7 +1,8 @@
 export const environment = {
     production: false,
-    apiUrl: 'https://ba-back.marcostorresalarcon.com',
+    // apiUrl: 'https://ba-back.marcostorresalarcon.com',
     // apiUrl: 'http://localhost:3022',
+    apiUrl: 'https://n33bfp3k-3022.brs.devtunnels.ms',
     /** Ruta del endpoint para eliminar cuenta. Si el backend usa prefijo global (ej. /api), usar 'api/auth/account'. */
     authDeleteAccountPath: 'auth/account',
     // apiUrl: 'http://localhost:3022',

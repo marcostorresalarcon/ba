@@ -21,7 +21,8 @@
         }
       </div>
 
-      <div class="relative z-50">
+      <div class="relative z-50 flex items-center gap-2">
+        <app-notification-center />
         <button
           type="button"
           (click)="toggleUserMenu()"
@@ -46,6 +47,22 @@
         <div
           class="absolute right-0 top-full z-[95] mt-2 w-52 origin-top-right rounded-xl bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
         >
+          <a
+            routerLink="/support"
+            (click)="toggleUserMenu()"
+            class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-charcoal transition-colors hover:bg-alabaster"
+          >
+            Support
+          </a>
+          @if (user()?.role === 'customer') {
+          <a
+            routerLink="/profile"
+            (click)="toggleUserMenu()"
+            class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-charcoal transition-colors hover:bg-alabaster"
+          >
+            Profile
+          </a>
+          }
           <a
             routerLink="/settings"
             (click)="toggleUserMenu()"

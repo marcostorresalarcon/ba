@@ -1,0 +1,94 @@
+<section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+  <h2 class="text-lg font-semibold text-charcoal">Comments</h2>
+
+  @if (isLoading()) {
+  <div class="mt-4 flex justify-center py-8">
+    <div class="h-8 w-8 animate-spin rounded-full border-2 border-pine border-t-transparent"></div>
+  </div>
+  } @else {
+  <div class="mt-4 space-y-4">
+    @for (comment of comments(); track comment._id) {
+    <div class="rounded-xl border border-fog/40 bg-sand/30 p-4">
+      @if (editingId() === comment._id) {
+      <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="space-y-3">
+        <textarea
+          formControlName="text"
+          rows="3"
+          class="w-full rounded-lg border border-fog/60 bg-white px-3 py-2 text-sm text-charcoal placeholder-slate/60 focus:border-pine focus:outline-none focus:ring-1 focus:ring-pine"
+          placeholder="Edit your comment..."
+        ></textarea>
+        @if (editForm.get('text')?.invalid && editForm.get('text')?.touched) {
+        <p class="text-xs text-red-600">Comment is required (max 2000 characters)</p>
+        }
+        <div class="flex gap-2">
+          <button
+            type="submit"
+            [disabled]="editForm.invalid"
+            class="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-pine/90 disabled:opacity-50"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            (click)="cancelEdit()"
+            class="rounded-full border border-fog/60 px-4 py-2 text-sm font-medium text-slate transition-colors hover:bg-fog/30"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+      } @else {
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium text-charcoal">
+            {{ isOwnComment(comment) ? 'You' : 'Team member' }}
+          </p>
+          <p class="mt-1 text-sm text-slate">{{ comment.text }}</p>
+          <p class="mt-1 text-xs text-slate/70">{{ formatDate(comment.createdAt) }}</p>
+        </div>
+        @if (isOwnComment(comment)) {
+        <div class="flex shrink-0 gap-1">
+          <button
+            type="button"
+            (click)="startEdit(comment)"
+            class="rounded px-2 py-1 text-xs font-medium text-pine transition-colors hover:bg-pine/10"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            (click)="deleteComment(comment)"
+            class="rounded px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    } @empty {
+    <p class="py-4 text-center text-sm text-slate">No comments yet. Be the first to comment.</p>
+    }
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="mt-6 space-y-3">
+    <textarea
+      formControlName="text"
+      rows="3"
+      class="w-full rounded-lg border border-fog/60 bg-white px-3 py-2 text-sm text-charcoal placeholder-slate/60 focus:border-pine focus:outline-none focus:ring-1 focus:ring-pine"
+      placeholder="Add a comment..."
+    ></textarea>
+    @if (form.get('text')?.invalid && form.get('text')?.touched) {
+    <p class="text-xs text-red-600">Comment is required (max 2000 characters)</p>
+    }
+    <button
+      type="submit"
+      [disabled]="form.invalid || isSubmitting()"
+      class="rounded-full bg-pine px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-pine/90 disabled:opacity-50"
+    >
+      {{ isSubmitting() ? 'Sending...' : 'Add comment' }}
+    </button>
+  </form>
+  }
+</section>

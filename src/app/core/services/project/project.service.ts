@@ -5,6 +5,18 @@ import type { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import type { Project, ProjectPayload } from '../../models/project.model';
 
+export interface TimelineItem {
+  type: 'status' | 'update' | 'milestone';
+  date: string;
+  label: string;
+  description?: string;
+  entityType?: 'quote' | 'project';
+  entityId?: string;
+  userId?: string;
+  fromStatus?: string;
+  toStatus?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -39,6 +51,11 @@ export class ProjectService {
   getProject(id: string): Observable<Project> {
     const endpoint = `${this.baseUrl}/project/${id}`;
     return this.http.get<Project>(endpoint);
+  }
+
+  getTimeline(projectId: string): Observable<TimelineItem[]> {
+    const endpoint = `${this.baseUrl}/project/${projectId}/timeline`;
+    return this.http.get<TimelineItem[]>(endpoint);
   }
 
   createProject(payload: ProjectPayload): Observable<Project> {

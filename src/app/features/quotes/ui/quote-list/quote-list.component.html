@@ -78,7 +78,13 @@
                   <span class="rounded-full bg-clay/10 px-2.5 py-0.5 text-xs font-semibold text-clay">
                     v{{ quote.versionNumber }}
                   </span>
+                  @if (quote.isChangeOrder) {
+                    <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 border border-amber-200">
+                      Change Order
+                    </span>
+                  }
                 </div>
+                @if (!hidePrices) {
                 <div class="mt-2 flex items-center gap-4">
                   <p class="text-base font-semibold text-charcoal">
                     @if (quote.totalPrice) {
@@ -88,6 +94,7 @@
                     }
                   </p>
                 </div>
+                }
                 @if (quote.notes) {
                   <p class="mt-1 text-sm text-slate line-clamp-1">{{ quote.notes }}</p>
                 }

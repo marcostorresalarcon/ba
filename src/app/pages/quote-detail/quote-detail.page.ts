@@ -292,6 +292,11 @@ export class QuoteDetailPage {
       return;
     }
 
+    if (quote.pdfUrl) {
+      window.open(quote.pdfUrl, '_blank');
+      return;
+    }
+
     try {
       this.notificationService.info('Generating PDF', 'Please wait...');
       const userRole = this.userRole();
