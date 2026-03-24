@@ -61,3 +61,28 @@ En **Appflow → Tu app → Build → Native build configuration**:
 
 - **Stripe**: `environment.production.ts` tiene `stripePublicKey: 'pk_test_placeholder'`. Sustituir por `pk_live_...` cuando vayas a cobros reales.
 - **Secrets**: Las claves S3 y API están en `environment.production.ts`. Para mayor seguridad, considera usar variables de entorno en Appflow y un build step que genere el archivo.
+
+---
+
+## Solución de errores al subir a TestFlight / App Store (Fastlane / altool)
+
+### `FORBIDDEN_ERROR.CONTRACT_NOT_VALID` — *You do not have required contracts*
+
+**No se arregla en el repositorio ni en Xcode.** Apple bloquea la subida hasta que la cuenta del programa de desarrolladores tenga los acuerdos al día.
+
+1. Entra como **Account Holder** o **Admin** en [App Store Connect](https://appstoreconnect.apple.com/) → revisa avisos en rojo o banner de **Agreements, Tax, and Banking**.
+2. Entra en [developer.apple.com/account](https://developer.apple.com/account) → **Agreements** → acepta el **Apple Developer Program License Agreement** y cualquier **Paid Applications Agreement** / **Free Apps Agreement** pendiente.
+3. Completa **Tax** y **Banking** si la app es de pago o tiene compras dentro de la app.
+4. Espera unos minutos tras firmar; vuelve a lanzar el deploy en Appflow.
+
+Sin esto, `upload_ipa_to_app_store` / `altool` seguirá devolviendo **403 CONTRACT_NOT_VALID**.
+
+### *Team ID supplied (5G8B5KR88X) does not appear to be a team of which you are a member*
+
+El **Apple ID** que usa Appflow (usuario de Transporter / API Key / contraseña de aplicación) **no pertenece** al equipo `5G8B5KR88X`, o el Team ID en la config ya no es el correcto.
+
+1. En Appflow, revisa **qué credenciales** usan el paso de subida a App Store (mismo Apple ID que firma el IPA).
+2. En [developer.apple.com/account#MembershipDetailsCard](https://developer.apple.com/account) confirma el **Team ID** real de la organización que posee la app `6755149730`.
+3. Si el Team ID cambió, actualiza **Appflow** (signing / variables) y, en el repo, `DEVELOPMENT_TEAM` en `project.pbxproj` y `teamID` en los `exportOptions*.plist` (ver `ios/IOS_BUILD_CONFIG.md`).
+
+El aviso de *Could not get providers from altool* suele ir ligado al mismo desajuste de cuenta o a sesión/credenciales incorrectas.

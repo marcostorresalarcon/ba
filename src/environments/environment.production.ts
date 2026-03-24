@@ -1,6 +1,8 @@
 export const environment = {
   production: true,
   apiUrl: 'https://ba-back.marcostorresalarcon.com',
+  /** Apple Developer Team ID (referencia; firma real en ios/ project.pbxproj y exportOptions*.plist). */
+  appleTeamId: '5G8B5KR88X',
   /** Ruta del endpoint para eliminar cuenta. Si el backend usa prefijo global (ej. /api), usar 'api/auth/account'. */
   authDeleteAccountPath: 'auth/account',
   s3BucketName: 'ba-bucket-aws',
