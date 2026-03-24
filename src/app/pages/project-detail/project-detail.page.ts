@@ -65,6 +65,9 @@ export class ProjectDetailPage {
   protected readonly isCustomer = computed(() => this.authService.user()?.role === 'customer');
   protected readonly isReadOnly = computed(() => this.isCustomer());
 
+  /** Estimator no debe ver appointments ni comments en project detail */
+  protected readonly isEstimator = computed(() => this.authService.user()?.role === 'estimator');
+
   protected readonly breadcrumbs = computed<LayoutBreadcrumb[]>(() => {
     const company = this.selectedCompany();
     const project = this.project();

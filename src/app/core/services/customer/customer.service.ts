@@ -27,12 +27,13 @@ export class CustomerService {
     const params = new HttpParams({ fromObject: { companyId } });
     return this.http.get<Customer[]>(endpoint, { params }).pipe(
       map((customers) => {
-        // Buscar por userId primero, luego por email como fallback
-        const byUserId = customers.find((c) => c.userId === userId);
+        const uid = String(userId);
+        const sameUser = (c: Customer) =>
+          c.userId != null && String(c.userId) === uid;
+        const byUserId = customers.find(sameUser);
         if (byUserId) {
           return byUserId;
         }
-        // Si no hay userId, buscar por email (necesitamos el email del usuario)
         return null;
       })
     );

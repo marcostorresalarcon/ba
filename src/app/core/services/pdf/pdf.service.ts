@@ -1,4 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { jsPDF } from 'jspdf';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -9,11 +11,14 @@ import type { Invoice } from '../../models/invoice.model';
 import type { Customer } from '../../models/customer.model';
 import type { Project } from '../../models/project.model';
 import type { Company } from '../../models/company.model';
+import { environment } from '../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PdfService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl;
   async generateInvoicePdf(
     invoice: Invoice, 
     customer: Customer | null, 
@@ -492,6 +497,16 @@ export class PdfService {
     const lightBgG = 209;
     const lightBgB = 186; // #EAD1BA (sand)
 
+    // Clay color (#997A63) para labels uppercase de campos
+    const clayColorR = 153;
+    const clayColorG = 122;
+    const clayColorB = 99;
+
+    // Fog color (#BFBFBF) para bordes suaves
+    const fogColorR = 191;
+    const fogColorG = 191;
+    const fogColorB = 191;
+
     const addPageIfNeeded = (expectedHeight: number) => {
       if (yPosition + expectedHeight > pageHeight - margin - 15) {
         doc.addPage();
@@ -501,79 +516,123 @@ export class PdfService {
       return false;
     };
 
-    const drawBorderedBox = (x: number, y: number, width: number, height: number, title?: string, titleBgColor?: number[]) => {
-      // Borde principal más visible
-      doc.setDrawColor(180, 180, 180);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(x, y, width, height, 3, 3, 'S');
-      
-      // Si hay título, dibujar header con fondo
-      if (title && titleBgColor) {
-        const headerHeight = 8;
-        // Establecer color de relleno
-        doc.setFillColor(titleBgColor[0], titleBgColor[1], titleBgColor[2]);
-        // Establecer color del borde del header
-        doc.setDrawColor(titleBgColor[0] - 20, titleBgColor[1] - 20, titleBgColor[2] - 20);
-        doc.setLineWidth(0.3);
-        // Dibujar fondo y borde del header juntos
-        doc.roundedRect(x, y, width, headerHeight, 3, 3, 'FD');
-        
-        // Establecer color del texto DESPUÉS de dibujar el fondo
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text(title.toUpperCase(), x + 5, y + 5.5);
-        
-        // Línea separadora debajo del header
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.2);
-        doc.line(x, y + headerHeight, x + width, y + headerHeight);
-        
-        // Resetear color del texto
+    // Encabezado de sección con línea decorativa — replica "font-display text-2xl text-charcoal"
+    const drawSectionTitle = (title: string) => {
+      addPageIfNeeded(22);
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title, margin, yPosition);
+      // Subrayado pine fino
+      const tw = doc.getTextWidth(title);
+      doc.setDrawColor(primaryColorR, primaryColorG, primaryColorB);
+      doc.setLineWidth(0.6);
+      doc.line(margin, yPosition + 4.5, margin + tw, yPosition + 4.5);
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
+      yPosition += 14;
+    };
+
+    // Encabezado de info-card (clay uppercase + hairline fog) — replica "text-sm font-bold uppercase tracking-widest text-clay"
+    const drawInfoCardHeader = (x: number, y: number, width: number, title: string) => {
+      doc.setTextColor(clayColorR, clayColorG, clayColorB);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title.toUpperCase(), x + 5, y + 5);
+      doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+      doc.setLineWidth(0.3);
+      doc.line(x + 5, y + 8, x + width - 5, y + 8);
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    };
+
+    // Card de dato individual — replica "bg-fog/10 rounded-xl p-4 border border-fog/40"
+    const drawDataCard = (x: number, y: number, w: number, h: number, label: string, value: string, isTrue: boolean) => {
+      // Fondo cálido fog/10
+      doc.setFillColor(245, 240, 234);
+      doc.roundedRect(x, y, w, h, 2.5, 2.5, 'F');
+      // Borde fog
+      doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(x, y, w, h, 2.5, 2.5, 'S');
+      // Label (clay uppercase xs bold)
+      doc.setTextColor(clayColorR, clayColorG, clayColorB);
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'bold');
+      const lblLines = doc.splitTextToSize(label.toUpperCase(), w - 8);
+      doc.text(lblLines, x + 4, y + 4.5);
+      const lblH = lblLines.length * 3.2;
+      // Value (charcoal medium — pine si es true)
+      if (isTrue) {
+        doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+      } else {
         doc.setTextColor(darkColorR, darkColorG, darkColorB);
       }
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', isTrue ? 'bold' : 'normal');
+      const valLines = doc.splitTextToSize(value, w - 8);
+      doc.text(valLines, x + 4, y + 4.5 + lblH + 3);
     };
 
-    const drawSectionTitle = (title: string) => {
-      addPageIfNeeded(20);
-      
-      // Fondo de sección con borde - usar FD (Fill and Draw) para mejor resultado
-      const sectionHeight = 12;
-      
-      // Primero establecer el color de relleno
-      doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-      // Establecer el color del borde
-      doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
-      doc.setLineWidth(0.8);
-      // Dibujar fondo y borde juntos
-      doc.roundedRect(margin, yPosition, contentWidth, sectionHeight, 2, 2, 'FD');
-      
-      // Establecer color del texto DESPUÉS de dibujar el fondo (blanco sobre fondo verde)
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      // Dibujar el texto centrado verticalmente en el header
-      doc.text(title.toUpperCase(), margin + 8, yPosition + 8);
-      
-      // Resetear color del texto para el contenido siguiente
-      doc.setTextColor(darkColorR, darkColorG, darkColorB);
-      yPosition += sectionHeight + 8; // Más espacio después del título
-    };
+    /**
+     * Renderiza un link de archivo/video/audio con tarjeta de marca.
+     * Elimina la URL raw — solo muestra nombre amigable + enlace clicable.
+     */
+    const renderFileLink = (url: string, mediaType: 'Video' | 'Audio' | 'File' | 'Image' = 'File') => {
+      addPageIfNeeded(14);
+      const displayName = fileNameFromUrl(url) || `${mediaType} file`;
 
-    const renderLink = (label: string, url: string) => {
-      doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+      // Fondo sand/fog con borde suave
+      doc.setFillColor(245, 240, 234);
+      doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, yPosition, contentWidth, 11, 2.5, 2.5, 'FD');
+
+      // Tipo de archivo en clay bold
+      const typeLabel = mediaType.toUpperCase();
       doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(clayColorR, clayColorG, clayColorB);
+      doc.text(typeLabel, margin + 4, yPosition + 7);
+      const typeLabelW = doc.getTextWidth(typeLabel);
+
+      // Separador vertical fino
+      doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+      doc.setLineWidth(0.3);
+      doc.line(margin + 4 + typeLabelW + 3, yPosition + 2.5, margin + 4 + typeLabelW + 3, yPosition + 8.5);
+
+      // Nombre amigable como link en pine (sin íconos unicode)
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.textWithLink(label, margin + 4, yPosition, { url });
-      yPosition += 6;
+      doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+      const truncatedName = displayName.length > 55
+        ? displayName.substring(0, 52) + '...'
+        : displayName;
+      doc.textWithLink(truncatedName, margin + 4 + typeLabelW + 7, yPosition + 7, { url });
+
       doc.setTextColor(darkColorR, darkColorG, darkColorB);
+      yPosition += 14;
     };
+
+    /** Elimina query string antes de testear extensión (S3 presigned URLs). */
+    const urlWithoutQuery = (url: string) => url.split('?')[0];
+    const isImageFile = (url: string) => /\.(jpg|jpeg|png|webp|gif|bmp|tiff)$/i.test(urlWithoutQuery(url));
+    const isVideoFile = (url: string) => /\.(mp4|mov|mkv|avi|webm)$/i.test(urlWithoutQuery(url));
 
     const fileNameFromUrl = (url: string): string => {
       try {
-        const clean = decodeURIComponent(url);
-        const parts = clean.split('/');
-        return parts.pop() || clean;
+        const parts = urlWithoutQuery(url).split('/');
+        const rawName = decodeURIComponent(parts.pop() || url);
+        // Eliminar cadena(s) de dígitos separadas por guión al inicio + UUID
+        const clean = rawName
+          .replace(/^(\d+[-])+\d*[_-]?/, '')     // "177...-177...-xxx_"  → lo que quede
+          .replace(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[_-]?/i, '');
+        // Si el nombre quedó vacío o demasiado corto (< 4 chars sin extensión), usar rawName truncado
+        const nameWithoutExt = (clean || '').replace(/\.[^.]+$/, '');
+        if (!clean || nameWithoutExt.length < 3) {
+          // Mostrar últimos ~30 caracteres del rawName como fallback
+          const suffix = rawName.length > 30 ? '...' + rawName.slice(-27) : rawName;
+          return suffix;
+        }
+        return clean;
       } catch {
         return url;
       }
@@ -642,182 +701,158 @@ export class PdfService {
         }
       } catch (error) {
         console.error('Error rendering image in PDF:', error);
-        // Fallback a link con mejor formato
-        addPageIfNeeded(10);
-        doc.setFillColor(245, 245, 245);
-        doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(margin, yPosition, contentWidth, 8, 2, 2, 'S');
-        
-        const label = fileNameFromUrl(url);
-        doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.textWithLink(label, margin + 4, yPosition + 5.5, { url });
-        yPosition += 12;
+        // Si no se puede renderizar la imagen, mostrar solo un placeholder de texto (sin link)
+        addPageIfNeeded(8);
+        const fallbackLabel = label || fileNameFromUrl(url);
+        doc.setTextColor(120, 120, 120);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text(`Image could not be loaded: ${fallbackLabel}`, margin, yPosition);
+        yPosition += 10;
       }
     };
 
-    // Header con logo y título
-    // Fondo completo del header
-    doc.setFillColor(lightBgR, lightBgG, lightBgB);
-    doc.rect(0, 0, pageWidth, 50, 'F'); // Altura aumentada
+    // ── HEADER ── compacto: barra pine superior + fondo sand
+    const headerH = 36;
 
-    // Logo placeholder o texto grande de marca
-    doc.setTextColor(darkColorR, darkColorG, darkColorB);
-    doc.setFontSize(28);
-    doc.setFont('helvetica', 'bold');
-    doc.text('BA Kitchen & Bath Design', margin, 25);
-
-    // Subtítulo
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('PROFESSIONAL ESTIMATE REPORT', margin, 35);
-    
-    // Línea decorativa
-    doc.setDrawColor(primaryColorR, primaryColorG, primaryColorB);
-    doc.setLineWidth(0.5);
-    doc.line(margin, 42, pageWidth - margin, 42);
-
-    yPosition = 60; // Inicio del contenido más abajo
-
-    // Información del Quote
+    // Barra pine fina (3mm) — señal de marca
     doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-    doc.rect(margin, yPosition, contentWidth, 10, 'F'); // Altura aumentada
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
+    doc.rect(0, 0, pageWidth, 3, 'F');
+
+    // Fondo sand
+    doc.setFillColor(lightBgR, lightBgG, lightBgB);
+    doc.rect(0, 3, pageWidth, headerH - 3, 'F');
+
+    // "BA" charcoal + "Kitchen & Bath Design" pine
+    doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
-    // Centrar texto del título
-    const title = `Estimate v${quote.versionNumber} - ${quote.category.toUpperCase()}`;
-    const titleWidth = doc.getTextWidth(title);
-    doc.text(title, margin + (contentWidth - titleWidth) / 2, yPosition + 7);
+    doc.text('BA', margin, 18);
+    const baW = doc.getTextWidth('BA');
+    doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+    doc.text(' Kitchen & Bath Design', margin + baW, 18);
 
-    yPosition += 14; // Espacio aumentado
+    // Subtítulo alineado a la derecha
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(83, 83, 83);
+    const subTitle = 'PROFESSIONAL ESTIMATE REPORT';
+    const subW = doc.getTextWidth(subTitle);
+    doc.text(subTitle, pageWidth - margin - subW, 18);
 
-    // Información del Cliente y Proyecto
-    const infoBoxHeight = 40;
-    const boxWidth = (contentWidth - 8) / 2;
+    // Línea pine cierra el header
+    doc.setDrawColor(primaryColorR, primaryColorG, primaryColorB);
+    doc.setLineWidth(0.6);
+    doc.line(0, headerH, pageWidth, headerH);
 
-    // Box Cliente - Con bordes visibles
-    drawBorderedBox(margin, yPosition, boxWidth, infoBoxHeight, 'CUSTOMER INFORMATION', [primaryColorR, primaryColorG, primaryColorB]);
+    yPosition = headerH + 10;
+
+    // ── HERO: solo título \"Estimate vN\" y total a la derecha ──
+    doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Estimate ', margin, yPosition);
+    const estimateLabelW = doc.getTextWidth('Estimate ');
+    doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+    doc.text(`v${quote.versionNumber}`, margin + estimateLabelW, yPosition);
+    doc.setTextColor(darkColorR, darkColorG, darkColorB);
+
+    // Total cost alineado a la derecha
+    const totalStr = `$${(quote.totalPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(clayColorR, clayColorG, clayColorB);
+    const totalLabelW = doc.getTextWidth('TOTAL COST');
+    doc.text('TOTAL COST', pageWidth - margin - totalLabelW, yPosition - 6);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    const totalStrW = doc.getTextWidth(totalStr);
+    doc.text(totalStr, pageWidth - margin - totalStrW, yPosition);
+
+    yPosition += 6;
+
+    // Fecha
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(83, 83, 83); // slate
+    doc.text(this.formatDate(quote.createdAt), margin, yPosition);
+    yPosition += 14;
+
+    // ── TARJETAS DE INFO: Customer Information + Project Details ──
+    const infoBoxHeight = 42;
+    const infoGap = 8;
+    const boxWidth = (contentWidth - infoGap) / 2;
+
+    // Customer card
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(margin, yPosition, boxWidth, infoBoxHeight, 4, 4, 'FD');
+    drawInfoCardHeader(margin, yPosition, boxWidth, 'Customer Information');
 
     if (customer) {
+      let iy = yPosition + 13;
       doc.setTextColor(darkColorR, darkColorG, darkColorB);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      
-      let infoY = yPosition + 12;
-      
+      doc.setFontSize(8.5);
       // Name
       doc.setFont('helvetica', 'bold');
-      doc.text('Name:', margin + 5, infoY);
-      doc.setFont('helvetica', 'normal');
-      doc.text(customer.name, margin + 22, infoY);
-      infoY += 7;
-      
-      // Email
+      doc.text(customer.name, margin + 5, iy);
+      iy += 6;
       if (customer.email) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Email:', margin + 5, infoY);
         doc.setFont('helvetica', 'normal');
-        doc.text(customer.email, margin + 22, infoY);
-        infoY += 7;
+        doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
+        doc.text(customer.email, margin + 5, iy);
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
+        iy += 6;
       }
-      
-      // Phone
       if (customer.phone) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Phone:', margin + 5, infoY);
         doc.setFont('helvetica', 'normal');
-        doc.text(customer.phone, margin + 22, infoY);
+        doc.setTextColor(83, 83, 83);
+        doc.text(customer.phone, margin + 5, iy);
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
       }
     } else {
-      doc.setTextColor(darkColorR, darkColorG, darkColorB);
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(9);
-      doc.text('No customer information', margin + 5, yPosition + 12);
+      doc.setFontSize(8);
+      doc.setTextColor(83, 83, 83);
+      doc.text('No customer information', margin + 5, yPosition + 14);
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
     }
 
-    // Box Proyecto - Con bordes visibles
-    const projX = margin + boxWidth + 8;
-    drawBorderedBox(projX, yPosition, boxWidth, infoBoxHeight, 'PROJECT DETAILS', [darkColorR, darkColorG, darkColorB]);
+    // Project details card
+    const projX = margin + boxWidth + infoGap;
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(projX, yPosition, boxWidth, infoBoxHeight, 4, 4, 'FD');
+    drawInfoCardHeader(projX, yPosition, boxWidth, 'Project Details');
 
+    let py = yPosition + 13;
+    doc.setFontSize(8.5);
+    doc.setTextColor(83, 83, 83); // slate label
+    doc.setFont('helvetica', 'normal');
+    doc.text('Experience Level', projX + 5, py);
+    py += 4;
     doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    
-    let projY = yPosition + 12;
-    
-    // Experience
-    doc.setFont('helvetica', 'bold');
-    doc.text('Experience:', projX + 5, projY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(quote.experience, projX + 28, projY);
-    projY += 7;
-    
-    // Status
-    doc.setFont('helvetica', 'bold');
-    doc.text('Status:', projX + 5, projY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(quote.status.toUpperCase(), projX + 28, projY);
-    projY += 7;
-    
-    // Date
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date:', projX + 5, projY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(this.formatDate(quote.createdAt), projX + 28, projY);
+    doc.text(quote.experience.charAt(0).toUpperCase() + quote.experience.slice(1), projX + 5, py);
+    py += 7;
+    if (quote.notes) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(83, 83, 83);
+      const notesLines = doc.splitTextToSize(quote.notes, boxWidth - 10);
+      doc.text(notesLines.slice(0, 2), projX + 5, py);
+      doc.setTextColor(darkColorR, darkColorG, darkColorB);
+    }
 
     yPosition += infoBoxHeight + 12;
-
-    // Total Price destacado con borde - usar FD para mejor resultado
-    doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-    doc.setDrawColor(primaryColorR - 30, primaryColorG - 30, primaryColorB - 30);
-    doc.setLineWidth(0.8);
-    // Dibujar fondo y borde juntos
-    doc.roundedRect(margin, yPosition, contentWidth, 18, 3, 3, 'FD');
-    
-    // Establecer color del texto DESPUÉS de dibujar el fondo
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    doc.text('TOTAL ESTIMATE', margin + 8, yPosition + 8);
-    
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text(
-      `$${(quote.totalPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      margin + 8,
-      yPosition + 16
-    );
-    
-    // Resetear color del texto
-    doc.setTextColor(darkColorR, darkColorG, darkColorB);
-
-    yPosition += 26;
-
-    // Notas si existen - Con borde (solo para estimator/admin)
-    if (quote.notes && showFullDetails) {
-      addPageIfNeeded(30);
-      
-      const notesHeight = 25;
-      drawBorderedBox(margin, yPosition, contentWidth, notesHeight, 'NOTES', [primaryColorR, primaryColorG, primaryColorB]);
-      
-      doc.setTextColor(darkColorR, darkColorG, darkColorB);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      
-      const notesLines = doc.splitTextToSize(quote.notes, contentWidth - 10);
-      doc.text(notesLines, margin + 5, yPosition + 14);
-      
-      const actualHeight = Math.max(notesHeight, (notesLines.length * 4) + 18);
-      yPosition += actualHeight + 8;
-    }
 
     // === SECCIÓN 1: Kitchen Information (campos dinámicos) ===
     if (quote.kitchenInformation) {
       for (const categoryGroup of groupedInputs) {
-        // Verificar si la categoría tiene datos
         const hasData = categoryGroup.subcategories.some(sub =>
           sub.inputs.some(input => {
             const value = quote.kitchenInformation?.[input.name];
@@ -827,32 +862,23 @@ export class PdfService {
 
         if (!hasData) continue;
 
-        // Verificar si necesitamos nueva página
         if (yPosition > pageHeight - 50) {
           doc.addPage();
           yPosition = margin;
         }
 
-        // Título de categoría - Diseño simplificado
-        const categoryTitleHeight = 12;
-        
-        // Dibujar fondo de la barra de título (verde oscuro) - diseño simple
-        doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-        doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
-        doc.setLineWidth(0.8);
-        doc.roundedRect(margin, yPosition, contentWidth, categoryTitleHeight, 2, 2, 'FD');
-        
-        // Establecer color del texto (blanco sobre fondo verde)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        // Dibujar el texto centrado verticalmente en la barra
-        const titleText = categoryGroup.title.toUpperCase();
-        doc.text(titleText, margin + 8, yPosition + 8);
-        
-        // Resetear color del texto para el contenido siguiente
+        // Título de categoría — charcoal bold con subrayado pine (replica "font-display text-2xl text-charcoal")
+        addPageIfNeeded(22);
         doc.setTextColor(darkColorR, darkColorG, darkColorB);
-        yPosition += categoryTitleHeight + 8;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(categoryGroup.title, margin, yPosition);
+        const catTitleW = doc.getTextWidth(categoryGroup.title);
+        doc.setDrawColor(primaryColorR, primaryColorG, primaryColorB);
+        doc.setLineWidth(0.5);
+        doc.line(margin, yPosition + 4.5, margin + catTitleW, yPosition + 4.5);
+        doc.setTextColor(darkColorR, darkColorG, darkColorB);
+        yPosition += 12;
 
         for (const subcategoryGroup of categoryGroup.subcategories) {
           const hasSubData = subcategoryGroup.inputs.some(input => {
@@ -862,125 +888,89 @@ export class PdfService {
 
           if (!hasSubData) continue;
 
-          // Verificar si necesitamos nueva página
           if (yPosition > pageHeight - 40) {
             doc.addPage();
             yPosition = margin;
           }
 
-          // Subtítulo si no es default
+          // Sub-sección — clay uppercase con hairline fog (replica "text-sm font-bold uppercase tracking-widest text-clay")
           if (subcategoryGroup.id !== 'default') {
-            doc.setTextColor(darkColorR, darkColorG, darkColorB);
-            doc.setFontSize(10);
+            addPageIfNeeded(14);
+            doc.setTextColor(clayColorR, clayColorG, clayColorB);
+            doc.setFontSize(8);
             doc.setFont('helvetica', 'bold');
-            doc.text(subcategoryGroup.title, margin + 3, yPosition);
-            yPosition += 5;
+            doc.text(subcategoryGroup.title.toUpperCase(), margin, yPosition);
+            doc.setDrawColor(fogColorR, fogColorG, fogColorB);
+            doc.setLineWidth(0.3);
+            doc.line(margin, yPosition + 3.5, margin + contentWidth, yPosition + 3.5);
+            yPosition += 9;
           }
 
-          // Items de la subcategoría - Tabla mejorada y más ordenada
-          // Primero recopilar todos los items válidos
+          // Recopilar items válidos
           const validItems: Array<{ input: KitchenInput; value: unknown; displayValue: string }> = [];
-          
+
           for (const input of subcategoryGroup.inputs) {
             const value = quote.kitchenInformation?.[input.name];
             if (value === null || value === undefined || value === false || value === '' || value === 'No') {
               continue;
             }
-
+            // Filtrar valores "none" (campo no aplica)
+            if (typeof value === 'string') {
+              const lc = value.toLowerCase().trim();
+              if (lc === 'none' || lc === 'no' || lc === 'n/a') continue;
+            }
             let displayValue = '';
             if (value === true) {
               displayValue = 'Yes';
-            } else if (value === false) {
-              displayValue = 'No';
             } else {
               displayValue = String(value);
-              if (input.unit) {
-                displayValue += ` ${input.unit}`;
-              }
+              if (input.unit) displayValue += ` ${input.unit}`;
             }
-
+            // Filtrar displayValue que empieza con "none" (ej: "none LF")
+            const dvLower = displayValue.toLowerCase().trim();
+            if (dvLower === 'none' || dvLower.startsWith('none ')) continue;
             validItems.push({ input, value, displayValue });
           }
 
-          // Si hay items válidos, crear tabla
+          // Renderizar como grid de cards (3 columnas) — replica "grid grid-cols-3 gap-6" de la pantalla
           if (validItems.length > 0) {
-            addPageIfNeeded(20);
+            const cardCols = 3;
+            const cardGap = 3;
+            const cardPadX = 4;
+            const cardPadY = 3.5;
+            const cw = (contentWidth - cardGap * (cardCols - 1)) / cardCols;
 
-            // Definir columnas de la tabla
-            const colLabelWidth = contentWidth * 0.65;
-            const colValueWidth = contentWidth * 0.30;
-            const rowHeight = 8;
-            const headerHeight = 10;
+            // Agrupar en filas
+            for (let rowStart = 0; rowStart < validItems.length; rowStart += cardCols) {
+              const rowItems = validItems.slice(rowStart, rowStart + cardCols);
 
-            // Header de la tabla - usar FD para mejor resultado
-            doc.setFillColor(primaryColorR, primaryColorG, primaryColorB);
-            doc.setDrawColor(primaryColorR - 20, primaryColorG - 20, primaryColorB - 20);
-            doc.setLineWidth(0.5);
-            // Dibujar fondo y borde juntos
-            doc.roundedRect(margin, yPosition, colLabelWidth, headerHeight, 2, 2, 'FD');
-            doc.roundedRect(margin + colLabelWidth + 2, yPosition, colValueWidth, headerHeight, 2, 2, 'FD');
+              // Calcular altura de cada card de la fila
+              const rowHeights = rowItems.map(item => {
+                doc.setFontSize(6.5);
+                doc.setFont('helvetica', 'bold');
+                const lbl = doc.splitTextToSize(item.input.label.toUpperCase(), cw - cardPadX * 2);
+                doc.setFontSize(9.5);
+                doc.setFont('helvetica', 'normal');
+                const val = doc.splitTextToSize(item.displayValue, cw - cardPadX * 2);
+                return Math.max(20, cardPadY + lbl.length * 3.2 + 3 + val.length * 5 + cardPadY);
+              });
 
-            // Establecer color del texto DESPUÉS de dibujar el fondo
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Item', margin + 4, yPosition + 6.5);
-            doc.text('Value', margin + colLabelWidth + 6, yPosition + 6.5);
-            
-            // Resetear color del texto para las filas de datos
-            doc.setTextColor(darkColorR, darkColorG, darkColorB);
+              const rowH = Math.max(...rowHeights);
+              addPageIfNeeded(rowH + 5);
 
-            yPosition += headerHeight + 1;
+              rowItems.forEach((item, j) => {
+                const cx = margin + j * (cw + cardGap);
+                drawDataCard(cx, yPosition, cw, rowH, item.input.label, item.displayValue, item.value === true);
+              });
 
-            // Filas de datos
-            for (let i = 0; i < validItems.length; i++) {
-              const item = validItems[i];
-              addPageIfNeeded(rowHeight + 2);
-
-              // Alternar color de fondo para mejor legibilidad
-              const isEven = i % 2 === 0;
-              doc.setFillColor(isEven ? 255 : 250, isEven ? 255 : 250, isEven ? 255 : 250);
-              doc.roundedRect(margin, yPosition, colLabelWidth, rowHeight, 1, 1, 'F');
-              doc.roundedRect(margin + colLabelWidth + 2, yPosition, colValueWidth, rowHeight, 1, 1, 'F');
-
-              // Bordes de las celdas
-              doc.setDrawColor(220, 220, 220);
-              doc.setLineWidth(0.2);
-              doc.roundedRect(margin, yPosition, colLabelWidth, rowHeight, 1, 1, 'S');
-              doc.roundedRect(margin + colLabelWidth + 2, yPosition, colValueWidth, rowHeight, 1, 1, 'S');
-
-              // Label (columna izquierda)
-              doc.setTextColor(100, 100, 100);
-              doc.setFontSize(8.5);
-              doc.setFont('helvetica', 'normal');
-              const labelLines = doc.splitTextToSize(item.input.label, colLabelWidth - 8);
-              doc.text(labelLines, margin + 4, yPosition + 5.5);
-
-              // Valor (columna derecha)
-              doc.setFont('helvetica', 'bold');
-              if (item.value === true) {
-                doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-              } else if (item.value === false) {
-                doc.setTextColor(150, 150, 150);
-              } else {
-                doc.setTextColor(darkColorR, darkColorG, darkColorB);
-              }
-              
-              const valueLines = doc.splitTextToSize(item.displayValue, colValueWidth - 8);
-              doc.text(valueLines, margin + colLabelWidth + 6, yPosition + 5.5);
-
-              // Calcular altura de la fila basada en el contenido más alto
-              const maxLines = Math.max(labelLines.length, valueLines.length);
-              const actualRowHeight = Math.max(rowHeight, maxLines * 4 + 4);
-              
-              yPosition += actualRowHeight + 1; // Espacio entre filas
+              yPosition += rowH + 4;
             }
 
-            yPosition += 4; // Espacio después de la tabla
+            yPosition += 4;
           }
         }
 
-        yPosition += 5; // Espacio entre categorías
+        yPosition += 6;
       }
     }
 
@@ -994,21 +984,25 @@ export class PdfService {
     // Preparar datos de media (orden del formulario)
     const kitchenInfo = quote.kitchenInformation || {};
     
-    // Countertops Files
+    // Countertops Files — leer desde top-level primero, luego kitchenInformation como fallback
     let countertopsFiles: string[] = [];
-    if (kitchenInfo['countertopsFiles'] && Array.isArray(kitchenInfo['countertopsFiles']) && kitchenInfo['countertopsFiles'].length > 0) {
+    if (quote.countertopsFiles && Array.isArray(quote.countertopsFiles) && quote.countertopsFiles.length > 0) {
+      countertopsFiles = quote.countertopsFiles;
+    } else if (kitchenInfo['countertopsFiles'] && Array.isArray(kitchenInfo['countertopsFiles']) && (kitchenInfo['countertopsFiles'] as string[]).length > 0) {
       countertopsFiles = kitchenInfo['countertopsFiles'] as string[];
     }
-    
-    // Backsplash Files
+
+    // Backsplash Files — leer desde top-level primero, luego kitchenInformation como fallback
     let backsplashFiles: string[] = [];
-    if (kitchenInfo['backsplashFiles'] && Array.isArray(kitchenInfo['backsplashFiles']) && kitchenInfo['backsplashFiles'].length > 0) {
+    if (quote.backsplashFiles && Array.isArray(quote.backsplashFiles) && quote.backsplashFiles.length > 0) {
+      backsplashFiles = quote.backsplashFiles;
+    } else if (kitchenInfo['backsplashFiles'] && Array.isArray(kitchenInfo['backsplashFiles']) && (kitchenInfo['backsplashFiles'] as string[]).length > 0) {
       backsplashFiles = kitchenInfo['backsplashFiles'] as string[];
     }
-    
-    // Audio Notes (ahora es array)
+
+    // Audio Notes (ahora es array) — top-level primero, luego kitchenInformation
     let audioNotesArray: { url: string; transcription?: string; summary?: string }[] = [];
-    const audioNotesData = kitchenInfo['audioNotes'] || quote.audioNotes;
+    const audioNotesData = quote.audioNotes || kitchenInfo['audioNotes'];
     if (audioNotesData) {
       if (Array.isArray(audioNotesData)) {
         audioNotesArray = audioNotesData;
@@ -1056,59 +1050,14 @@ export class PdfService {
         const file = countertopsFiles[i];
         if (!file) continue;
         
-        console.log(`[PDF] Processing countertop file ${i + 1}:`, file);
-        const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file);
-        const isVideo = /\.(mp4|mov|mkv|avi|webm)$/i.test(file);
-        
-        if (isImage) {
-          try {
-            const label = countertopsFiles.length > 1 ? `Countertop ${i + 1} of ${countertopsFiles.length}` : 'Countertop';
-            await renderFullWidthImage(file, label);
-            yPosition += 4;
-          } catch (error) {
-            console.error('[PDF] Error rendering countertop image:', error);
-          }
+        if (isImageFile(file)) {
+          const imgLabel = countertopsFiles.length > 1 ? `Countertop ${i + 1} of ${countertopsFiles.length}` : 'Countertop';
+          await renderFullWidthImage(file, imgLabel);
+          yPosition += 4;
         } else {
-          addPageIfNeeded(16);
-          const label = fileNameFromUrl(file) || 'Countertop File';
-          const mediaType = isVideo ? 'Video' : 'File';
-          
-          // Box con borde para el link
-          doc.setFillColor(245, 245, 245);
-          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
-          
-          // Texto y link
-          doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          
-          const typeLabel = `${mediaType}: `;
-          const typeLabelWidth = doc.getTextWidth(typeLabel);
-          doc.text(typeLabel, margin + 4, yPosition + 7.5);
-          
-          // Link clicable
-          doc.setTextColor(0, 0, 255);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
-            url: file,
-            color: [0, 0, 255]
-          });
-          
-          // Mostrar también la URL completa debajo
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(7);
-          doc.setFont('helvetica', 'italic');
-          const urlText = file.length > 80 ? file.substring(0, 80) + '...' : file;
-          doc.text(urlText, margin + 4, yPosition + 10.5);
-          
-          yPosition += 16;
+          renderFileLink(file, isVideoFile(file) ? 'Video' : 'File');
         }
       }
-      
       yPosition += 4;
     }
 
@@ -1121,59 +1070,14 @@ export class PdfService {
         const file = backsplashFiles[i];
         if (!file) continue;
         
-        console.log(`[PDF] Processing backsplash file ${i + 1}:`, file);
-        const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(file);
-        const isVideo = /\.(mp4|mov|mkv|avi|webm)$/i.test(file);
-        
-        if (isImage) {
-          try {
-            const label = backsplashFiles.length > 1 ? `Backsplash ${i + 1} of ${backsplashFiles.length}` : 'Backsplash';
-            await renderFullWidthImage(file, label);
-            yPosition += 4;
-          } catch (error) {
-            console.error('[PDF] Error rendering backsplash image:', error);
-          }
+        if (isImageFile(file)) {
+          const imgLabel = backsplashFiles.length > 1 ? `Backsplash ${i + 1} of ${backsplashFiles.length}` : 'Backsplash';
+          await renderFullWidthImage(file, imgLabel);
+          yPosition += 4;
         } else {
-          addPageIfNeeded(16);
-          const label = fileNameFromUrl(file) || 'Backsplash File';
-          const mediaType = isVideo ? 'Video' : 'File';
-          
-          // Box con borde para el link
-          doc.setFillColor(245, 245, 245);
-          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
-          doc.setDrawColor(200, 200, 200);
-          doc.setLineWidth(0.3);
-          doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
-          
-          // Texto y link
-          doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          
-          const typeLabel = `${mediaType}: `;
-          const typeLabelWidth = doc.getTextWidth(typeLabel);
-          doc.text(typeLabel, margin + 4, yPosition + 7.5);
-          
-          // Link clicable
-          doc.setTextColor(0, 0, 255);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
-            url: file,
-            color: [0, 0, 255]
-          });
-          
-          // Mostrar también la URL completa debajo
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(7);
-          doc.setFont('helvetica', 'italic');
-          const urlText = file.length > 80 ? file.substring(0, 80) + '...' : file;
-          doc.text(urlText, margin + 4, yPosition + 10.5);
-          
-          yPosition += 16;
+          renderFileLink(file, isVideoFile(file) ? 'Video' : 'File');
         }
       }
-      
       yPosition += 4;
     }
 
@@ -1195,48 +1099,10 @@ export class PdfService {
           yPosition += 6;
 
           const fileUrl = materials.file;
-          const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(fileUrl);
-
-          if (isImage) {
+          if (isImageFile(fileUrl)) {
             await renderFullWidthImage(fileUrl);
           } else {
-            const label = fileNameFromUrl(fileUrl);
-            addPageIfNeeded(16);
-            const mediaType = 'File';
-            
-            // Box con borde para el link
-            doc.setFillColor(245, 245, 245);
-            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
-            doc.setDrawColor(200, 200, 200);
-            doc.setLineWidth(0.3);
-            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
-            
-            // Texto y link
-            doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            
-            const typeLabel = `${mediaType}: `;
-            const typeLabelWidth = doc.getTextWidth(typeLabel);
-            doc.text(typeLabel, margin + 4, yPosition + 7.5);
-            
-            // Link clicable
-            doc.setTextColor(0, 0, 255);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
-            doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
-              url: fileUrl,
-              color: [0, 0, 255]
-            });
-            
-            // Mostrar también la URL completa debajo
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(7);
-            doc.setFont('helvetica', 'italic');
-            const urlText = fileUrl.length > 80 ? fileUrl.substring(0, 80) + '...' : fileUrl;
-            doc.text(urlText, margin + 4, yPosition + 10.5);
-            
-            yPosition += 16;
+            renderFileLink(fileUrl, 'File');
           }
         }
 
@@ -1311,41 +1177,7 @@ export class PdfService {
         doc.text(audioTitle, margin + 2, yPosition);
         yPosition += 6;
 
-        const label = fileNameFromUrl(audioNote.url) || 'Audio File';
-        
-        // Box con borde para el audio
-        doc.setFillColor(245, 245, 245);
-        doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
-        
-        // Texto y link en la misma línea
-        doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        
-        const audioLabel = 'Audio: ';
-        const audioLabelWidth = doc.getTextWidth(audioLabel);
-        doc.text(audioLabel, margin + 4, yPosition + 7.5);
-        
-        // Link clicable
-        doc.setTextColor(0, 0, 255);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.textWithLink(label, margin + 4 + audioLabelWidth, yPosition + 7.5, { 
-          url: audioNote.url,
-          color: [0, 0, 255]
-        });
-        
-        // Mostrar también la URL completa debajo
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'italic');
-        const urlText = audioNote.url.length > 80 ? audioNote.url.substring(0, 80) + '...' : audioNote.url;
-        doc.text(urlText, margin + 4, yPosition + 10.5);
-        
-        yPosition += 16;
+        renderFileLink(audioNote.url, 'Audio');
         
         // Mostrar summary y transcription si existen
         if (audioNote.summary || audioNote.transcription) {
@@ -1441,58 +1273,12 @@ export class PdfService {
         for (const media of additionalMedia) {
           if (!media) continue;
           
-          console.log('[PDF] Processing media:', media);
-          const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(media);
-          const isVideo = /\.(mp4|mov|mkv|avi|webm)$/i.test(media);
-          console.log('[PDF] - isImage:', isImage, 'isVideo:', isVideo);
-          
-          if (isImage) {
-            try {
-              await renderFullWidthImage(media);
-            } catch (error) {
-              console.error('[PDF] Error rendering image:', error);
-            }
+          if (isImageFile(media)) {
+            await renderFullWidthImage(media);
           } else {
-            addPageIfNeeded(16);
-            const label = fileNameFromUrl(media) || 'Media File';
-            const mediaType = isVideo ? 'Video' : 'File';
-            
-            // Box con borde para el link
-            doc.setFillColor(245, 245, 245);
-            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'F');
-            doc.setDrawColor(200, 200, 200);
-            doc.setLineWidth(0.3);
-            doc.roundedRect(margin, yPosition, contentWidth, 12, 2, 2, 'S');
-            
-            // Texto y link
-            doc.setTextColor(primaryColorR, primaryColorG, primaryColorB);
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            
-            const typeLabel = `${mediaType}: `;
-            const typeLabelWidth = doc.getTextWidth(typeLabel);
-            doc.text(typeLabel, margin + 4, yPosition + 7.5);
-            
-            // Link clicable
-            doc.setTextColor(0, 0, 255);
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
-            doc.textWithLink(label, margin + 4 + typeLabelWidth, yPosition + 7.5, { 
-              url: media,
-              color: [0, 0, 255]
-            });
-            
-            // Mostrar también la URL completa debajo
-            doc.setTextColor(100, 100, 100);
-            doc.setFontSize(7);
-            doc.setFont('helvetica', 'italic');
-            const urlText = media.length > 80 ? media.substring(0, 80) + '...' : media;
-            doc.text(urlText, margin + 4, yPosition + 10.5);
-            
-            yPosition += 16;
+            renderFileLink(media, isVideoFile(media) ? 'Video' : 'File');
           }
         }
-
         yPosition += 4;
       }
     }
@@ -1599,74 +1385,56 @@ export class PdfService {
     });
   }
 
-  private getImageFromUrl(url: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      console.log('[PDF] Loading image from URL:', url);
-      
-      // Intentar primero con Image object (más compatible)
+  private async getImageFromUrl(url: string): Promise<string> {
+    // Estrategia 1: Proxy del backend — evita CORS en S3
+    // El backend descarga la imagen desde S3 y la sirve al browser
+    try {
+      const proxyUrl = `${this.apiUrl}/upload/image-proxy?url=${encodeURIComponent(url)}`;
+      const blob = await firstValueFrom(
+        this.http.get(proxyUrl, { responseType: 'blob' })
+      );
+      return await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onloadend = () => res(reader.result as string);
+        reader.onerror = () => rej(new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+    } catch (proxyErr) {
+      console.warn('[PDF] backend proxy failed, trying direct fetch:', proxyErr);
+    }
+
+    // Estrategia 2: fetch directo con CORS
+    try {
+      const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      return await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onloadend = () => res(reader.result as string);
+        reader.onerror = () => rej(new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+    } catch (fetchErr) {
+      console.warn('[PDF] direct fetch failed, trying Image element:', fetchErr);
+    }
+
+    // Estrategia 3: Image element con crossOrigin (último recurso)
+    return new Promise<string>((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
       img.onload = () => {
         try {
-          console.log('[PDF] Image loaded successfully, dimensions:', img.width, 'x', img.height);
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
-          
           const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            throw new Error('Could not get canvas context');
-          }
-          
+          if (!ctx) throw new Error('No canvas context');
           ctx.drawImage(img, 0, 0);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-          console.log('[PDF] Image converted to data URL, length:', dataUrl.length);
-          resolve(dataUrl);
-        } catch (error) {
-          console.error('[PDF] Error converting image to canvas:', error);
-          reject(error);
-        }
+          resolve(canvas.toDataURL('image/jpeg', 0.92));
+        } catch (e) { reject(e); }
       };
-      
-      img.onerror = (error) => {
-        console.warn('[PDF] Image object failed, trying fetch:', error);
-        // Fallback a fetch
-        fetch(url, {
-          mode: 'cors',
-          credentials: 'omit',
-          cache: 'no-cache'
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          return response.blob();
-        })
-        .then(blob => {
-          return new Promise<string>((resolveBlob, rejectBlob) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const result = reader.result as string;
-              console.log('[PDF] Image loaded via fetch, data URL length:', result.length);
-              resolveBlob(result);
-            };
-            reader.onerror = () => rejectBlob(new Error('FileReader error'));
-            reader.readAsDataURL(blob);
-          });
-        })
-        .then(dataUrl => {
-          resolve(dataUrl);
-        })
-        .catch(fetchError => {
-          console.error('[PDF] Both Image and fetch failed:', fetchError);
-          reject(new Error(`Could not load image: ${fetchError.message}`));
-        });
-      };
-      
-      // Agregar timestamp para evitar caché y forzar recarga
-      const separator = url.includes('?') ? '&' : '?';
-      img.src = url + separator + '_t=' + new Date().getTime();
+      img.onerror = () => reject(new Error(`Could not load image from ${url}`));
+      img.src = url;
     });
   }
 }

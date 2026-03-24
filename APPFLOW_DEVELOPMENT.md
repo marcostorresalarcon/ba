@@ -11,7 +11,7 @@ Checklist para desplegar una versión de desarrollo (debug) vía Ionic Appflow p
 
 ### 2. Capacitor
 - [x] **capacitor.config.ts** `appId`: `com.bakitchenandbathdesigns.app`
-- [x] **capacitor.config.ts** `appName`: `BA Kitchen & Bath (Dev)`
+- [x] **capacitor.config.ts** `appName`: **BA Kitchen & Bath Design** (en una rama solo-dev puedes cambiar a `…(Dev)` en `capacitor.config.ts`, `Info.plist` y `strings.xml` si quieres distinguir el binario)
 - [x] **android**: `webContentsDebuggingEnabled: true` para poder inspeccionar desde Chrome DevTools.
 
 ### 3. iOS (Development)

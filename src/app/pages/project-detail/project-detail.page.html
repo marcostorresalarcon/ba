@@ -4,16 +4,16 @@
     <div class="h-64 rounded-2xl bg-fog/30"></div>
   </div>
   } @else { @if (project()) {
-  <div class="space-y-12">
+  <div class="space-y-14">
     @if (isCustomer()) {
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-8 shadow-brand">
+    <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-8 shadow-brand sm:p-10">
       <h1 class="font-display text-4xl text-charcoal">{{ project()?.name }}</h1>
       @if (project()?.description) {
-      <p class="mt-2 text-lg text-slate">{{ project()?.description }}</p>
+      <p class="mt-3 text-lg leading-relaxed text-slate">{{ project()?.description }}</p>
       }
       
-      <div class="mt-6 flex flex-wrap items-center gap-4 text-sm text-slate">
-        <span class="rounded-full bg-pine/10 px-4 py-1.5 font-bold text-pine uppercase tracking-wider text-xs">
+      <div class="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-slate">
+        <span class="rounded-full bg-pine/10 px-4 py-2 font-bold text-pine uppercase tracking-wider text-xs">
           {{ project()?.status?.replace('_', ' ') }}
         </span>
         @if (project()?.startDate) {
@@ -34,55 +34,52 @@
         }
       </div>
 
-      <!-- Enhanced Pipeline Stepper -->
-      <div class="mt-10 mb-12">
-        <div class="flex items-center w-full px-2">
+      <!-- Pipeline: 7 celdas flex (paso | línea | paso | …) para alinear conectores con los círculos -->
+      <div class="mt-12 w-full min-w-0 px-0.5 sm:px-1">
+        <div class="flex w-full min-w-0 items-start">
           @for (step of pipelineSteps(); track step.label; let last = $last; let i = $index) {
-            <div class="flex items-center" [class.flex-1]="!last">
-              <!-- Step Circle -->
-              <div class="relative flex flex-col items-center group">
-                <div 
-                  class="w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 z-10"
-                  [class.bg-pine]="step.active || step.done"
-                  [class.border-pine]="step.active || step.done"
-                  [class.bg-white]="!step.active && !step.done"
-                  [class.border-fog]="!step.active && !step.done"
-                  [class.shadow-raised]="step.active"
-                >
-                  @if (step.done) {
-                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  } @else if (step.active) {
-                    <span class="w-3 h-3 rounded-full bg-white animate-pulse"></span>
-                  } @else {
-                    <span class="text-xs font-semibold text-slate/50">{{ i + 1 }}</span>
-                  }
-                </div>
-                <span 
-                  class="absolute top-12 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors duration-300"
-                  [class.text-pine]="step.active"
-                  [class.text-charcoal]="step.done && !step.active"
-                  [class.text-fog]="!step.active && !step.done"
-                >
-                  {{ step.label }}
-                </span>
+            <div class="flex min-w-0 min-h-0 flex-1 flex-col items-center px-0.5 sm:px-1">
+              <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500"
+                [class.bg-pine]="step.active || step.done"
+                [class.border-pine]="step.active || step.done"
+                [class.bg-white]="!step.active && !step.done"
+                [class.border-fog]="!step.active && !step.done"
+                [class.shadow-raised]="step.active"
+              >
+                @if (step.done) {
+                  <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                  </svg>
+                } @else if (step.active) {
+                  <span class="h-3 w-3 animate-pulse rounded-full bg-white"></span>
+                } @else {
+                  <span class="text-xs font-semibold text-slate/50">{{ i + 1 }}</span>
+                }
               </div>
-              
-              <!-- Connector Line -->
-              @if (!last) {
-                <div class="flex-1 h-0.5 mx-2 rounded-full transition-colors duration-500" 
-                     [class.bg-pine]="step.done" 
-                     [class.bg-fog/30]="!step.done">
-                </div>
-              }
+              <p
+                class="mt-4 w-full max-w-full text-center text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-balance sm:mt-5 sm:text-[0.7rem] sm:leading-tight md:text-xs md:tracking-wider"
+                [class.text-pine]="step.active"
+                [class.text-charcoal]="step.done && !step.active"
+                [class.text-fog]="!step.active && !step.done"
+              >
+                {{ step.label }}
+              </p>
             </div>
+            @if (!last) {
+              <div
+                class="mt-5 h-0.5 min-w-[8px] flex-1 shrink-0 rounded-full transition-colors duration-500"
+                [class.bg-pine]="step.done"
+                [class.bg-fog/40]="!step.done"
+                aria-hidden="true"
+              ></div>
+            }
           }
         </div>
       </div>
 
       @if (nextStep()) {
-      <div class="mt-8 rounded-[2rem] bg-gradient-to-br from-pine/5 to-pine/10 p-6 border border-pine/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="mt-12 rounded-[2rem] border border-pine/10 bg-gradient-to-br from-pine/5 to-pine/10 p-6 sm:p-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p class="text-xs font-bold uppercase tracking-widest text-pine mb-1">Up Next</p>
           <h3 class="font-display text-xl text-charcoal">{{ nextStep()!.action }}</h3>
@@ -100,7 +97,7 @@
       </div>
       }
 
-      <div class="mt-8 flex flex-wrap gap-4">
+      <div class="mt-12 flex flex-wrap gap-4">
         <a
           [routerLink]="['/projects', projectId(), 'documents']"
           class="flex-1 min-w-[140px] flex flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-fog/60 bg-white p-4 transition-all hover:border-pine/40 hover:shadow-raised hover:-translate-y-1 group"
@@ -139,8 +136,8 @@
       </div>
 
       @if (project()?.milestones && project()!.milestones!.length > 0) {
-      <div class="mt-10">
-        <h2 class="text-lg font-display font-semibold text-charcoal mb-4">Milestones</h2>
+      <div class="mt-14 border-t border-fog/50 pt-10">
+        <h2 class="mb-5 font-display text-lg font-semibold text-charcoal">Milestones</h2>
         <div class="space-y-3">
           @for (m of project()!.milestones!; track m.name) {
           <div class="flex items-center gap-4 p-3 rounded-xl transition-colors" [class.bg-pine/5]="m.completed" [class.bg-white]="!m.completed">
@@ -219,6 +216,7 @@
           <span class="text-sm font-semibold text-charcoal">Timeline</span>
         </a>
         
+        @if (!isEstimator()) {
         <a
           [routerLink]="['/projects', projectId(), 'comments']"
           class="flex-1 min-w-[140px] flex flex-col items-center justify-center gap-3 rounded-[1.5rem] border border-fog/60 bg-white p-4 transition-all hover:border-pine/40 hover:shadow-raised hover:-translate-y-1 group"
@@ -230,13 +228,18 @@
           </div>
           <span class="text-sm font-semibold text-charcoal">Comments</span>
         </a>
+        }
       </div>
     </section>
     }
 
     @if (projectId(); as pid) {
-    <app-project-comments [projectId]="pid" />
-    <app-project-appointments [projectId]="pid" />
+    @if (!isEstimator()) {
+    <div class="flex flex-col gap-5 sm:mt-5 sm:gap-5">
+      <app-project-comments [projectId]="pid" />
+      <app-project-appointments [projectId]="pid" />
+    </div>
+    }
     }
 
     <app-quote-list

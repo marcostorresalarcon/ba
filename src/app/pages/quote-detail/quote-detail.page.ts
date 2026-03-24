@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../core/services/auth/auth.service';
 import { QuoteService } from '../../core/services/quote/quote.service';
@@ -16,7 +17,6 @@ import type { Invoice } from '../../core/models/invoice.model';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
 import { KitchenInputsService, type CategoryGroup, type KitchenInput } from '../../core/services/kitchen-inputs/kitchen-inputs.service';
-import { PdfService } from '../../core/services/pdf/pdf.service';
 
 @Component({
   selector: 'app-quote-detail-page',
@@ -38,7 +38,6 @@ export class QuoteDetailPage {
   private readonly errorService = inject(HttpErrorService);
   private readonly notificationService = inject(NotificationService);
   private readonly inputsService = inject(KitchenInputsService);
-  private readonly pdfService = inject(PdfService);
   private readonly layoutService = inject(LayoutService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly mediaPreview = inject(MediaPreviewService);
@@ -200,9 +199,12 @@ export class QuoteDetailPage {
 
   protected shouldShowInput(input: KitchenInput, quote: Quote): boolean {
     const value = this.getInputValue(input, quote);
-    // Mostrar solo si tiene valor válido (no false, no null, no undefined, no vacío)
-    // Excepción: el valor 0 sí debería mostrarse si es un número
-    return value !== null && value !== undefined && value !== false && value !== '' && value !== 'No';
+    if (value === null || value === undefined || value === false || value === '' || value === 'No') return false;
+    if (typeof value === 'string') {
+      const lc = value.toLowerCase().trim();
+      if (lc === 'none' || lc === 'n/a') return false;
+    }
+    return true;
   }
 
   protected formatKey(key: string): string {
@@ -292,16 +294,15 @@ export class QuoteDetailPage {
       return;
     }
 
-    if (quote.pdfUrl) {
-      window.open(quote.pdfUrl, '_blank');
-      return;
-    }
-
     try {
       this.notificationService.info('Generating PDF', 'Please wait...');
-      const userRole = this.userRole();
-      await this.pdfService.generateQuotePdf(quote, this.customer, this.groupedInputs(), userRole);
-      this.notificationService.success('PDF Generated', 'Your estimate PDF has been downloaded');
+      const response = await firstValueFrom(this.quoteService.getQuotePdfUrl(quote._id));
+      if (response?.pdfUrl) {
+        window.open(response.pdfUrl, '_blank');
+        this.notificationService.success('PDF Ready', 'Your estimate PDF is ready to download');
+        return;
+      }
+      this.notificationService.error('PDF Generation Failed', 'Could not generate the PDF. Please try again.');
     } catch (error) {
       console.error('Error generating PDF:', error);
       this.notificationService.error('PDF Generation Failed', 'Could not generate the PDF. Please try again.');

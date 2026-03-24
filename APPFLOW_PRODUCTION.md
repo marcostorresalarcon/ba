@@ -11,8 +11,8 @@ Checklist para verificar que el proyecto está listo para desplegar en App Store
 - [x] **fileReplacements** en producción usa `environment.production.ts`
 
 ### 2. Capacitor
-- [x] **capacitor.config.ts** `appId`: com.bakitchenandbathdesigns.appprod
-- [x] **capacitor.config.ts** `appName`: BA Kitchen & Bath
+- [x] **capacitor.config.ts** `appId`: com.bakitchenandbathdesigns.app (ajustar a `appprod` en rama de store si aplica)
+- [x] **capacitor.config.ts** `appName`: **BA Kitchen & Bath Design**
 - [x] **webDir**: dist/ba/browser (coincide con salida de Angular)
 
 ### 3. iOS (Release / App Store)
@@ -21,12 +21,14 @@ Checklist para verificar que el proyecto está listo para desplegar en App Store
 - [x] **project.pbxproj** Release: `CODE_SIGN_IDENTITY` = Apple Distribution
 - [x] **project.pbxproj** `MARKETING_VERSION` = 1.2.0
 - [x] **project.pbxproj** `CURRENT_PROJECT_VERSION` = 7
-- [x] **Info.plist** `CFBundleDisplayName` = BA Kitchen & Bath
+- [x] **Info.plist** `CFBundleDisplayName` = BA Kitchen & Bath Design
 - [x] **exportOptions.plist** method = app-store
 
 ### 4. Iconos y splash
-- [x] Iconos generados con `@capacitor/assets` (logo BA, fondo #C4A574)
-- [x] Carpeta `assets/logo.png` y `ios/App/App/Assets.xcassets/AppIcon.appiconset/`
+- [x] **Fuente del logo**: `public/BA APP Logo Blanco-02.png` (oro sobre blanco)
+- [x] Script: `npm run generate:icons` → copia a `assets/logo.png` y ejecuta `@capacitor/assets`
+- [x] Fondos icono: claro `#FFFFFF`, oscuro `#332F28`; splash: `#ead1ba` / `#332F28`
+- [x] Tras generar: `npx cap sync` (o `npm run sync:ios`) y commit de `ios/…/AppIcon.appiconset/`, `android/app/src/main/res/mipmap-*`, `icons/`, etc.
 
 ---
 

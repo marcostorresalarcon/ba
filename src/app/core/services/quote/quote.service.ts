@@ -50,6 +50,11 @@ export class QuoteService {
     return this.http.get<Quote>(endpoint);
   }
 
+  getQuotePdfUrl(id: string): Observable<{ pdfUrl: string }> {
+    const endpoint = `${this.baseUrl}/quote/${id}/pdf-url`;
+    return this.http.get<{ pdfUrl: string }>(endpoint);
+  }
+
   createQuote(payload: QuotePayload): Observable<Quote> {
     const endpoint = `${this.baseUrl}/quote`;
     return this.http.post<Quote>(endpoint, payload);
