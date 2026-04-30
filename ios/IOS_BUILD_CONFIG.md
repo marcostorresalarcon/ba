@@ -7,8 +7,8 @@ Este documento centraliza toda la configuración de builds iOS (Production, Deve
 - **Bundle ID**: `com.bakitchenandbathdesigns.appprod`
 - **Team ID**: `5G8B5KR88X`
 - **Deployment Target**: iOS 14.0
-- **Marketing Version**: 1.2.0
-- **Current Project Version**: 7
+- **Marketing Version**: 1.3.0
+- **Current Project Version**: 9
 
 ---
 
