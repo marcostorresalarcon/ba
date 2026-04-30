@@ -9,7 +9,7 @@ import { Canvas, PencilBrush, Rect, Circle, Line, Polyline, Polygon, Point } fro
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="w-full h-screen bg-white flex flex-col overflow-hidden" style="height: 100vh;">
+    <div class="w-full h-screen bg-white flex flex-col overflow-hidden" style="height: 100dvh; padding-top: env(safe-area-inset-top);">
       <!-- Toolbar -->
       <div class="flex flex-col border-b border-fog/60 bg-white shadow-sm flex-shrink-0">
         <!-- Top Bar: Actions -->

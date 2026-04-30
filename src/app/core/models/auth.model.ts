@@ -9,14 +9,15 @@ export interface AuthUser {
   email: string;
   name: string;
   role: 'customer' | 'estimator' | 'administrator' | 'admin' | string;
-  customerId?: string; // ID del cliente asociado (puede variar por compañía)
+  forcePasswordChange?: boolean;
+  customerId?: string;
   customerInfo?: {
     _id: string;
     name: string;
     lastName: string;
     email?: string;
     companyId: string;
-  }; // Información completa del customer guardada en localStorage
+  };
 }
 
 export interface AuthResponse {
@@ -33,6 +34,8 @@ export interface RegisterRequestPayload {
 export interface RegisterConfirmPayload {
   email: string;
   code: string;
+  estimatorId?: string;
+  companyId?: string;
 }
 
 export interface RegisterRequestResponse {

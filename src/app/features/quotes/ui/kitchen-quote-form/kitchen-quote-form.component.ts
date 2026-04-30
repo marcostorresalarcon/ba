@@ -7,6 +7,7 @@ import {
   Input,
   Output,
   ViewChild,
+  ElementRef,
   inject,
   signal,
   computed,
@@ -97,6 +98,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
   // Referencia al componente de materiales
   @ViewChild(MaterialsTabComponent, { static: false })
   protected materialsTabComponent: MaterialsTabComponent | null = null;
+  @ViewChild('roughQuoteInput') private roughQuoteInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('clientBudgetInput') private clientBudgetInputRef?: ElementRef<HTMLInputElement>;
   protected readonly selectedKitchenTypeValue = signal<string>('basic');
   protected readonly kitchenSize = signal<'small' | 'medium' | 'large'>('small');
   protected readonly showCostCounter = signal<boolean>(false);
@@ -730,6 +733,8 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
           this.form.updateValueAndValidity({ emitEvent: false });
           this.formChangeTrigger.update((val) => val + 1);
           this.showCostCounter.set(true);
+          this.updateCurrencyDisplay('roughQuote');
+          this.updateCurrencyDisplay('clientBudget');
         }, 0);
       },
       error: (error) => {
@@ -2699,22 +2704,46 @@ export class KitchenQuoteFormComponent implements OnInit, AfterViewInit {
    * Maneja el evento blur: al salir del campo, aplicamos formato de moneda
    * con 2 decimales, pero sin limitar la cantidad de dígitos enteros.
    */
-  protected onCurrencyBlur(controlName: 'roughQuote' | 'clientBudget'): void {
+  private formatCurrency(value: number): string {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  private updateCurrencyDisplay(controlName: 'roughQuote' | 'clientBudget'): void {
+    const value = this.form.controls[controlName].value;
+    const ref = controlName === 'roughQuote' ? this.roughQuoteInputRef : this.clientBudgetInputRef;
+    if (ref && value !== null && value !== undefined) {
+      ref.nativeElement.value = this.formatCurrency(value as number);
+    }
+  }
+
+  protected onCurrencyFocus(event: FocusEvent, controlName: 'roughQuote' | 'clientBudget'): void {
+    const input = event.target as HTMLInputElement;
+    const value = this.form.controls[controlName].value;
+    if (value !== null && value !== undefined) {
+      input.value = String(value);
+    }
+  }
+
+  protected onCurrencyBlur(event: FocusEvent, controlName: 'roughQuote' | 'clientBudget'): void {
+    const input = event.target as HTMLInputElement;
     const control = this.form.controls[controlName];
-    const raw = control.value;
-    if (raw === null || raw === undefined) {
+    const raw = input.value;
+
+    if (!raw || raw.trim() === '') {
       control.setValue(null, { emitEvent: false });
       return;
     }
 
-    const normalized = String(raw).replace(/,/g, '').trim();
+    const normalized = raw.replace(/,/g, '').trim();
     const parsed = parseFloat(normalized);
 
     if (isNaN(parsed)) {
       control.setValue(null, { emitEvent: false });
+      input.value = '';
     } else {
       const rounded = Number(parsed.toFixed(2));
       control.setValue(rounded, { emitEvent: false });
+      input.value = this.formatCurrency(rounded);
     }
   }
 

@@ -1,5 +1,4 @@
-<app-page-layout [breadcrumbs]="breadcrumbs()">
-  @if (isLoading()) {
+@if (isLoading()) {
     <div class="animate-pulse space-y-6">
       <div class="h-32 rounded-[2.5rem] bg-fog/30"></div>
       <div class="h-64 rounded-[2.5rem] bg-fog/30"></div>
@@ -13,31 +12,52 @@
             <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="getStatusColor(inv.status)">
               {{ inv.status }}
             </span>
-            <span class="text-slate text-sm">Issued: {{ inv.issueDate | date }}</span>
+            <span class="text-slate text-sm">Issued: {{ inv.createdAt | date }}</span>
           </div>
-          <h1 class="font-display text-3xl text-charcoal">Invoice #{{ inv.number }}</h1>
+          <h1 class="font-display text-3xl text-charcoal">{{ inv.invoiceNumber }}</h1>
         </div>
         <div class="flex flex-col items-end gap-4">
           <div class="text-right">
             <p class="text-xs font-bold uppercase tracking-widest text-clay mb-1">Total Amount</p>
             <p class="font-display text-4xl text-pine">${{ inv.totalAmount | number:'1.2-2' }}</p>
           </div>
-          <button (click)="downloadPdf()" 
-            [disabled]="isGeneratingPdf()"
-            class="flex items-center gap-2 rounded-full bg-charcoal px-6 py-2 text-sm font-bold text-white shadow-raised transition hover:bg-charcoal/90 disabled:opacity-70">
-            @if (isGeneratingPdf()) {
-              <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Generating...
-            } @else {
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download PDF
+          <div class="flex items-center gap-3">
+            <button (click)="downloadPdf()"
+              [disabled]="isGeneratingPdf()"
+              class="flex items-center gap-2 rounded-full bg-charcoal px-6 py-2 text-sm font-bold text-white shadow-raised transition hover:bg-charcoal/90 disabled:opacity-70">
+              @if (isGeneratingPdf()) {
+                <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating...
+              } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download PDF
+              }
+            </button>
+
+            @if (canDelete()) {
+              <button (click)="deleteInvoice()"
+                [disabled]="isDeleting()"
+                class="flex items-center gap-2 rounded-full border border-red-300 bg-white px-6 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-70">
+                @if (isDeleting()) {
+                  <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Deleting...
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete
+                }
+              </button>
             }
-          </button>
+          </div>
         </div>
       </div>
 
@@ -74,11 +94,27 @@
                 </div>
               </div>
 
-              <div class="flex items-center gap-6">
+              <div class="flex items-center gap-4">
                 <p class="font-display text-xl text-charcoal">${{ item.amount | number:'1.2-2' }}</p>
-                
+
+                <button (click)="downloadInstallmentPdf($index)"
+                  [disabled]="generatingInstallmentIndex() === $index"
+                  class="flex items-center justify-center h-9 w-9 rounded-full border border-fog/60 bg-white text-slate transition hover:bg-fog/20 disabled:opacity-50"
+                  title="Download receipt">
+                  @if (generatingInstallmentIndex() === $index) {
+                    <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  }
+                </button>
+
                 @if (item.status === 'pending' && !isEstimator()) {
-                  <button (click)="openPayment(item, $index)" 
+                  <button (click)="openPayment(item, $index)"
                     class="rounded-full bg-pine px-6 py-2 text-sm font-bold text-white shadow-raised transition hover:bg-pine/90 hover:shadow-lg">
                     Pay Now
                   </button>
@@ -100,5 +136,4 @@
       (close)="handlePaymentResult($event)"
     ></app-payment-modal>
   }
-</app-page-layout>
 

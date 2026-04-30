@@ -1,12 +1,5 @@
 <section class="mt-5 space-y-6">
-  @if (!isCustomer()) {
-  <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
-    <p class="text-slate">Profile editing is available for customers only.</p>
-    <a routerLink="/settings" class="mt-4 inline-block text-sm font-medium text-pine hover:underline">
-      Go to Settings
-    </a>
-  </div>
-  } @else if (isLoading()) {
+  @if (isLoading()) {
   <div class="flex justify-center py-12">
     <div class="h-10 w-10 animate-spin rounded-full border-2 border-pine border-t-transparent"></div>
   </div>
@@ -26,6 +19,7 @@
             class="mt-1 w-full rounded-xl border border-fog/60 bg-white px-4 py-2 text-charcoal"
           />
         </div>
+        @if (isCustomer()) {
         <div>
           <label class="block text-sm font-medium text-charcoal">Last name</label>
           <input
@@ -34,6 +28,7 @@
             class="mt-1 w-full rounded-xl border border-fog/60 bg-white px-4 py-2 text-charcoal"
           />
         </div>
+        }
       </div>
       <div>
         <label class="block text-sm font-medium text-charcoal">Email</label>
@@ -70,12 +65,35 @@
     </form>
   </div>
 
+  @if (isCustomer()) {
   <app-address-list
     [addresses]="profile()?.addresses ?? []"
     (addAddress)="onAddAddress($event)"
     (editAddress)="onEditAddress($event)"
     (deleteAddress)="onDeleteAddress($event)"
   ></app-address-list>
+  }
+
+  @if (!isCustomer()) {
+  <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
+    <h3 class="font-display text-lg text-charcoal">Customer Invite Link</h3>
+    <p class="mt-2 text-sm text-slate">
+      Share this link so customers can register and be automatically assigned to you.
+    </p>
+    <div class="mt-4 flex items-center gap-3">
+      <code class="flex-1 truncate rounded-xl border border-fog/60 bg-alabaster px-4 py-2 text-xs text-charcoal">
+        {{ inviteLink() }}
+      </code>
+      <button
+        type="button"
+        (click)="copyInviteLink()"
+        class="rounded-xl bg-pine px-4 py-2 text-sm font-medium text-white hover:bg-pine/90"
+      >
+        {{ linkCopied() ? 'Copied!' : 'Copy' }}
+      </button>
+    </div>
+  </div>
+  }
 
   <div class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-6 shadow-brand">
     <h3 class="font-display text-lg text-charcoal">Reset password</h3>

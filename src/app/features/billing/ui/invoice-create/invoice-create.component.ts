@@ -1,6 +1,6 @@
 import { CommonModule, Location } from '@angular/common';
 import type { OnInit} from '@angular/core';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import type { FormArray, FormGroup} from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,15 +8,15 @@ import { InvoiceService } from '../../../../core/services/invoice/invoice.servic
 import { QuoteService } from '../../../../core/services/quote/quote.service';
 import { ProjectService } from '../../../../core/services/project/project.service';
 import { NotificationService } from '../../../../core/services/notification/notification.service';
+import { LayoutService } from '../../../../core/services/layout/layout.service';
 import type { Quote } from '../../../../core/models/quote.model';
 import type { Project } from '../../../../core/models/project.model';
 import type { LayoutBreadcrumb } from '../../../../shared/ui/page-layout/page-layout.component';
-import { PageLayoutComponent } from '../../../../shared/ui/page-layout/page-layout.component';
 
 @Component({
   selector: 'app-invoice-create',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PageLayoutComponent],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './invoice-create.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -29,11 +29,12 @@ export class InvoiceCreateComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly notificationService = inject(NotificationService);
   private readonly location = inject(Location);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly quoteId = this.route.snapshot.paramMap.get('quoteId');
   protected readonly quote = signal<Quote | null>(null);
   protected readonly project = signal<Project | null>(null);
-  
+
   protected readonly form = this.fb.group({
     paymentPlan: this.fb.array([])
   });
@@ -44,6 +45,12 @@ export class InvoiceCreateComponent implements OnInit {
       { label: 'Create Invoice' }
     ];
   });
+
+  constructor() {
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+  }
 
   protected readonly totalPercentage = computed(() => {
     const plan = this.form.controls.paymentPlan.value;
@@ -125,16 +132,13 @@ export class InvoiceCreateComponent implements OnInit {
       }))
     };
 
-    console.log('Creating invoice with payload:', payload);
-
     this.invoiceService.createInvoice(payload).subscribe({
       next: (invoice) => {
         this.notificationService.success('Success', 'Invoice created successfully');
-        this.router.navigate(['/invoices', invoice._id]); // Navigate to invoice detail
+        this.router.navigate(['/invoices', invoice._id]);
       },
-      error: (error) => {
-        console.error('Create invoice error:', error);
-        this.notificationService.error('Error', `Could not create invoice: ${error.status} ${error.statusText}`);
+      error: () => {
+        this.notificationService.error('Error', 'Could not create invoice. Please try again.');
       }
     });
   }

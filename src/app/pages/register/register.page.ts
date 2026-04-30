@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal, ViewChild } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import type { RegisterRequestPayload, RegisterConfirmPayload } from '../../core/models/auth.model';
 import { AuthService } from '../../core/services/auth/auth.service';
@@ -22,12 +22,16 @@ export class RegisterPage {
   private readonly errorService = inject(HttpErrorService);
   private readonly companyContext = inject(CompanyContextService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly notificationService = inject(NotificationService);
 
   @ViewChild(RegisterFormComponent) registerForm?: RegisterFormComponent;
 
   protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+
+  private readonly estimatorId = this.route.snapshot.queryParamMap.get('estimatorId') ?? undefined;
+  private readonly companyId = this.route.snapshot.queryParamMap.get('companyId') ?? undefined;
 
   async handleRegisterData(payload: RegisterRequestPayload): Promise<void> {
     if (this.isSubmitting()) {
@@ -63,7 +67,12 @@ export class RegisterPage {
     this.errorMessage.set(null);
 
     try {
-      const response = await firstValueFrom(this.authService.registerConfirm(payload));
+      const confirmPayload: RegisterConfirmPayload = {
+        ...payload,
+        estimatorId: this.estimatorId,
+        companyId: this.companyId
+      };
+      const response = await firstValueFrom(this.authService.registerConfirm(confirmPayload));
       localStorage.setItem('access_token', response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
       this.companyContext.clear();

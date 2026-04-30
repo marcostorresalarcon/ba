@@ -1,7 +1,7 @@
 export const environment = {
     production: false,
-    apiUrl: 'https://ba-back.marcostorresalarcon.com',
-    // apiUrl: 'http://localhost:3022',
+    // apiUrl: 'https://ba-back.marcostorresalarcon.com',
+    apiUrl: 'http://localhost:3000',
     /** Apple Developer Team ID (referencia; firma real en ios/ project.pbxproj y exportOptions*.plist). */
     appleTeamId: '5G8B5KR88X',
     /** Ruta del endpoint para eliminar cuenta. Si el backend usa prefijo global (ej. /api), usar 'api/auth/account'. */

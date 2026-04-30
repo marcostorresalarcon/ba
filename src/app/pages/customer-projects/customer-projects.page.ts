@@ -219,13 +219,18 @@ export class CustomerProjectsPage {
       .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (projects) => {
-          const projectsWithCounts: ProjectWithQuoteCount[] = projects.map((project) => ({
+          const sorted = [...projects].sort((a, b) => {
+            const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return db - da;
+          });
+          const projectsWithCounts: ProjectWithQuoteCount[] = sorted.map((project) => ({
             ...project,
             quoteCount: 0
           }));
           this.projects.set(projectsWithCounts);
 
-          projects.forEach((project, index) => {
+          sorted.forEach((project, index) => {
             this.quoteService
               .getQuotesByProject(project._id)
               .pipe(takeUntilDestroyed(this.destroyRef))

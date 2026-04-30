@@ -116,11 +116,11 @@ export class MediaPickerService {
     try {
       // Intentar primero con Camera para imágenes
       const photo = await Camera.getPhoto({
-        quality: 60,
+        quality: 90,
         allowEditing: false,
         resultType: CameraResultType.Uri,
         source: CameraSource.Prompt,
-        width: 1280,
+        width: 1920,
         correctOrientation: true
       });
 
@@ -683,7 +683,7 @@ export class MediaPickerService {
       // Android: usar FilePicker que puede abrir la cámara
       const result = await FilePicker.pickFiles({
         types: ['video/mp4', 'video/*'],
-        readData: true
+        readData: false
       });
 
       if (!result.files || result.files.length === 0) {

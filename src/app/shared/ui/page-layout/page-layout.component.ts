@@ -64,6 +64,7 @@ export class PageLayoutComponent {
     if (role === 'customer') {
       return [
         { label: 'My Projects', route: '/my-projects' },
+        { label: 'Invoices', route: '/invoices' },
         { label: 'Support', route: '/support' },
         { label: 'Profile', route: '/profile' }
       ];

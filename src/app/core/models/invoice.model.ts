@@ -2,37 +2,31 @@ export type InvoiceStatus = 'draft' | 'sent' | 'pending' | 'paid' | 'partially_p
 export type PaymentStatus = 'pending' | 'paid' | 'failed';
 
 export interface InvoicePaymentPlan {
-  name: string; // e.g., "Advance 50%", "Final 50%"
+  name: string;
   percentage: number;
   amount: number;
   status: PaymentStatus;
-  paymentDate?: string; // Date when it was paid
-  paymentIntentId?: string; // Stripe PaymentIntent ID
+  dueDate?: string;
+  paymentDate?: string;
+  paymentIntentId?: string;
 }
 
 export interface Invoice {
   _id: string;
-  quoteId: string; // Associated Quote
-  projectId: string; // Associated Project
-  customerId: string | { _id: string; name: string; email?: string };
+  quoteId: string;
+  projectId: string;
+  customerId: string | { _id: string; name: string; lastName?: string; email?: string };
   companyId: string;
-  
-  number: string; // Invoice number (e.g., INV-001)
-  issueDate: string;
-  dueDate?: string;
-  
-  items: InvoiceItem[];
-  
-  subtotal: number;
-  tax?: number;
+
+  invoiceNumber: string;
   totalAmount: number;
-  
-  // Payment Management
-  paymentPlan: InvoicePaymentPlan[];
-  
+  paidAmount: number;
+  currency: string;
   status: InvoiceStatus;
+  paymentPlan: InvoicePaymentPlan[];
   notes?: string;
-  
+  createdBy?: string;
+
   createdAt?: string;
   updatedAt?: string;
 }

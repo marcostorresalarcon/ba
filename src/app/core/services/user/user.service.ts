@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { map, type Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import type { Role, User, UserPayload, UpdateUserPayload, UserRole } from '../../models/user.model';
+import type { Role, User, UserPayload, UpdateUserPayload, UserRole, CreateUserPayload, CreateUserResponse } from '../../models/user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -95,6 +95,14 @@ export class UserService {
         };
       })
     );
+  }
+
+  /**
+   * Crea un nuevo usuario (admin, estimator o customer)
+   */
+  createUser(payload: CreateUserPayload): Observable<CreateUserResponse> {
+    const endpoint = `${this.baseUrl}/users`;
+    return this.http.post<CreateUserResponse>(endpoint, payload);
   }
 
   /**

@@ -54,7 +54,11 @@ export class LoginPage {
       }
 
       this.notificationService.success('Welcome back!', `Hello ${response.user.name}`);
-      await this.router.navigateByUrl('/company');
+      if (response.user.forcePasswordChange) {
+        await this.router.navigateByUrl('/change-password');
+      } else {
+        await this.router.navigateByUrl('/company');
+      }
     } catch (error) {
       const message = this.errorService.handle(error);
       this.errorMessage.set(message);

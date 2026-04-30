@@ -95,19 +95,70 @@ export class ProjectDetailPage {
       : null;
   });
 
-  /** Pipeline: estados combinados para vista customer */
-  protected readonly pipelineSteps = computed(() => {
-    const proj = this.project();
+  private readonly USER_PIPELINE = [
+    'On-Site Visit',
+    'Proposal Sent',
+    'Client Reviewing',
+    'Payment Pending',
+    'Paid',
+    'Scheduling & Prep',
+    'In Progress',
+    'Final Walkthrough',
+    'Closed'
+  ];
+
+  private readonly ADMIN_PIPELINE = [
+    'On-Site Visit',
+    'Estimate Draft',
+    'Internal Review',
+    'Proposal Sent',
+    'Client Reviewing',
+    'Send Invoice',
+    'Payment Pending',
+    'Paid',
+    'Scheduling & Prep',
+    'In Progress',
+    'Final Walkthrough',
+    'Closed'
+  ];
+
+  private computeStageIndex(isCustomer: boolean): number {
     const quotesList = this.quotes();
+    const proj = this.project();
+    const hasAny = quotesList.length > 0;
+    const hasDraft = quotesList.some((q) => q.status === 'draft');
     const hasSent = quotesList.some((q) => q.status === 'sent');
     const hasApproved = quotesList.some((q) => q.status === 'approved');
-    const steps: { label: string; active: boolean; done: boolean }[] = [
-      { label: 'Propuesta enviada', active: hasSent && !hasApproved, done: hasSent || hasApproved },
-      { label: 'Revisión', active: hasSent && !hasApproved, done: hasApproved },
-      { label: 'En progreso', active: proj?.status === 'in_progress', done: proj?.status === 'completed' },
-      { label: 'Completado', active: proj?.status === 'completed', done: proj?.status === 'completed' }
-    ];
-    return steps;
+    const hasInProgress = quotesList.some((q) => q.status === 'in_progress') || proj?.status === 'in_progress';
+    const hasCompleted = quotesList.some((q) => q.status === 'completed') || proj?.status === 'completed';
+
+    if (isCustomer) {
+      if (hasCompleted) return 8;
+      if (hasInProgress) return 6;
+      if (hasApproved) return 3;
+      if (hasSent) return 2;
+      if (hasAny) return 1;
+      return 0;
+    } else {
+      if (hasCompleted) return 11;
+      if (hasInProgress) return 9;
+      if (hasApproved) return 5;
+      if (hasSent) return 3;
+      if (hasDraft) return 1;
+      return 0;
+    }
+  }
+
+  /** Pipeline stages for the current user role */
+  protected readonly pipelineSteps = computed(() => {
+    const customer = this.isCustomer();
+    const labels = customer ? this.USER_PIPELINE : this.ADMIN_PIPELINE;
+    const activeIndex = this.computeStageIndex(customer);
+    return labels.map((label, i) => ({
+      label,
+      active: i === activeIndex,
+      done: i < activeIndex
+    }));
   });
 
   constructor() {

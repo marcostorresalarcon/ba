@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  computed,
   effect,
   inject,
   signal,
@@ -14,10 +15,12 @@ import { finalize } from 'rxjs';
 
 import { CustomerService } from '../../core/services/customer/customer.service';
 import { AuthService } from '../../core/services/auth/auth.service';
+import { UserService } from '../../core/services/user/user.service';
 import { HttpErrorService } from '../../core/services/error/http-error.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
 import { LayoutService } from '../../core/services/layout/layout.service';
 import { Customer, CustomerAddress } from '../../core/models/customer.model';
+import { CompanyContextService } from '../../core/services/company/company-context.service';
 import { AddressListComponent } from '../../features/profile/ui/address-list/address-list.component';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 
@@ -31,9 +34,11 @@ import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.c
 export class ProfilePage {
   private readonly customerService = inject(CustomerService);
   private readonly authService = inject(AuthService);
+  private readonly userService = inject(UserService);
   private readonly errorService = inject(HttpErrorService);
   private readonly notificationService = inject(NotificationService);
   private readonly layoutService = inject(LayoutService);
+  private readonly companyContext = inject(CompanyContextService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
 
@@ -53,40 +58,50 @@ export class ProfilePage {
   ];
 
   protected readonly isCustomer = () => this.authService.user()?.role === 'customer';
+  protected readonly linkCopied = signal(false);
+
+  protected readonly inviteLink = computed(() => {
+    const user = this.authService.user();
+    const companyId = this.companyContext.selectedCompany()?._id;
+    const base = window.location.origin;
+    const params = new URLSearchParams({ estimatorId: user?.id ?? '' });
+    if (companyId) params.set('companyId', companyId);
+    return `${base}/register?${params.toString()}`;
+  });
 
   constructor() {
     effect(() => {
       this.layoutService.setBreadcrumbs(this.breadcrumbs);
     });
-
-    if (this.isCustomer()) {
-      this.loadProfile();
-    }
+    this.loadProfile();
   }
 
   protected loadProfile(): void {
     this.isLoading.set(true);
-    this.customerService
-      .getMe()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isLoading.set(false))
-      )
-      .subscribe({
-        next: (customer) => {
-          this.profile.set(customer);
-          this.form.patchValue({
-            name: customer.name ?? '',
-            lastName: customer.lastName ?? '',
-            phone: customer.phone ?? '',
-            email: customer.email ?? ''
-          });
-        },
-        error: (err: unknown) => {
-          const msg = this.errorService.handle(err);
-          this.notificationService.error('Error loading profile', msg);
-        }
-      });
+    if (this.isCustomer()) {
+      this.customerService
+        .getMe()
+        .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isLoading.set(false)))
+        .subscribe({
+          next: (customer) => {
+            this.profile.set(customer);
+            this.form.patchValue({
+              name: customer.name ?? '',
+              lastName: customer.lastName ?? '',
+              phone: customer.phone ?? '',
+              email: customer.email ?? ''
+            });
+          },
+          error: (err: unknown) => {
+            this.notificationService.error('Error loading profile', this.errorService.handle(err));
+          }
+        });
+    } else {
+      // Admin / estimator: prefill from auth user signal, no extra API call needed
+      const u = this.authService.user();
+      this.form.patchValue({ name: u?.name ?? '', email: u?.email ?? '' });
+      this.isLoading.set(false);
+    }
   }
 
   protected onSubmit(): void {
@@ -96,32 +111,46 @@ export class ProfilePage {
     }
     this.isSaving.set(true);
     const raw = this.form.getRawValue();
-    const payload = {
-      name: raw.name ?? undefined,
-      lastName: raw.lastName || undefined,
-      phone: raw.phone || undefined,
-      email: raw.email ?? undefined
-    };
-    this.customerService
-      .updateMe(payload)
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isSaving.set(false))
-      )
-      .subscribe({
-        next: (updated) => {
-          this.profile.set(updated);
-          this.authService.updateUser({
-            ...this.authService.user()!,
-            name: [updated.name, updated.lastName].filter(Boolean).join(' ') || this.authService.user()!.name
-          });
-          this.notificationService.success('Profile updated', '');
-        },
-        error: (err: unknown) => {
-          const msg = this.errorService.handle(err);
-          this.notificationService.error('Error updating profile', msg);
-        }
-      });
+
+    if (this.isCustomer()) {
+      const payload = {
+        name: raw.name ?? undefined,
+        lastName: raw.lastName || undefined,
+        phone: raw.phone || undefined,
+        email: raw.email ?? undefined
+      };
+      this.customerService
+        .updateMe(payload)
+        .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSaving.set(false)))
+        .subscribe({
+          next: (updated) => {
+            this.profile.set(updated);
+            this.authService.updateUser({
+              ...this.authService.user()!,
+              name: [updated.name, updated.lastName].filter(Boolean).join(' ') || this.authService.user()!.name
+            });
+            this.notificationService.success('Profile updated', '');
+          },
+          error: (err: unknown) => {
+            this.notificationService.error('Error updating profile', this.errorService.handle(err));
+          }
+        });
+    } else {
+      const userId = this.authService.user()?.id;
+      if (!userId) return;
+      this.userService
+        .updateUser(userId, { name: raw.name ?? undefined, email: raw.email ?? undefined } as any)
+        .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSaving.set(false)))
+        .subscribe({
+          next: (updated) => {
+            this.authService.updateUser({ ...this.authService.user()!, name: updated.name ?? this.authService.user()!.name });
+            this.notificationService.success('Profile updated', '');
+          },
+          error: (err: unknown) => {
+            this.notificationService.error('Error updating profile', this.errorService.handle(err));
+          }
+        });
+    }
   }
 
   protected onAddAddress(address: CustomerAddress) {
@@ -152,6 +181,13 @@ export class ProfilePage {
       current.splice(index, 1);
       this.updateAddresses(current);
     }
+  }
+
+  protected copyInviteLink(): void {
+    navigator.clipboard.writeText(this.inviteLink()).then(() => {
+      this.linkCopied.set(true);
+      setTimeout(() => this.linkCopied.set(false), 2000);
+    });
   }
 
   private updateAddresses(addresses: CustomerAddress[]) {

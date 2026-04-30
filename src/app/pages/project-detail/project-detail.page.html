@@ -34,11 +34,11 @@
         }
       </div>
 
-      <!-- Pipeline: 7 celdas flex (paso | línea | paso | …) para alinear conectores con los círculos -->
-      <div class="mt-12 w-full min-w-0 px-0.5 sm:px-1">
-        <div class="flex w-full min-w-0 items-start">
+      <!-- Pipeline (scrollable on mobile) -->
+      <div class="mt-12 w-full overflow-x-auto pb-2">
+        <div class="flex min-w-max items-start gap-0">
           @for (step of pipelineSteps(); track step.label; let last = $last; let i = $index) {
-            <div class="flex min-w-0 min-h-0 flex-1 flex-col items-center px-0.5 sm:px-1">
+            <div class="flex flex-col items-center" style="min-width: 72px; max-width: 80px;">
               <div
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500"
                 [class.bg-pine]="step.active || step.done"
@@ -58,17 +58,15 @@
                 }
               </div>
               <p
-                class="mt-4 w-full max-w-full text-center text-[0.625rem] font-bold uppercase leading-snug tracking-wide text-balance sm:mt-5 sm:text-[0.7rem] sm:leading-tight md:text-xs md:tracking-wider"
+                class="mt-3 w-full px-0.5 text-center text-[0.6rem] font-bold uppercase leading-tight tracking-wide"
                 [class.text-pine]="step.active"
                 [class.text-charcoal]="step.done && !step.active"
                 [class.text-fog]="!step.active && !step.done"
-              >
-                {{ step.label }}
-              </p>
+              >{{ step.label }}</p>
             </div>
             @if (!last) {
               <div
-                class="mt-5 h-0.5 min-w-[8px] flex-1 shrink-0 rounded-full transition-colors duration-500"
+                class="mt-5 h-0.5 w-8 shrink-0 rounded-full transition-colors duration-500"
                 [class.bg-pine]="step.done"
                 [class.bg-fog/40]="!step.done"
                 aria-hidden="true"
@@ -190,7 +188,49 @@
         </div>
         }
       </div>
-      
+
+      <!-- Pipeline for admin/estimator (12 stages) -->
+      <div class="mt-10 w-full overflow-x-auto pb-2">
+        <div class="flex min-w-max items-start gap-0">
+          @for (step of pipelineSteps(); track step.label; let last = $last; let i = $index) {
+            <div class="flex flex-col items-center" style="min-width: 72px; max-width: 80px;">
+              <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500"
+                [class.bg-pine]="step.active || step.done"
+                [class.border-pine]="step.active || step.done"
+                [class.bg-white]="!step.active && !step.done"
+                [class.border-fog]="!step.active && !step.done"
+                [class.shadow-raised]="step.active"
+              >
+                @if (step.done) {
+                  <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                  </svg>
+                } @else if (step.active) {
+                  <span class="h-2.5 w-2.5 animate-pulse rounded-full bg-white"></span>
+                } @else {
+                  <span class="text-[10px] font-semibold text-slate/50">{{ i + 1 }}</span>
+                }
+              </div>
+              <p
+                class="mt-2 w-full px-0.5 text-center text-[0.55rem] font-bold uppercase leading-tight tracking-wide"
+                [class.text-pine]="step.active"
+                [class.text-charcoal]="step.done && !step.active"
+                [class.text-fog]="!step.active && !step.done"
+              >{{ step.label }}</p>
+            </div>
+            @if (!last) {
+              <div
+                class="mt-4 h-0.5 w-8 shrink-0 rounded-full transition-colors duration-500"
+                [class.bg-pine]="step.done"
+                [class.bg-fog/40]="!step.done"
+                aria-hidden="true"
+              ></div>
+            }
+          }
+        </div>
+      </div>
+
       <div class="mt-8 flex flex-wrap gap-4">
         <a
           [routerLink]="['/projects', projectId(), 'documents']"

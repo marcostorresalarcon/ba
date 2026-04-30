@@ -68,8 +68,9 @@ export interface Quote {
   clientBudget?: number | null;
   createdAt?: string;
   updatedAt?: string;
-  pdfUrl?: string; // URL al PDF generado en S3
+  pdfUrl?: string;
   isChangeOrder?: boolean;
+  isActive?: boolean;
 }
 
 // Helper para verificar si customerId es un objeto poblado

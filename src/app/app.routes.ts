@@ -34,6 +34,12 @@ export const routes: Routes = [
       import('./pages/drawing-canvas/drawing-canvas.page').then((m) => m.DrawingCanvasPage)
   },
   {
+    path: 'change-password',
+    loadComponent: () =>
+      import('./pages/change-password/change-password.page').then((m) => m.ChangePasswordPage),
+    canActivate: [authGuard]
+  },
+  {
     path: '',
     loadComponent: () =>
       import('./shared/ui/page-layout/page-layout.component').then((m) => m.PageLayoutComponent),
@@ -139,14 +145,12 @@ export const routes: Routes = [
       {
         path: 'invoices',
         loadComponent: () =>
-          import('./features/billing/ui/invoice-list/invoice-list.component').then((m) => m.InvoiceListComponent),
-        canActivate: [roleGuard(['administrator', 'admin'])]
+          import('./features/billing/ui/invoice-list/invoice-list.component').then((m) => m.InvoiceListComponent)
       },
       {
         path: 'invoices/:id',
         loadComponent: () =>
-          import('./features/billing/ui/invoice-detail/invoice-detail.component').then((m) => m.InvoiceDetailComponent),
-        canActivate: [roleGuard(['administrator', 'admin'])]
+          import('./features/billing/ui/invoice-detail/invoice-detail.component').then((m) => m.InvoiceDetailComponent)
       },
       {
         path: 'users',

@@ -6,7 +6,6 @@
         {{ user ? 'Edit user' : 'Create user' }}
       </h2>
     </div>
-    @if (user) {
     <button
       type="button"
       class="text-sm text-slate underline-offset-4 hover:underline"
@@ -14,7 +13,6 @@
     >
       Cancel
     </button>
-    }
   </header>
 
   <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()">
@@ -81,7 +79,6 @@
     </div>
 
     <div class="flex justify-end gap-3 pt-4">
-      @if (user) {
       <button
         type="button"
         (click)="cancelEdit.emit()"
@@ -89,7 +86,6 @@
       >
         Cancel
       </button>
-      }
       <button
         type="submit"
         [disabled]="isSubmitting || form.invalid"

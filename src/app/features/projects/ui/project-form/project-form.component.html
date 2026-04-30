@@ -20,6 +20,13 @@
     </button>
   </div>
 
+  @if (!project) {
+  <div class="mb-6 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+    <p class="font-medium">A project groups all work for one client location.</p>
+    <p class="mt-1 text-sky-700">You can create multiple estimates (kitchen, bathroom, etc.) under a single project and manage them independently.</p>
+  </div>
+  }
+
   <form class="space-y-4" [formGroup]="form" (ngSubmit)="submit()">
     <label class="flex flex-col gap-2 text-sm font-medium text-charcoal">
       Project Name

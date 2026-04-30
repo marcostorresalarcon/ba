@@ -36,6 +36,8 @@ export class InvoiceService {
     return this.http.post<Invoice>(`${this.baseUrl}/invoice`, payload);
   }
 
-  // Additional methods if needed (update, delete)
+  deleteInvoice(id: string): Observable<Invoice> {
+    return this.http.delete<Invoice>(`${this.baseUrl}/invoice/${id}`);
+  }
 }
 

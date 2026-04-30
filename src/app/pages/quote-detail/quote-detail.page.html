@@ -5,48 +5,46 @@
   </div>
   } @else if (quote(); as currentQuote) {
   <div class="space-y-6">
-    <!-- Header Section -->
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white/95 p-8 shadow-brand">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div class="flex-1">
-          <div class="flex items-center gap-3 mb-2">
-            <span
-              class="rounded-full bg-sand/70 px-3 py-1 text-xs font-semibold text-charcoal/80 uppercase tracking-wider"
-            >
+    @if (currentQuote.isActive === false) {
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-4 flex items-center gap-3">
+      <svg class="h-5 w-5 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      </svg>
+      <p class="text-sm font-semibold text-amber-800">This estimate is inactive. A newer estimate has been created for this project. This version is read-only.</p>
+    </div>
+    }
+
+    <!-- Hero -->
+    <section class="rounded-[2.5rem] bg-pine shadow-raised overflow-hidden">
+      <div class="flex flex-col md:flex-row items-start justify-between gap-6 px-8 py-8">
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white uppercase tracking-wider">
               {{ currentQuote.category }}
             </span>
-            <span
-              class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider"
-              [ngClass]="getStatusColor(currentQuote.status)"
-            >
+            <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
               {{ currentQuote.status.replace('_', ' ') }}
             </span>
-          </div>
-          <h1 class="font-display text-3xl md:text-4xl text-charcoal flex items-center flex-wrap gap-2">
-            <span>Estimate <span class="text-pine">v{{ currentQuote.versionNumber }}</span></span>
             @if (currentQuote.isChangeOrder) {
-              <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-800 border border-amber-200">
+              <span class="rounded-full bg-amber-400/80 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
                 Change Order
               </span>
             }
+          </div>
+          <h1 class="font-display text-3xl md:text-4xl text-white mb-2">
+            Estimate <span class="text-white/60">v{{ currentQuote.versionNumber }}</span>
           </h1>
-          <p class="text-slate mt-1 flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
+          <p class="text-white/70 text-sm flex items-center gap-2">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             {{ formatDate(currentQuote.createdAt) }}
           </p>
         </div>
-
-        <div class="flex flex-col items-start md:items-end gap-4 w-full md:w-auto">
-          <div class="flex flex-col items-start md:items-end w-full md:w-auto">
-            <p class="text-xs font-semibold uppercase tracking-widest text-clay mb-1">Total Cost</p>
-            <p class="font-display text-4xl text-charcoal">
+        <div class="flex flex-col items-start md:items-end gap-4 shrink-0">
+          <div class="md:text-right">
+            <p class="text-xs font-semibold uppercase tracking-widest text-white/60 mb-1">Total Cost</p>
+            <p class="font-display text-4xl text-white">
               ${{
                 (currentQuote.totalPrice || 0).toLocaleString('en-US', {
                   minimumFractionDigits: 2,
@@ -58,43 +56,128 @@
           <button
             type="button"
             (click)="downloadPdf()"
-            class="flex items-center justify-center gap-2 rounded-full bg-pine px-6 py-3 text-sm font-semibold text-white shadow-raised transition hover:bg-pine/90 hover:shadow-lg active:scale-95 whitespace-nowrap w-full md:w-auto"
+            class="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-pine transition hover:bg-fog/90 active:scale-95 whitespace-nowrap"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="2"
-              stroke="currentColor"
-              class="w-5 h-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
             Download PDF
           </button>
         </div>
       </div>
+
+      <!-- Status strip inside hero -->
+      @if (quote()?.status === 'approved') {
+      <div class="flex items-center gap-3 border-t border-white/10 bg-white/10 px-8 py-4">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+          <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-white text-sm">Estimate Approved</p>
+          <p class="text-xs text-white/70">This estimate has been approved. The project is ready to proceed.</p>
+          @if (quote()?.updatedAt) {
+          <p class="text-xs text-white/50 mt-0.5">Approved on {{ formatDate(quote()?.updatedAt) }}</p>
+          }
+        </div>
+      </div>
+      }
+      @if (quote()?.status === 'rejected') {
+      <div class="flex items-center gap-3 border-t border-white/10 bg-black/15 px-8 py-4">
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20">
+          <svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-white text-sm">Estimate Rejected</p>
+          @if (quote()?.rejectionComments?.rejectedAt) {
+          <p class="text-xs text-white/60">Rejected on {{ formatDate(quote()?.rejectionComments?.rejectedAt) }}</p>
+          }
+        </div>
+      </div>
+      }
     </section>
 
-    <!-- Approval Actions -->
-    @if (quote(); as currentQuote) {
-        <app-quote-approval-actions
-          [quote]="currentQuote"
-          [userRole]="userRole()"
-          (approve)="handleApprove()"
-          (reject)="handleReject()"
-          (send)="handleSend()"
-          (startWork)="handleStartWork()"
-          (completeWork)="handleCompleteWork()"
-        />
-    }
+    <!-- Info Card -->
+    <div class="rounded-[2rem] border border-fog/60 bg-white overflow-hidden shadow-sm">
+      <!-- Customer -->
+      <div class="p-6 border-b border-fog/40">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">Customer</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          @if (customer; as cust) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Name</span>
+            <span class="text-sm font-semibold text-charcoal">{{ cust.name }}</span>
+          </div>
+          @if (cust.email) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Email</span>
+            <a [href]="'mailto:' + cust.email" class="text-sm font-semibold text-pine hover:underline">{{ cust.email }}</a>
+          </div>
+          }
+          @if (cust.phone) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Phone</span>
+            <a [href]="'tel:' + cust.phone" class="text-sm font-semibold text-charcoal hover:text-pine transition">{{ cust.phone }}</a>
+          </div>
+          }
+          } @else {
+          <p class="text-sm text-slate italic col-span-3">No customer information available.</p>
+          }
+        </div>
+      </div>
 
-    <!-- Rejection Comments Section -->
+      <!-- Project Details -->
+      <div class="p-6">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">Project Details</h4>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Experience Level</span>
+            <span class="text-sm font-semibold text-charcoal capitalize">{{ currentQuote.experience }}</span>
+          </div>
+          @if (currentQuote.kitchenInformation && currentQuote.kitchenInformation['type']) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Kitchen Size</span>
+            <span class="text-sm font-semibold text-charcoal capitalize">{{ currentQuote.kitchenInformation['type'] }}</span>
+          </div>
+          }
+          @if (currentQuote.kitchenInformation && currentQuote.kitchenInformation['kitchenSquareFootage']) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Square Footage</span>
+            <span class="text-sm font-semibold text-charcoal">{{ currentQuote.kitchenInformation['kitchenSquareFootage'] }} SF</span>
+          </div>
+          }
+          @if (currentQuote.kitchenInformation && currentQuote.kitchenInformation['ceilingHeight']) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Ceiling Height</span>
+            <span class="text-sm font-semibold text-charcoal">{{ currentQuote.kitchenInformation['ceilingHeight'] }} ft</span>
+          </div>
+          }
+          @if (currentQuote.clientBudget) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Client Budget</span>
+            <span class="text-sm font-semibold text-charcoal">${{ currentQuote.clientBudget.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}</span>
+          </div>
+          }
+          @if (currentQuote.roughQuote && !isCustomer()) {
+          <div>
+            <span class="text-xs text-slate block mb-0.5">Rough Quote</span>
+            <span class="text-sm font-semibold text-charcoal">${{ currentQuote.roughQuote.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}</span>
+          </div>
+          }
+          @if (currentQuote.notes) {
+          <div class="col-span-2 md:col-span-3">
+            <span class="text-xs text-slate block mb-0.5">Notes</span>
+            <p class="text-sm font-medium text-charcoal italic">{{ currentQuote.notes }}</p>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Rejection Comments Detail (full content) -->
     @if (quote()?.status === 'rejected' && quote()?.rejectionComments) {
       <section class="rounded-[2.5rem] border border-red-500/30 bg-red-50/50 p-8 shadow-brand">
         <div class="flex items-start gap-4">
@@ -111,13 +194,8 @@
             </div>
           </div>
           <div class="flex-1">
-            <h3 class="text-lg font-semibold text-red-900 mb-2">Motivo del Rechazo</h3>
+            <h3 class="text-lg font-semibold text-red-900 mb-2">Rejection Details</h3>
             <p class="text-red-800 whitespace-pre-wrap mb-4">{{ quote()?.rejectionComments?.comment }}</p>
-            @if (quote()?.rejectionComments?.rejectedAt) {
-              <p class="text-xs text-red-600">
-                Rechazado el {{ formatDate(quote()?.rejectionComments?.rejectedAt) }}
-              </p>
-            }
             @if (quote()?.rejectionComments?.mediaFiles && (quote()?.rejectionComments?.mediaFiles?.length ?? 0) > 0) {
               <div class="mt-4">
                 <h4 class="text-sm font-semibold text-red-900 mb-2">Archivos Adjuntos</h4>
@@ -163,69 +241,20 @@
       </section>
     }
 
-    <!-- Customer & Project Info -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <section class="rounded-[2rem] border border-fog/60 bg-white p-6 shadow-sm">
-        <h3
-          class="text-sm font-bold uppercase tracking-widest text-clay mb-4 border-b border-fog/40 pb-2"
-        >
-          Customer Information
-        </h3>
-        <div class="space-y-3">
-          @if (customer; as cust) {
-          <div>
-            <span class="text-xs text-slate block">Name</span>
-            <span class="font-medium text-charcoal">{{ cust.name }}</span>
-          </div>
-          @if (cust.email) {
-          <div>
-            <span class="text-xs text-slate block">Email</span>
-            <a [href]="'mailto:' + cust.email" class="font-medium text-pine hover:underline">{{
-              cust.email
-            }}</a>
-          </div>
-          } @if (cust.phone) {
-          <div>
-            <span class="text-xs text-slate block">Phone</span>
-            <a
-              [href]="'tel:' + cust.phone"
-              class="font-medium text-charcoal hover:text-pine transition"
-              >{{ cust.phone }}</a
-            >
-          </div>
-          } } @else {
-          <p class="text-sm text-slate italic">No customer information available.</p>
-          }
-        </div>
-      </section>
-
-      <section class="rounded-[2rem] border border-fog/60 bg-white p-6 shadow-sm">
-        <h3
-          class="text-sm font-bold uppercase tracking-widest text-clay mb-4 border-b border-fog/40 pb-2"
-        >
-          Project Details
-        </h3>
-        <div class="space-y-3">
-          <div>
-            <span class="text-xs text-slate block">Experience Level</span>
-            <span class="font-medium text-charcoal capitalize">{{ currentQuote.experience }}</span>
-          </div>
-          @if (currentQuote.notes) {
-          <div>
-            <span class="text-xs text-slate block">Notes</span>
-            <p class="font-medium text-charcoal text-sm italic">{{ currentQuote.notes }}</p>
-          </div>
-          } @if (currentQuote.kitchenInformation && currentQuote.kitchenInformation['type']) {
-          <div>
-            <span class="text-xs text-slate block">Kitchen Size</span>
-            <span class="font-medium text-charcoal capitalize">{{
-              currentQuote.kitchenInformation['type']
-            }}</span>
-          </div>
-          }
-        </div>
-      </section>
-    </div>
+    <!-- Approval Actions -->
+    @if (quote(); as currentQuote) {
+      @if (currentQuote.isActive !== false) {
+        <app-quote-approval-actions
+          [quote]="currentQuote"
+          [userRole]="userRole()"
+          (approve)="handleApprove()"
+          (reject)="handleReject()"
+          (send)="handleSend()"
+          (startWork)="handleStartWork()"
+          (completeWork)="handleCompleteWork()"
+        />
+      }
+    }
 
     <!-- Tabs Navigation -->
     <div class="mb-6 flex gap-2 rounded-[2rem] border border-fog/40 bg-white p-1 shadow-sm">
@@ -275,341 +304,230 @@
 
     <!-- Tab Content: Kitchen Details -->
     @if (activeTab() === 'kitchen-details') {
-    <!-- Kitchen Specific Information -->
-    @if (currentQuote.kitchenInformation) { @for (categoryGroup of groupedInputs(); track categoryGroup.id)
-    { @if (hasCategoryData(categoryGroup, currentQuote)) {
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
-      <h2 class="font-display text-2xl text-charcoal mb-6">{{ categoryGroup.title }}</h2>
+    @if (currentQuote.kitchenInformation) {
+    @let countertopsFiles = currentQuote.kitchenInformation['countertopsFiles'];
+    @let backsplashFiles = currentQuote.kitchenInformation['backsplashFiles'];
+    @let audioNotes = currentQuote.kitchenInformation['audioNotes'];
+    @let sketchFiles = currentQuote.kitchenInformation['sketchFiles'];
+    @let sketchFile = currentQuote.kitchenInformation['sketchFile'];
+    @let additionalComments = currentQuote.kitchenInformation['additionalComments'];
 
-      @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) { @if
-      (subcategoryGroup.id !== 'default') {
-      <h4
-        class="mb-4 text-sm font-bold uppercase tracking-widest text-clay border-b border-fog/40 pb-2 mt-6 first:mt-0"
-      >
-        {{ subcategoryGroup.title }}
-      </h4>
-      }
+    <div class="rounded-[2rem] border border-fog/60 bg-white overflow-hidden shadow-sm">
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        @for (input of subcategoryGroup.inputs; track input.name) { @if (shouldShowInput(input,
-        currentQuote)) {
-        <div class="bg-fog/10 rounded-xl p-4 border border-fog/40">
-          <span class="text-xs font-bold uppercase tracking-wide text-clay block mb-1">{{
-            input.label
-          }}</span>
-          <span class="text-lg font-medium text-charcoal">
-            @let value = getInputValue(input, currentQuote); @if (value === true) { Yes } @else if (value
-            === false) { No } @else {
-            {{ value }}
-            @if (input.unit) {
-            <span class="text-sm text-slate ml-1">{{ input.unit }}</span>
-            } }
-          </span>
-        </div>
-        } }
-      </div>
-      }
-    </section>
-    } }
-
-    <!-- Media Files -->
-    @let countertopsFiles = currentQuote.kitchenInformation['countertopsFiles']; @let backsplashFiles =
-    currentQuote.kitchenInformation['backsplashFiles']; @if ((countertopsFiles &&
-    $any(countertopsFiles).length > 0) || (backsplashFiles && $any(backsplashFiles).length > 0)) {
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
-      <h2 class="font-display text-2xl text-charcoal mb-6">Media & Files</h2>
-
-      @if (countertopsFiles && $any(countertopsFiles).length > 0) {
-      <div class="mb-8">
-        <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">
-          Countertops Files
-        </h3>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          @for (file of $any(countertopsFiles); track file) {
-          <div
-            (click)="openMediaPreview($any(file), $event)"
-            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
-          >
-            @if (isImageUrl(file)) {
-            <img
-              [src]="file"
-              class="h-32 w-full object-cover transition group-hover:scale-105"
-              alt="Countertop file"
-            />
-            } @else if (isVideoUrl(file)) {
-            <video
-              [src]="file"
-              class="h-32 w-full object-cover"
-              preload="metadata"
-              muted
-              playsinline
-            ></video>
-            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-              <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
-                <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </span>
-            </div>
-            } @else {
-            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
-              <span class="text-xs font-bold">VIEW FILE</span>
-            </div>
-            }
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
-              <button
-                type="button"
-                class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
-                (click)="openMediaPreview($any(file), $event)"
-                title="Preview"
-                aria-label="Preview file"
-              >
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </button>
-            </div>
-            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
-              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
-            </div>
+      <!-- Category sections -->
+      @for (categoryGroup of groupedInputs(); track categoryGroup.id) {
+      @if (hasCategoryData(categoryGroup, currentQuote)) {
+      <div class="p-6 border-b border-fog/40">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">{{ categoryGroup.title }}</h4>
+        @for (subcategoryGroup of categoryGroup.subcategories; track subcategoryGroup.id) {
+        @if (subcategoryGroup.id !== 'default') {
+        <p class="text-xs font-semibold text-slate uppercase tracking-wide mb-2 mt-4 first:mt-0">{{ subcategoryGroup.title }}</p>
+        }
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3">
+          @for (input of subcategoryGroup.inputs; track input.name) {
+          @if (shouldShowInput(input, currentQuote)) {
+          @let value = getInputValue(input, currentQuote);
+          <div>
+            <span class="text-xs text-slate block mb-0.5">{{ input.label }}</span>
+            <span class="text-sm font-semibold text-charcoal">
+              @if (value === true) { Yes }
+              @else if (value === false) { No }
+              @else { {{ value }}@if (input.unit) {<span class="font-normal text-slate"> {{ input.unit }}</span>} }
+            </span>
           </div>
           }
-        </div>
-      </div>
-      } @if (backsplashFiles && $any(backsplashFiles).length > 0) {
-      <div>
-        <h3 class="text-sm font-bold uppercase tracking-widest text-clay mb-4">Backsplash Files</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          @for (file of $any(backsplashFiles); track file) {
-          <div
-            (click)="openMediaPreview($any(file), $event)"
-            class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
-          >
-            @if (isImageUrl(file)) {
-            <img
-              [src]="file"
-              class="h-32 w-full object-cover transition group-hover:scale-105"
-              alt="Backsplash file"
-            />
-            } @else if (isVideoUrl(file)) {
-            <video
-              [src]="file"
-              class="h-32 w-full object-cover"
-              preload="metadata"
-              muted
-              playsinline
-            ></video>
-            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-              <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
-                <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
-              </span>
-            </div>
-            } @else {
-            <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
-              <span class="text-xs font-bold">VIEW FILE</span>
-            </div>
-            }
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
-              <button
-                type="button"
-                class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
-                (click)="openMediaPreview($any(file), $event)"
-                title="Preview"
-                aria-label="Preview file"
-              >
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </button>
-            </div>
-            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
-              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
-            </div>
-          </div>
           }
-        </div>
-      </div>
-      }
-    </section>
-    }
-
-    <!-- Audio Notes -->
-    @let audioNotes = currentQuote.kitchenInformation['audioNotes']; @if (audioNotes) {
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
-      <h2 class="font-display text-2xl text-charcoal mb-6">Voice Notes</h2>
-
-      <div class="bg-fog/10 rounded-2xl p-6 border border-fog/40">
-        @if ($any(audioNotes).url) {
-        <audio controls class="w-full mb-4" [src]="$any(audioNotes).url"></audio>
-        } @if ($any(audioNotes).summary) {
-        <div class="mb-4">
-          <h4 class="text-xs font-bold uppercase tracking-wide text-pine mb-2">Summary</h4>
-          <p class="text-charcoal leading-relaxed">{{ $any(audioNotes).summary }}</p>
-        </div>
-        } @if ($any(audioNotes).transcription) {
-        <div>
-          <h4 class="text-xs font-bold uppercase tracking-wide text-clay mb-2">Transcription</h4>
-          <p class="text-sm text-slate italic leading-relaxed">
-            {{ $any(audioNotes).transcription }}
-          </p>
         </div>
         }
       </div>
-    </section>
-    }
+      }
+      }
 
-    <!-- Sketch Files (Dibujos) -->
-    @let sketchFiles = currentQuote.kitchenInformation['sketchFiles']; @let sketchFile = currentQuote.kitchenInformation['sketchFile'];
-    @if ((sketchFiles && $any(sketchFiles).length > 0) || sketchFile) {
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
-      <h2 class="font-display text-2xl text-charcoal mb-6">Sketches & Drawings</h2>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Compatibilidad con sketchFile antiguo (único) -->
-        @if (sketchFile && (!sketchFiles || $any(sketchFiles).length === 0)) {
-          <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
-               (click)="openMediaPreview($any(sketchFile), $event)">
-            <img
-              [src]="sketchFile"
-              alt="Project Sketch"
-              class="h-64 w-full object-contain bg-white transition group-hover:opacity-90"
-            />
+      <!-- Media Files -->
+      @if ((countertopsFiles && $any(countertopsFiles).length > 0) || (backsplashFiles && $any(backsplashFiles).length > 0)) {
+      <div class="p-6 border-b border-fog/40">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">Media & Files</h4>
+        @if (countertopsFiles && $any(countertopsFiles).length > 0) {
+        <p class="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Countertops</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-5">
+          @for (file of $any(countertopsFiles); track file) {
+          <div (click)="openMediaPreview($any(file), $event)" class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer">
+            @if (isImageUrl(file)) {
+            <img [src]="file" class="h-28 w-full object-cover transition group-hover:scale-105" alt="Countertop file" />
+            } @else if (isVideoUrl(file)) {
+            <video [src]="file" class="h-28 w-full object-cover" preload="metadata" muted playsinline></video>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                <svg class="h-5 w-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            } @else {
+            <div class="h-28 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <span class="text-xs font-bold">VIEW FILE</span>
+            </div>
+            }
             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
-              <button
-                type="button"
-                class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
-                (click)="openMediaPreview($any(sketchFile), $event)"
-                title="Preview"
-                aria-label="Preview file"
-              >
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <button type="button" class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-2.5 text-pine shadow-lg hover:bg-white" (click)="openMediaPreview($any(file), $event)" aria-label="Preview">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               </button>
             </div>
-            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-1.5">
+              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+        @if (backsplashFiles && $any(backsplashFiles).length > 0) {
+        <p class="text-xs font-semibold text-slate uppercase tracking-wide mb-3">Backsplash</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          @for (file of $any(backsplashFiles); track file) {
+          <div (click)="openMediaPreview($any(file), $event)" class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer">
+            @if (isImageUrl(file)) {
+            <img [src]="file" class="h-28 w-full object-cover transition group-hover:scale-105" alt="Backsplash file" />
+            } @else if (isVideoUrl(file)) {
+            <video [src]="file" class="h-28 w-full object-cover" preload="metadata" muted playsinline></video>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                <svg class="h-5 w-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            } @else {
+            <div class="h-28 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <span class="text-xs font-bold">VIEW FILE</span>
+            </div>
+            }
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button type="button" class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-2.5 text-pine shadow-lg hover:bg-white" (click)="openMediaPreview($any(file), $event)" aria-label="Preview">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-1.5">
+              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      <!-- Voice Notes -->
+      @if (audioNotes) {
+      <div class="p-6 border-b border-fog/40">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">Voice Notes</h4>
+        @if ($any(audioNotes).url) {
+        <audio controls class="w-full mb-4" [src]="$any(audioNotes).url"></audio>
+        }
+        @if ($any(audioNotes).summary) {
+        <div class="mb-3">
+          <p class="text-xs font-bold uppercase tracking-wide text-pine mb-1">Summary</p>
+          <p class="text-sm text-charcoal leading-relaxed">{{ $any(audioNotes).summary }}</p>
+        </div>
+        }
+        @if ($any(audioNotes).transcription) {
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wide text-clay mb-1">Transcription</p>
+          <p class="text-sm text-slate italic leading-relaxed">{{ $any(audioNotes).transcription }}</p>
+        </div>
+        }
+      </div>
+      }
+
+      <!-- Sketches -->
+      @if ((sketchFiles && $any(sketchFiles).length > 0) || sketchFile) {
+      <div class="p-6 border-b border-fog/40">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">Sketches & Drawings</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          @if (sketchFile && (!sketchFiles || $any(sketchFiles).length === 0)) {
+          <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer" (click)="openMediaPreview($any(sketchFile), $event)">
+            <img [src]="sketchFile" alt="Project Sketch" class="h-56 w-full object-contain bg-white transition group-hover:opacity-90" />
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button type="button" class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-2.5 text-pine shadow-lg hover:bg-white" (click)="openMediaPreview($any(sketchFile), $event)" aria-label="Preview">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-1.5">
               <span class="block truncate text-xs text-white">Sketch</span>
             </div>
           </div>
-        }
-        
-        <!-- Múltiples dibujos (sketchFiles) -->
-        @if (sketchFiles && $any(sketchFiles).length > 0) {
-          @for (file of $any(sketchFiles); track file; let i = $index) {
-            <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
-                 (click)="openMediaPreview($any(file), $event)">
-              <img
-                [src]="file"
-                [alt]="'Sketch ' + (i + 1)"
-                class="h-64 w-full object-contain bg-white transition group-hover:opacity-90"
-              />
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
-                <button
-                  type="button"
-                  class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
-                  (click)="openMediaPreview($any(file), $event)"
-                  title="Preview"
-                  aria-label="Preview sketch"
-                >
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-              </div>
-              <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
-                <span class="block truncate text-xs text-white">Sketch {{ i + 1 }}</span>
-              </div>
-            </div>
           }
-        }
-      </div>
-    </section>
-    }
-
-    <!-- Additional Comments & Media -->
-    @let additionalComments = currentQuote.kitchenInformation['additionalComments'];
-    @if (additionalComments && ($any(additionalComments).comment || ($any(additionalComments).mediaFiles && $any(additionalComments).mediaFiles.length > 0))) {
-    <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
-      <h2 class="font-display text-2xl text-charcoal mb-6">Additional Comments & Media</h2>
-
-      <div class="bg-fog/10 rounded-2xl p-6 border border-fog/40 space-y-6">
-        <!-- Comment -->
-        @if ($any(additionalComments).comment) {
-          <div>
-            <h4 class="text-xs font-bold uppercase tracking-wide text-pine mb-2">Comments</h4>
-            <p class="text-charcoal leading-relaxed whitespace-pre-wrap">{{ $any(additionalComments).comment }}</p>
-          </div>
-        }
-
-        <!-- Media Files -->
-        @if ($any(additionalComments).mediaFiles && $any(additionalComments).mediaFiles.length > 0) {
-          <div>
-            <h4 class="text-xs font-bold uppercase tracking-wide text-clay mb-4">Photos & Videos</h4>
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              @for (file of $any(additionalComments).mediaFiles; track file) {
-                <div
-                  (click)="openMediaPreview($any(file), $event)"
-                  class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer"
-                >
-                  @if (isImageUrl(file)) {
-                    <img
-                      [src]="file"
-                      class="h-32 w-full object-cover transition group-hover:scale-105"
-                      [alt]="file.split('/').pop()"
-                    />
-                  } @else if (isVideoUrl(file)) {
-                    <video
-                      [src]="file"
-                      class="h-32 w-full object-cover"
-                      preload="metadata"
-                      muted
-                      playsinline
-                    ></video>
-                    <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-                      <span class="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
-                        <svg class="h-6 w-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                      </span>
-                    </div>
-                  } @else {
-                    <div class="h-32 w-full flex items-center justify-center bg-fog/10 text-charcoal">
-                      <span class="text-xs font-bold">VIEW FILE</span>
-                    </div>
-                  }
-                  <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
-                    <button
-                      type="button"
-                      class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-3 text-pine shadow-lg hover:bg-white hover:scale-110"
-                      (click)="openMediaPreview($any(file), $event)"
-                      title="Preview"
-                      aria-label="Preview file"
-                    >
-                      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-2">
-                    <span class="block truncate text-xs text-white">
-                      {{ file.split('/').pop() }}
-                    </span>
-                  </div>
-                </div>
-              }
+          @if (sketchFiles && $any(sketchFiles).length > 0) {
+          @for (file of $any(sketchFiles); track file; let i = $index) {
+          <div class="group relative overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer" (click)="openMediaPreview($any(file), $event)">
+            <img [src]="file" [alt]="'Sketch ' + (i + 1)" class="h-56 w-full object-contain bg-white transition group-hover:opacity-90" />
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button type="button" class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-2.5 text-pine shadow-lg hover:bg-white" (click)="openMediaPreview($any(file), $event)" aria-label="Preview">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-1.5">
+              <span class="block truncate text-xs text-white">Sketch {{ i + 1 }}</span>
             </div>
           </div>
+          }
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Additional Comments -->
+      @if (additionalComments && ($any(additionalComments).comment || ($any(additionalComments).mediaFiles && $any(additionalComments).mediaFiles.length > 0))) {
+      <div class="p-6">
+        <h4 class="text-xs font-bold uppercase tracking-widest text-clay mb-4">Additional Comments & Media</h4>
+        @if ($any(additionalComments).comment) {
+        <p class="text-sm text-charcoal leading-relaxed whitespace-pre-wrap mb-4">{{ $any(additionalComments).comment }}</p>
+        }
+        @if ($any(additionalComments).mediaFiles && $any(additionalComments).mediaFiles.length > 0) {
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          @for (file of $any(additionalComments).mediaFiles; track file) {
+          <div (click)="openMediaPreview($any(file), $event)" class="group relative block overflow-hidden rounded-xl border border-fog/60 bg-fog/5 transition hover:shadow-lg hover:border-pine/50 cursor-pointer">
+            @if (isImageUrl(file)) {
+            <img [src]="file" class="h-28 w-full object-cover transition group-hover:scale-105" [alt]="file.split('/').pop()" />
+            } @else if (isVideoUrl(file)) {
+            <video [src]="file" class="h-28 w-full object-cover" preload="metadata" muted playsinline></video>
+            <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-pine shadow-lg">
+                <svg class="h-5 w-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+            </div>
+            } @else {
+            <div class="h-28 w-full flex items-center justify-center bg-fog/10 text-charcoal">
+              <span class="text-xs font-bold">VIEW FILE</span>
+            </div>
+            }
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition flex items-center justify-center">
+              <button type="button" class="opacity-0 group-hover:opacity-100 transition rounded-full bg-white/90 p-2.5 text-pine shadow-lg hover:bg-white" (click)="openMediaPreview($any(file), $event)" aria-label="Preview">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-charcoal/80 p-1.5">
+              <span class="block truncate text-xs text-white">{{ file.split('/').pop() }}</span>
+            </div>
+          </div>
+          }
+        </div>
         }
       </div>
-    </section>
-    } }
+      }
+
+    </div>
+    }
     }
 
     <!-- Tab Content: Materials -->
@@ -764,44 +682,57 @@
       <section class="rounded-[2.5rem] border border-fog/60 bg-white p-8 shadow-brand">
         <div class="flex justify-between items-center mb-6">
           <h2 class="font-display text-2xl text-charcoal">Invoices</h2>
-          <!-- Solo mostrar si hay un quote activo y no está en modo solo lectura (lógica simplificada por ahora) -->
-           @if (!isCustomer()) {
+          @if (!isCustomer() && !isEstimator()) {
           <button (click)="createInvoice()" class="flex items-center gap-2 rounded-full bg-pine px-4 py-2 text-sm font-bold text-white shadow-raised transition hover:bg-pine/90">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Create Invoice
           </button>
-           }
+          }
         </div>
 
         @if (invoices().length > 0) {
           <div class="space-y-4">
             @for (inv of invoices(); track inv._id) {
-              <div (click)="viewInvoice(inv._id)" class="flex items-center justify-between p-6 rounded-2xl border border-fog/60 bg-white hover:border-pine/50 hover:shadow-md transition cursor-pointer group">
-                <div>
-                  <p class="font-bold text-charcoal group-hover:text-pine transition">Invoice #{{ inv.number }}</p>
-                  <p class="text-sm text-slate">{{ inv.issueDate | date }}</p>
-                </div>
-                <div class="flex items-center gap-6">
+              @if (isEstimator()) {
+                <div class="flex items-center justify-between p-6 rounded-2xl border border-fog/60 bg-white">
+                  <span class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="getInvoiceStatusColor(inv.status)">
+                    {{ inv.status }}
+                  </span>
                   <div class="text-right">
                     <p class="text-xs font-bold uppercase text-clay">Total</p>
                     <p class="font-display text-xl text-charcoal">${{ inv.totalAmount | number:'1.2-2' }}</p>
                   </div>
-                  <span class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="getInvoiceStatusColor(inv.status)">
-                    {{ inv.status }}
-                  </span>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate group-hover:text-pine transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
                 </div>
-              </div>
+              } @else {
+                <div (click)="viewInvoice(inv._id)" class="flex items-center justify-between p-6 rounded-2xl border border-fog/60 bg-white hover:border-pine/50 hover:shadow-md transition cursor-pointer group">
+                  <div>
+                    <p class="font-bold text-charcoal group-hover:text-pine transition">Invoice #{{ inv.invoiceNumber }}</p>
+                    <p class="text-sm text-slate">{{ inv.createdAt | date }}</p>
+                  </div>
+                  <div class="flex items-center gap-6">
+                    <div class="text-right">
+                      <p class="text-xs font-bold uppercase text-clay">Total</p>
+                      <p class="font-display text-xl text-charcoal">${{ inv.totalAmount | number:'1.2-2' }}</p>
+                    </div>
+                    <span class="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider" [ngClass]="getInvoiceStatusColor(inv.status)">
+                      {{ inv.status }}
+                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate group-hover:text-pine transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              }
             }
           </div>
         } @else {
           <div class="text-center py-12 bg-fog/5 rounded-2xl border border-dashed border-fog/60">
             <p class="text-slate text-lg">No invoices generated yet.</p>
-            <p class="text-sm text-slate mt-2">Create the first invoice to start billing.</p>
+            @if (!isEstimator()) {
+              <p class="text-sm text-slate mt-2">Create the first invoice to start billing.</p>
+            }
           </div>
         }
       </section>

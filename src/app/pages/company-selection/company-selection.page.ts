@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import type { Company } from '../../core/models/company.model';
@@ -9,6 +11,7 @@ import { CompanyService } from '../../core/services/company/company.service';
 import { CompanyContextService } from '../../core/services/company/company-context.service';
 import { AuthService } from '../../core/services/auth/auth.service';
 import { NotificationService } from '../../core/services/notification/notification.service';
+import { ProjectService } from '../../core/services/project/project.service';
 import { CompanyCardComponent } from '../../features/company/ui/company-card/company-card.component';
 import { PageLayoutComponent, type LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 
@@ -30,6 +33,7 @@ export class CompanySelectionPage {
   private readonly companyService = inject(CompanyService);
   private readonly companyContext = inject(CompanyContextService);
   private readonly authService = inject(AuthService);
+  private readonly projectService = inject(ProjectService);
   private readonly errorService = inject(HttpErrorService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -91,17 +95,42 @@ export class CompanySelectionPage {
   private fetchCompanies(): void {
     this.isLoading.set(true);
 
-    this.companyService
-      .getCompanies()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (companies) => this.companies.set(companies),
-        error: (error) => {
-          const message = this.errorService.handle(error);
-          this.notificationService.error('Unable to load companies', message);
-        },
-        complete: () => this.isLoading.set(false)
-      });
+    const user = this.authService.user();
+    const isCustomer = user?.role === 'customer';
+    const customerId = user?.customerId;
+
+    if (isCustomer && customerId) {
+      forkJoin({
+        companies: this.companyService.getCompanies(),
+        projects: this.projectService.getProjects({ customerId }).pipe(catchError(() => of([])))
+      })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: ({ companies, projects }) => {
+            const companyIds = new Set(projects.map((p) => p.companyId));
+            const filtered = companies.filter((c) => companyIds.has(c._id));
+            this.companies.set(filtered.length ? filtered : companies);
+            this.isLoading.set(false);
+          },
+          error: (error) => {
+            const message = this.errorService.handle(error);
+            this.notificationService.error('Unable to load companies', message);
+            this.isLoading.set(false);
+          }
+        });
+    } else {
+      this.companyService
+        .getCompanies()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (companies) => this.companies.set(companies),
+          error: (error) => {
+            const message = this.errorService.handle(error);
+            this.notificationService.error('Unable to load companies', message);
+          },
+          complete: () => this.isLoading.set(false)
+        });
+    }
   }
 }
 

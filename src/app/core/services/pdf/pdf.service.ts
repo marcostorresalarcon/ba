@@ -19,439 +19,391 @@ import { environment } from '../../../../environments/environment';
 export class PdfService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = environment.apiUrl;
+  async generateInstallmentPdf(
+    invoice: Invoice,
+    installmentIndex: number,
+    customer: Customer | null,
+    project: Project | null,
+    company: Company | null,
+    quote?: Quote,
+    groupedInputs?: { id: string; title: string; subcategories: { id: string; title: string; inputs: KitchenInput[] }[] }[],
+    userRole?: string
+  ): Promise<void> {
+    const installment = invoice.paymentPlan[installmentIndex];
+    const singleInstallmentInvoice: Invoice = {
+      ...invoice,
+      paymentPlan: [installment],
+      totalAmount: installment.amount,
+    };
+    await this.generateInvoicePdf(singleInstallmentInvoice, customer, project, company, quote, groupedInputs, userRole);
+  }
+
   async generateInvoicePdf(
-    invoice: Invoice, 
-    customer: Customer | null, 
-    project: Project | null, 
+    invoice: Invoice,
+    customer: Customer | null,
+    project: Project | null,
     company: Company | null,
     quote?: Quote,
     groupedInputs?: {
       id: string;
       title: string;
-      subcategories: {
-        id: string;
-        title: string;
-        inputs: KitchenInput[];
-      }[];
-    }[]
+      subcategories: { id: string; title: string; inputs: KitchenInput[] }[];
+    }[],
+    userRole?: string
   ): Promise<void> {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+    const isCustomer = userRole === 'customer';
+    if (isCustomer) {
+      await this.generateSimpleInvoicePdf(invoice, customer, project, company, quote);
+    } else {
+      await this.generateDetailedInvoicePdf(invoice, customer, project, company, quote, groupedInputs);
+    }
+  }
 
+  private async generateSimpleInvoicePdf(
+    invoice: Invoice,
+    customer: Customer | null,
+    project: Project | null,
+    company: Company | null,
+    quote?: Quote
+  ): Promise<void> {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15; // Matches standard printer margins
+    const margin = 20;
     const contentWidth = pageWidth - margin * 2;
-    let yPosition = margin;
+    let y = margin;
 
-    // --- Configuration & Constants ---
-    const colors = {
-      text: { r: 0, g: 0, b: 0 }, // Black
-      secondaryText: { r: 100, g: 100, b: 100 }, // Gray
-      headerBg: { r: 51, g: 51, b: 51 }, // Dark Gray #333
-      headerText: { r: 255, g: 255, b: 255 }, // White
-      border: { r: 230, g: 230, b: 230 }, // Light Gray
-      highlight: { r: 245, g: 245, b: 245 } // Very Light Gray
-    };
+    const pine = { r: 58, g: 115, b: 68 };
+    const charcoal = { r: 51, g: 47, b: 40 };
+    const gray = { r: 100, g: 100, b: 100 };
 
-    const companyDetails = {
-      name: company?.name || 'BA Kitchen and Bath Design',
-      address: ['1739 Canton Rd.', 'Marietta, GA 30066'], // Fallback to image data if missing
-      phone: '(770) 627-4661',
-      email: 'office@bakitchenandbathdesign.com'
-    };
+    // Pine top bar
+    doc.setFillColor(pine.r, pine.g, pine.b);
+    doc.rect(0, 0, pageWidth, 3, 'F');
 
-    // --- Header Section ---
-    
-    // Left Side: Company Info
+    y += 6;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(18);
-    doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-    
-    // Handle multi-line company name if needed
-    const companyNameLines = doc.splitTextToSize(companyDetails.name, contentWidth / 2);
-    doc.text(companyNameLines, margin, yPosition + 5);
-    
-    let leftY = yPosition + 5 + (companyNameLines.length * 8);
-    
+    doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+    doc.text(company?.name || 'BA Kitchen & Bath Design', margin, y);
+    y += 7;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    companyDetails.address.forEach(line => {
-      doc.text(line, margin, leftY);
-      leftY += 5;
-    });
-    
-    leftY += 2;
-    doc.text(companyDetails.phone, margin, leftY);
-    leftY += 5;
-    doc.text(companyDetails.email, margin, leftY);
+    doc.setFontSize(9);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text('1739 Canton Rd. Marietta, GA 30066  |  (770) 627-4661  |  office@bakitchenandbathdesign.com', margin, y);
+    y += 10;
 
-    // Right Side: Invoice Meta
-    let rightY = yPosition + 5;
-    doc.setFont('helvetica', 'bold');
+    doc.setDrawColor(pine.r, pine.g, pine.b);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, margin + contentWidth, y);
+    y += 10;
+
+    // Invoice title + number
     doc.setFontSize(24);
-    const invoiceTitle = 'Invoice';
-    const invoiceTitleWidth = doc.getTextWidth(invoiceTitle);
-    doc.text(invoiceTitle, pageWidth - margin - invoiceTitleWidth, rightY);
-    
-    rightY += 12;
-    
-    // Helper for right-aligned pairs
-    const drawMetaPair = (label: string, value: string, y: number) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+    doc.text('Invoice', margin, y);
+    const numText = invoice.invoiceNumber || 'Draft';
+    doc.setFontSize(12);
+    doc.setTextColor(pine.r, pine.g, pine.b);
+    const numW = doc.getTextWidth(numText);
+    doc.text(numText, pageWidth - margin - numW, y - 2);
+    doc.setFontSize(9);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    const dateText = this.formatDate(invoice.createdAt);
+    const dateW = doc.getTextWidth(dateText);
+    doc.text(dateText, pageWidth - margin - dateW, y + 5);
+    y += 18;
+
+    // Concept (quote category/name)
+    if (quote) {
+      const concept = quote.category ? `${quote.category.charAt(0).toUpperCase()}${quote.category.slice(1)} Estimate` : 'Estimate';
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-      const labelWidth = doc.getTextWidth(label);
-      
-      doc.text(label, pageWidth - margin - 40 - labelWidth, y); // Label somewhat to the left
-      
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      doc.text('Concept:', margin, y);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(colors.text.r, colors.text.g, colors.text.b); // Ensure black
-      const valueWidth = doc.getTextWidth(value);
-      // Value right aligned to margin
-      doc.text(value, pageWidth - margin - valueWidth, y);
+      doc.setFontSize(11);
+      doc.text(concept, margin + doc.getTextWidth('Concept:') + 4, y);
+      y += 10;
+    }
+
+    // Client info
+    if (customer) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      doc.text('Bill To:', margin, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text(`${customer.name}${customer.lastName ? ' ' + customer.lastName : ''}`, margin, y); y += 5;
+      if (customer.email) { doc.text(customer.email, margin, y); y += 5; }
+      if (customer.phone) { doc.text(customer.phone, margin, y); y += 5; }
+      y += 5;
+    }
+
+    // Payment plan table
+    doc.setFillColor(charcoal.r, charcoal.g, charcoal.b);
+    doc.rect(margin, y, contentWidth, 9, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text('INSTALLMENT', margin + 4, y + 6);
+    doc.text('AMOUNT', pageWidth - margin - 4 - doc.getTextWidth('AMOUNT'), y + 6);
+    y += 9;
+
+    const isTotal = invoice.paymentPlan?.length === 1;
+    for (const installment of invoice.paymentPlan || []) {
+      doc.setFillColor(248, 248, 248);
+      doc.rect(margin, y, contentWidth, 10, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.1);
+      doc.line(margin, y + 10, margin + contentWidth, y + 10);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      const label = isTotal
+        ? installment.name
+        : `${installment.name} (${installment.percentage}%)`;
+      doc.text(label, margin + 4, y + 7);
+      const amtText = `$${(installment.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(pine.r, pine.g, pine.b);
+      doc.text(amtText, pageWidth - margin - 4 - doc.getTextWidth(amtText), y + 7);
+      y += 10;
+    }
+
+    // Total
+    y += 6;
+    doc.setFillColor(pine.r, pine.g, pine.b);
+    doc.rect(pageWidth - margin - 70, y, 70, 12, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(255, 255, 255);
+    doc.text('TOTAL', pageWidth - margin - 60, y + 8);
+    const totalText = `$${(invoice.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    doc.text(totalText, pageWidth - margin - 4 - doc.getTextWidth(totalText), y + 8);
+
+    const fileName = `Invoice_${invoice.invoiceNumber || 'Draft'}_${Date.now()}.pdf`;
+    await this.savePdf(doc, fileName);
+  }
+
+  private async generateDetailedInvoicePdf(
+    invoice: Invoice,
+    customer: Customer | null,
+    project: Project | null,
+    company: Company | null,
+    quote?: Quote,
+    groupedInputs?: {
+      id: string;
+      title: string;
+      subcategories: { id: string; title: string; inputs: KitchenInput[] }[];
+    }[]
+  ): Promise<void> {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    const pine = { r: 58, g: 115, b: 68 };
+    const charcoal = { r: 51, g: 47, b: 40 };
+    const gray = { r: 100, g: 100, b: 100 };
+    const lightBg = { r: 245, g: 245, b: 245 };
+
+    const addPageCheck = (needed: number) => {
+      if (y + needed > pageHeight - margin) { doc.addPage(); y = margin; }
     };
 
-    drawMetaPair('Invoice Number:', invoice.number || 'Draft', rightY);
-    rightY += 6;
-    drawMetaPair('Invoice Date:', this.formatDate(invoice.issueDate), rightY);
-    rightY += 6;
-    drawMetaPair('Payment Due:', invoice.dueDate ? this.formatDate(invoice.dueDate) : '{set when sent}', rightY);
+    // Header
+    doc.setFillColor(pine.r, pine.g, pine.b);
+    doc.rect(0, 0, pageWidth, 3, 'F');
+    y += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+    doc.text(company?.name || 'BA Kitchen & Bath Design', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text('1739 Canton Rd. Marietta, GA 30066  |  (770) 627-4661  |  office@bakitchenandbathdesign.com', margin, y);
 
-    yPosition = Math.max(leftY, rightY) + 15;
+    // Invoice label top-right
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+    const invLabel = 'INVOICE';
+    doc.text(invLabel, pageWidth - margin - doc.getTextWidth(invLabel), margin + 5);
 
-    // --- Client & Project Section ---
-    const drawSectionHeader = (text: string, y: number) => {
+    y += 10;
+    doc.setDrawColor(pine.r, pine.g, pine.b);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // Meta: number, date, status
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text(`Invoice #: ${invoice.invoiceNumber || 'N/A'}`, margin, y);
+    doc.text(`Date: ${this.formatDate(invoice.createdAt)}`, margin, y + 5);
+    doc.text(`Status: ${(invoice.status || 'draft').toUpperCase()}`, margin, y + 10);
+
+    // Client block on right
+    if (customer) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      const clientLabel = 'BILL TO';
+      doc.text(clientLabel, pageWidth - margin - doc.getTextWidth(clientLabel), y);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(gray.r, gray.g, gray.b);
+      const clientName = `${customer.name}${customer.lastName ? ' ' + customer.lastName : ''}`;
+      doc.text(clientName, pageWidth - margin - doc.getTextWidth(clientName), y + 5);
+      if (customer.email) { doc.text(customer.email, pageWidth - margin - doc.getTextWidth(customer.email), y + 10); }
+    }
+
+    y += 20;
+
+    // Concept
+    if (quote) {
+      const concept = quote.category ? `${quote.category.charAt(0).toUpperCase()}${quote.category.slice(1)} Estimate` : 'Estimate';
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      doc.text(`Concept: `, margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(concept, margin + doc.getTextWidth('Concept: '), y);
+      y += 10;
+
+      // Project name
+      if (project) {
+        doc.text(`Project: ${project.name}`, margin, y);
+        y += 8;
+      }
+    }
+
+    // Payment Plan Table
+    addPageCheck(30);
+    doc.setFillColor(charcoal.r, charcoal.g, charcoal.b);
+    doc.rect(margin, y, contentWidth, 9, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text('INSTALLMENT', margin + 4, y + 6);
+    doc.text('%', margin + contentWidth * 0.55, y + 6);
+    doc.text('AMOUNT', margin + contentWidth * 0.7, y + 6);
+    doc.text('STATUS', pageWidth - margin - 4 - doc.getTextWidth('STATUS'), y + 6);
+    y += 9;
+
+    for (let i = 0; i < (invoice.paymentPlan || []).length; i++) {
+      const plan = invoice.paymentPlan[i];
+      addPageCheck(12);
+      if (i % 2 === 0) {
+        doc.setFillColor(lightBg.r, lightBg.g, lightBg.b);
+        doc.rect(margin, y, contentWidth, 10, 'F');
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      doc.text(plan.name, margin + 4, y + 6.5);
+      doc.text(`${plan.percentage}%`, margin + contentWidth * 0.55, y + 6.5);
+      const amtStr = `$${(plan.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      doc.text(amtStr, margin + contentWidth * 0.7, y + 6.5);
+      const statusStr = (plan.status || 'pending').toUpperCase();
+      if (plan.status === 'paid') doc.setTextColor(pine.r, pine.g, pine.b);
+      else doc.setTextColor(gray.r, gray.g, gray.b);
+      doc.text(statusStr, pageWidth - margin - 4 - doc.getTextWidth(statusStr), y + 6.5);
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.1);
+      doc.line(margin, y + 10, pageWidth - margin, y + 10);
+      y += 10;
+    }
+
+    // Totals
+    y += 5;
+    addPageCheck(25);
+    const paidText = `$${(invoice.paidAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+    const totalText = `$${(invoice.totalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(gray.r, gray.g, gray.b);
+    doc.text('Paid:', pageWidth - margin - 60, y); doc.text(paidText, pageWidth - margin - 4 - doc.getTextWidth(paidText), y);
+    y += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setFillColor(pine.r, pine.g, pine.b);
+    doc.rect(pageWidth - margin - 70, y, 70, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.text('TOTAL', pageWidth - margin - 60, y + 8);
+    doc.text(totalText, pageWidth - margin - 4 - doc.getTextWidth(totalText), y + 8);
+    y += 20;
+
+    // Quote details section for admin
+    if (quote && groupedInputs && quote.kitchenInformation) {
+      addPageCheck(20);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-      const w = doc.getTextWidth(text);
-      doc.text(text, pageWidth - margin - w, y);
-    };
+      doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+      doc.text('Estimate Details', margin, y);
+      doc.setDrawColor(pine.r, pine.g, pine.b);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y + 4, margin + doc.getTextWidth('Estimate Details'), y + 4);
+      y += 12;
 
-    const drawRightAlignedBlock = (lines: string[], startY: number): number => {
-      let cy = startY;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-      
-      lines.forEach(line => {
-        if (!line) return;
-        const w = doc.getTextWidth(line);
-        doc.text(line, pageWidth - margin - w, cy);
-        cy += 5;
-      });
-      return cy;
-    };
-
-    // Client Block
-    drawSectionHeader('Client', yPosition);
-    yPosition += 6;
-    
-    if (customer) {
-      yPosition = drawRightAlignedBlock([
-        customer.name + (customer.lastName ? ` ${customer.lastName}` : ''),
-        customer.address || '',
-        [customer.city, customer.state, customer.zipCode].filter(Boolean).join(', '),
-        customer.phone || '',
-        customer.email || ''
-      ], yPosition);
-    }
-    
-    yPosition += 8;
-
-    // Billing Address Block (Assume same as client for now if not distinct)
-    drawSectionHeader('Billing Address', yPosition);
-    yPosition += 6;
-    
-    // "Project" Block
-    drawSectionHeader('Project', yPosition);
-    yPosition += 6;
-    
-    if (project) {
-      yPosition = drawRightAlignedBlock([
-        `${invoice.projectId ? 'P-' + (typeof invoice.projectId === 'string' ? invoice.projectId.slice(-4).toUpperCase() : String((invoice.projectId as any)._id || invoice.projectId).slice(-4).toUpperCase()) : 'Project'} - ${customer?.name || 'Client'}`, 
-        customer?.address || '',
-        [customer?.city, customer?.state, customer?.zipCode].filter(Boolean).join(', ')
-      ], yPosition);
-    }
-
-    yPosition += 15;
-
-    // --- Items Table ---
-    const tableHeaderHeight = 10;
-    const priceColWidth = 40;
-    const descColWidth = contentWidth - priceColWidth;
-    
-    // Header Row
-    doc.setFillColor(colors.headerBg.r, colors.headerBg.g, colors.headerBg.b);
-    doc.rect(margin, yPosition, contentWidth, tableHeaderHeight, 'F');
-    
-    doc.setTextColor(colors.headerText.r, colors.headerText.g, colors.headerText.b);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    
-    const headerTextY = yPosition + (tableHeaderHeight / 2) + 1.5; 
-    doc.text('DESCRIPTION', margin + 4, headerTextY);
-    
-    const priceLabel = 'PRICE';
-    const priceLabelWidth = doc.getTextWidth(priceLabel);
-    doc.text(priceLabel, pageWidth - margin - 4 - priceLabelWidth, headerTextY); 
-
-    yPosition += tableHeaderHeight;
-
-    // Items
-    doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-    
-    if (invoice.items && invoice.items.length > 0) {
-      invoice.items.forEach((item, index) => {
-        if (yPosition > pageHeight - 40) {
-          doc.addPage();
-          yPosition = margin;
-          doc.setFillColor(colors.headerBg.r, colors.headerBg.g, colors.headerBg.b);
-          doc.rect(margin, yPosition, contentWidth, tableHeaderHeight, 'F');
-          doc.setTextColor(colors.headerText.r, colors.headerText.g, colors.headerText.b);
-          doc.text('DESCRIPTION', margin + 4, yPosition + 6.5);
-          doc.text(priceLabel, pageWidth - margin - 4 - priceLabelWidth, yPosition + 6.5);
-          yPosition += tableHeaderHeight;
-          doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-        }
-
-        const isHeader = item.description.toLowerCase().startsWith('change order');
-        
-        let rowHeight = 10;
-        doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+      for (const group of groupedInputs) {
+        const hasData = group.subcategories.some(sub =>
+          sub.inputs.some(i => {
+            const v = quote.kitchenInformation?.[i.name];
+            return v !== null && v !== undefined && v !== false && v !== '' && v !== 'No';
+          })
+        );
+        if (!hasData) continue;
+        addPageCheck(20);
         doc.setFontSize(10);
-        
-        const descLines = doc.splitTextToSize(item.description, descColWidth - 8);
-        rowHeight = Math.max(rowHeight, (descLines.length * 5) + 6);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
+        doc.text(group.title, margin, y);
+        y += 7;
 
-        if (isHeader) {
-          doc.setFillColor(colors.highlight.r, colors.highlight.g, colors.highlight.b);
-          doc.rect(margin, yPosition, contentWidth, rowHeight, 'F');
-        }
-
-        doc.text(descLines, margin + 4, yPosition + 6);
-        
-        if (item.amount !== 0 || !isHeader) {
-          const priceText = `$${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-          const priceWidth = doc.getTextWidth(priceText);
-          doc.text(priceText, pageWidth - margin - 4 - priceWidth, yPosition + 6);
-        }
-
-        doc.setDrawColor(colors.border.r, colors.border.g, colors.border.b);
-        doc.setLineWidth(0.1);
-        doc.line(margin, yPosition + rowHeight, pageWidth - margin, yPosition + rowHeight);
-
-        yPosition += rowHeight;
-      });
-    }
-
-    // --- Footer / Totals ---
-    yPosition += 5;
-    
-    const totalLabel = 'Total';
-    const totalValue = `$${invoice.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    
-    doc.setFillColor(colors.highlight.r, colors.highlight.g, colors.highlight.b);
-    doc.rect(pageWidth - margin - 80, yPosition, 80, 12, 'F');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-    
-    doc.text(totalLabel, pageWidth - margin - 70, yPosition + 8);
-    
-    const totalWidth = doc.getTextWidth(totalValue);
-    doc.text(totalValue, pageWidth - margin - 4 - totalWidth, yPosition + 8);
-
-    yPosition += 20;
-
-    // --- Quote Details / Kitchen Information ---
-    if (quote && groupedInputs && quote.kitchenInformation) {
-        // Add page if not enough space
-        if (yPosition > pageHeight - 50) {
-          doc.addPage();
-          yPosition = margin;
-        } else {
-          // Separator title
-           doc.setFont('helvetica', 'bold');
-           doc.setFontSize(14);
-           doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-           doc.text('DETAILS', margin, yPosition);
-           yPosition += 10;
-        }
-        
-        for (const categoryGroup of groupedInputs) {
-          const hasData = categoryGroup.subcategories.some(sub =>
-            sub.inputs.some(input => {
-              const value = quote.kitchenInformation?.[input.name];
-              return value !== null && value !== undefined && value !== false && value !== '' && value !== 'No';
-            })
-          );
-  
-          if (!hasData) continue;
-  
-          if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = margin;
-          }
-  
-          // Category Title
-          doc.setFillColor(colors.highlight.r, colors.highlight.g, colors.highlight.b); // Use highlight color
-          doc.rect(margin, yPosition, contentWidth, 8, 'F');
-          
-          doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'bold');
-          doc.text(categoryGroup.title.toUpperCase(), margin + 4, yPosition + 5.5);
-          yPosition += 12;
-  
-          for (const subcategoryGroup of categoryGroup.subcategories) {
-            const hasSubData = subcategoryGroup.inputs.some(input => {
-              const value = quote.kitchenInformation?.[input.name];
-              return value !== null && value !== undefined && value !== false && value !== '' && value !== 'No';
-            });
-  
-            if (!hasSubData) continue;
-  
-            if (yPosition > pageHeight - 30) {
-               doc.addPage();
-               yPosition = margin;
-            }
-
-            // Subcategory Title
-            if (subcategoryGroup.id !== 'default') {
-              doc.setTextColor(colors.secondaryText.r, colors.secondaryText.g, colors.secondaryText.b);
-              doc.setFontSize(10);
-              doc.setFont('helvetica', 'bold');
-              doc.text(subcategoryGroup.title, margin + 2, yPosition);
-              yPosition += 6;
-            }
-  
-            // Inputs
-            for (const input of subcategoryGroup.inputs) {
-              const value = quote.kitchenInformation?.[input.name];
-              if (value === null || value === undefined || value === false || value === '' || value === 'No') {
-                continue;
-              }
-  
-              if (yPosition > pageHeight - 15) {
-                doc.addPage();
-                yPosition = margin;
-              }
-  
-              doc.setDrawColor(colors.border.r, colors.border.g, colors.border.b);
-              doc.setLineWidth(0.1);
-              doc.line(margin, yPosition + 6, margin + contentWidth, yPosition + 6);
-  
-              // Label
-              doc.setTextColor(colors.secondaryText.r, colors.secondaryText.g, colors.secondaryText.b);
-              doc.setFontSize(9);
-              doc.setFont('helvetica', 'normal');
-              
-              const labelWidth = contentWidth * 0.65;
-              const labelLines = doc.splitTextToSize(input.label, labelWidth);
-              doc.text(labelLines, margin + 2, yPosition + 4);
-  
-              // Value
-              doc.setFont('helvetica', 'bold');
-              let displayValue = '';
-              if (value === true) {
-                displayValue = 'Yes';
-                doc.setTextColor(colors.text.r, colors.text.g, colors.text.b); // Black for Yes
-              } else if (value === false) {
-                displayValue = 'No';
-              } else {
-                displayValue = String(value);
-                if (input.unit) {
-                  displayValue += ` ${input.unit}`;
-                }
-                doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-              }
-              
-              const valueWidth = doc.getTextWidth(displayValue);
-              doc.text(displayValue, margin + contentWidth - valueWidth - 2, yPosition + 4);
-  
-              const rowHeight = Math.max(7, labelLines.length * 4 + 3);
-              yPosition += rowHeight;
-            }
-             yPosition += 2;
-          }
-           yPosition += 4;
-        }
-    }
-
-    // --- Materials Section (Requested) ---
-    if (quote && quote.materials) {
-       const materials = quote.materials as Materials;
-       if (materials.file || (materials.items && materials.items.length > 0)) {
-         if (yPosition > pageHeight - 40) {
-            doc.addPage();
-            yPosition = margin;
-         }
-
-         // Header
-         doc.setFillColor(colors.headerBg.r, colors.headerBg.g, colors.headerBg.b);
-         doc.rect(margin, yPosition, contentWidth, 8, 'F');
-         doc.setTextColor(colors.headerText.r, colors.headerText.g, colors.headerText.b);
-         doc.setFontSize(11);
-         doc.setFont('helvetica', 'bold');
-         doc.text('MATERIALS', margin + 4, yPosition + 5.5);
-         yPosition += 12;
-
-         // If file (URL)
-         if (materials.file) {
-            doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-            doc.setFontSize(10);
+        for (const sub of group.subcategories) {
+          for (const input of sub.inputs) {
+            const val = quote.kitchenInformation?.[input.name];
+            if (!val && val !== 0) continue;
+            addPageCheck(8);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(gray.r, gray.g, gray.b);
+            const lbl = doc.splitTextToSize(input.label, contentWidth * 0.6);
+            doc.text(lbl, margin + 2, y);
+            doc.setTextColor(charcoal.r, charcoal.g, charcoal.b);
             doc.setFont('helvetica', 'bold');
-            // Requirement: "Included materials" in English if URL present
-            doc.text('Included materials', margin + 4, yPosition);
-            yPosition += 6;
-            
-            // Optionally show the link text below for reference if printed? 
-            // Or just the text as requested. I'll add the text.
-            // If it's an image, logic in generateQuotePdf renders it. 
-            // User just said "debe salir algo así: 'Incluido materiales'". 
-            // I will leave it as just the text for now to be safe/clean.
-         }
-
-         // If items
-         if (materials.items && materials.items.length > 0) {
-            if (materials.file) yPosition += 4; // Spacer
-
-            // Table Header
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(colors.secondaryText.r, colors.secondaryText.g, colors.secondaryText.b);
-            doc.text('Qty', margin + 4, yPosition);
-            doc.text('Description', margin + 20, yPosition);
-            yPosition += 5;
-
-            for (const item of materials.items) {
-               if (yPosition > pageHeight - 10) {
-                  doc.addPage();
-                  yPosition = margin;
-               }
-               
-               doc.setFont('helvetica', 'bold');
-               doc.setTextColor(colors.text.r, colors.text.g, colors.text.b);
-               doc.text(String(item.quantity), margin + 4, yPosition);
-               
-               doc.setFont('helvetica', 'normal');
-               doc.text(item.description, margin + 20, yPosition);
-               
-               yPosition += 6;
-            }
-         }
-       }
+            const dv = val === true ? 'Yes' : `${val}${input.unit ? ' ' + input.unit : ''}`;
+            doc.text(String(dv), pageWidth - margin - 2 - doc.getTextWidth(String(dv)), y);
+            doc.setDrawColor(220, 220, 220);
+            doc.setLineWidth(0.1);
+            doc.line(margin, y + 3.5, pageWidth - margin, y + 3.5);
+            y += Math.max(6, lbl.length * 3.5);
+          }
+        }
+        y += 4;
+      }
     }
 
-    // Save
-    const fileName = `Invoice_${invoice.number || 'Draft'}_${new Date().getTime()}.pdf`;
+    // Footer
+    const total = doc.getNumberOfPages();
+    for (let p = 1; p <= total; p++) {
+      doc.setPage(p);
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Page ${p} of ${total}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+    }
+
+    const fileName = `Invoice_${invoice.invoiceNumber || 'Draft'}_${Date.now()}.pdf`;
     await this.savePdf(doc, fileName);
   }
 

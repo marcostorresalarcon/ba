@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import type { OnInit} from '@angular/core';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { AuthService } from '../../../../core/services/auth/auth.service';
@@ -11,15 +11,15 @@ import { ProjectService } from '../../../../core/services/project/project.servic
 import { QuoteService } from '../../../../core/services/quote/quote.service';
 import { PdfService } from '../../../../core/services/pdf/pdf.service';
 import { KitchenInputsService } from '../../../../core/services/kitchen-inputs/kitchen-inputs.service';
+import { LayoutService } from '../../../../core/services/layout/layout.service';
 import type { Invoice, InvoicePaymentPlan } from '../../../../core/models/invoice.model';
 import { PaymentModalComponent } from '../payment-modal/payment-modal.component';
 import type { LayoutBreadcrumb } from '../../../../shared/ui/page-layout/page-layout.component';
-import { PageLayoutComponent } from '../../../../shared/ui/page-layout/page-layout.component';
 
 @Component({
   selector: 'app-invoice-detail',
   standalone: true,
-  imports: [CommonModule, PaymentModalComponent, PageLayoutComponent],
+  imports: [CommonModule, PaymentModalComponent],
   templateUrl: './invoice-detail.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -34,24 +34,37 @@ export class InvoiceDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly notificationService = inject(NotificationService);
+  private readonly layoutService = inject(LayoutService);
 
   protected readonly invoice = signal<Invoice | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly isGeneratingPdf = signal(false);
-  
+
   protected readonly paymentModalOpen = signal(false);
   protected readonly selectedInstallment = signal<{ amount: number; index: number; name: string } | null>(null);
 
   protected readonly isEstimator = computed(() => this.authService.user()?.role === 'estimator');
+  protected readonly canDelete = computed(() => {
+    const role = this.authService.user()?.role;
+    return role !== 'customer' && role !== 'estimator';
+  });
+  protected readonly isDeleting = signal(false);
+  protected readonly generatingInstallmentIndex = signal<number | null>(null);
 
   protected readonly breadcrumbs = computed<LayoutBreadcrumb[]>(() => {
     const inv = this.invoice();
     if (!inv) return [{ label: 'Invoices', route: '/invoices' }];
     return [
       { label: 'Invoices', route: '/invoices' },
-      { label: `Invoice #${inv.number}` }
+      { label: inv.invoiceNumber }
     ];
   });
+
+  constructor() {
+    effect(() => {
+      this.layoutService.setBreadcrumbs(this.breadcrumbs());
+    });
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -76,57 +89,55 @@ export class InvoiceDetailComponent implements OnInit {
     });
   }
 
+  private async loadPdfData(inv: Invoice) {
+    const custId = typeof inv.customerId === 'string' ? inv.customerId : (inv.customerId as any)._id;
+    const projId: any = inv.projectId;
+    const projIdStr = projId && typeof projId === 'object' && projId._id ? projId._id : String(projId);
+    const quoteId: any = inv.quoteId;
+    const quoteIdStr = quoteId && typeof quoteId === 'object' && quoteId._id ? quoteId._id : String(quoteId);
+
+    return firstValueFrom(
+      forkJoin([
+        this.customerService.getCustomer(custId),
+        this.projectService.getProject(projIdStr),
+        this.quoteService.getQuote(quoteIdStr),
+      ])
+    );
+  }
+
   async downloadPdf(): Promise<void> {
     const inv = this.invoice();
     if (!inv) return;
 
     this.isGeneratingPdf.set(true);
     try {
-      // Handle customerId: could be string or object
-      let customerObservable;
-      if (typeof inv.customerId === 'string') {
-        customerObservable = this.customerService.getCustomer(inv.customerId);
-      } else {
-        customerObservable = this.customerService.getCustomer(inv.customerId._id);
-      }
-
-      // Handle projectId: could be string or object
-      let projectObservable;
-      const projId: any = inv.projectId;
-      if (projId && typeof projId === 'object' && projId._id) {
-         projectObservable = this.projectService.getProject(projId._id);
-      } else {
-         projectObservable = this.projectService.getProject(String(projId));
-      }
-
-      // Handle Quote
-      let quoteObservable;
-      const quoteId: any = inv.quoteId;
-      if (quoteId && typeof quoteId === 'object' && quoteId._id) {
-         // If populated, use ID to fetch fresh/full data or just to be safe with URL
-         quoteObservable = this.quoteService.getQuote(quoteId._id);
-      } else {
-         quoteObservable = this.quoteService.getQuote(String(quoteId));
-      }
-
-      const [customer, project, quote] = await firstValueFrom(
-        forkJoin([
-          customerObservable,
-          projectObservable,
-          quoteObservable
-        ])
-      );
-
-      // Prepare groupedInputs for Quote details
+      const [customer, project, quote] = await this.loadPdfData(inv);
       const groupedInputs = this.kitchenInputsService.getOrderedGroupedInputs(quote.experience);
-
-      await this.pdfService.generateInvoicePdf(inv, customer, project, null, quote, groupedInputs);
+      await this.pdfService.generateInvoicePdf(inv, customer, project, null, quote, groupedInputs, this.authService.user()?.role);
       this.notificationService.success('Success', 'PDF downloaded successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
       this.notificationService.error('Error', 'Could not generate PDF');
     } finally {
       this.isGeneratingPdf.set(false);
+    }
+  }
+
+  async downloadInstallmentPdf(installmentIndex: number): Promise<void> {
+    const inv = this.invoice();
+    if (!inv || !inv.paymentPlan[installmentIndex]) return;
+
+    this.generatingInstallmentIndex.set(installmentIndex);
+    try {
+      const [customer, project, quote] = await this.loadPdfData(inv);
+      const groupedInputs = this.kitchenInputsService.getOrderedGroupedInputs(quote.experience);
+      await this.pdfService.generateInstallmentPdf(inv, installmentIndex, customer, project, null, quote, groupedInputs, this.authService.user()?.role);
+      this.notificationService.success('Success', 'PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error generating installment PDF:', error);
+      this.notificationService.error('Error', 'Could not generate PDF');
+    } finally {
+      this.generatingInstallmentIndex.set(null);
     }
   }
 
@@ -156,9 +167,26 @@ export class InvoiceDetailComponent implements OnInit {
     this.paymentModalOpen.set(false);
     this.selectedInstallment.set(null);
     if (result === 'success' && this.invoice()) {
-      // Reload invoice to update status
       this.loadInvoice(this.invoice()!._id);
     }
+  }
+
+  deleteInvoice(): void {
+    const inv = this.invoice();
+    if (!inv) return;
+    if (!confirm(`Delete invoice ${inv.invoiceNumber}? This cannot be undone.`)) return;
+
+    this.isDeleting.set(true);
+    this.invoiceService.deleteInvoice(inv._id).subscribe({
+      next: () => {
+        this.notificationService.success('Deleted', 'Invoice deleted successfully');
+        this.router.navigate(['/invoices']);
+      },
+      error: () => {
+        this.notificationService.error('Error', 'Could not delete invoice');
+        this.isDeleting.set(false);
+      }
+    });
   }
 }
 

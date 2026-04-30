@@ -20,7 +20,7 @@ import { NotificationService } from '../../core/services/notification/notificati
 import { LayoutService } from '../../core/services/layout/layout.service';
 import { UserFormComponent } from '../../features/users/ui/user-form/user-form.component';
 import { ConfirmationModalComponent } from '../../shared/ui/confirmation-modal/confirmation-modal.component';
-import type { User } from '../../core/models/user.model';
+import type { User, CreateUserResponse } from '../../core/models/user.model';
 import type { LayoutBreadcrumb } from '../../shared/ui/page-layout/page-layout.component';
 
 @Component({
@@ -56,10 +56,12 @@ export class UsersPage {
   protected readonly searchQuery = signal('');
   protected readonly isLoading = signal(false);
   protected readonly selectedUser = signal<User | null>(null);
+  protected readonly showCreateForm = signal(false);
   protected readonly isSubmitting = signal(false);
   protected readonly isDeleting = signal(false);
   protected readonly userToDelete = signal<User | null>(null);
   protected readonly showDeleteModal = signal(false);
+  protected readonly createdUserInfo = signal<CreateUserResponse | null>(null);
 
   protected readonly deleteMessage = computed(() => {
     const user = this.userToDelete();
@@ -126,7 +128,6 @@ export class UsersPage {
           this.users.set(users);
         },
         error: (error) => {
-          console.error('Error loading users:', error);
           const errorMessage = this.errorService.handle(error);
           this.notificationService.error('Error loading users', errorMessage);
         }
@@ -176,11 +177,18 @@ export class UsersPage {
   }
 
   protected editUser(user: User): void {
+    this.showCreateForm.set(false);
     this.selectedUser.set(user);
   }
 
   protected cancelEdit(): void {
     this.selectedUser.set(null);
+  }
+
+  protected toggleCreateForm(): void {
+    this.selectedUser.set(null);
+    this.createdUserInfo.set(null);
+    this.showCreateForm.set(!this.showCreateForm());
   }
 
   protected async handleSubmit(payload: {
@@ -190,33 +198,40 @@ export class UsersPage {
     active: boolean;
   }): Promise<void> {
     const user = this.selectedUser();
+
     if (!user) {
+      // Create mode
+      this.isSubmitting.set(true);
+      this.userService
+        .createUser({ name: payload.name, email: payload.email, role: payload.role })
+        .pipe(takeUntilDestroyed(this.destroyRef), finalize(() => this.isSubmitting.set(false)))
+        .subscribe({
+          next: (created) => {
+            this.createdUserInfo.set(created);
+            this.showCreateForm.set(false);
+            this.loadUsers();
+            this.notificationService.success('User created', `${payload.name} has been created`);
+          },
+          error: (error) => {
+            const errorMessage = this.errorService.handle(error);
+            this.notificationService.error('Error creating user', errorMessage);
+          }
+        });
       return;
     }
 
     this.isSubmitting.set(true);
 
-    // Construir el array de roles según el payload
-    const roles = [
-      {
-        name: payload.role,
-        active: payload.active
-      }
-    ];
+    const roles = [{ name: payload.role, active: payload.active }];
 
     this.userService
-      .updateUser(user._id, {
-        name: payload.name,
-        email: payload.email,
-        roles
-      })
+      .updateUser(user._id, { name: payload.name, email: payload.email, roles })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isSubmitting.set(false))
       )
       .subscribe({
         next: (updatedUser) => {
-          // Actualizar el usuario en la lista
           this.users.update((users) =>
             users.map((u) => (u._id === updatedUser._id ? updatedUser : u))
           );
@@ -228,6 +243,10 @@ export class UsersPage {
           this.notificationService.error('Error updating user', errorMessage);
         }
       });
+  }
+
+  protected dismissCreatedInfo(): void {
+    this.createdUserInfo.set(null);
   }
 
   protected deleteUser(user: User): void {

@@ -78,11 +78,12 @@ export class ProjectsPage {
       )
       .subscribe({
         next: (data) => {
-          // Cast to ProjectWithQuoteCount if backend returns it, otherwise it's Project[]
-          // The ProjectListComponent expects ProjectWithQuoteCount
-          // If backend doesn't return quoteCount, we might need to map or update backend
-          // Assuming backend returns Project[] compatible or we cast
-          this.projects.set(data as ProjectWithQuoteCount[]);
+          const sorted = (data as ProjectWithQuoteCount[]).sort((a, b) => {
+            const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const db = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return db - da;
+          });
+          this.projects.set(sorted);
         },
         error: (error) => {
           const message = this.errorService.handle(error);

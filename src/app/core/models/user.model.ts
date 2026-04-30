@@ -35,3 +35,16 @@ export interface UpdateUserPayload {
   email?: string;
   roles?: UserRole[];
 }
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface CreateUserResponse {
+  _id: string;
+  email: string;
+  name: string;
+  tempPassword: string;
+}

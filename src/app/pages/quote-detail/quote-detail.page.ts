@@ -49,6 +49,7 @@ export class QuoteDetailPage {
   protected readonly showRejectionModal = signal(false);
 
   protected readonly isCustomer = computed(() => this.authService.user()?.role === 'customer');
+  protected readonly isEstimator = computed(() => this.authService.user()?.role === 'estimator');
   protected readonly userRole = computed(() => this.authService.user()?.role);
 
   // Estructura agrupada de inputs

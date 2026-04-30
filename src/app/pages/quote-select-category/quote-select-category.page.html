@@ -19,25 +19,52 @@
         @for (option of categoryOptions; track option.value) {
         <button
           type="button"
-          class="group flex flex-col items-start gap-3 rounded-2xl border-2 border-fog/60 bg-white p-6 text-left transition-all hover:border-pine hover:bg-pine/5 hover:shadow-raised"
+          class="group flex flex-col items-start gap-3 rounded-2xl border-2 p-6 text-left transition-all hover:shadow-raised"
+          [class.border-pine]="selectedCategory() === option.value"
+          [class.bg-pine/5]="selectedCategory() === option.value"
+          [class.border-fog/60]="selectedCategory() !== option.value"
+          [class.bg-white]="selectedCategory() !== option.value"
+          [class.hover:border-pine]="selectedCategory() !== option.value"
+          [class.hover:bg-pine/5]="selectedCategory() !== option.value"
           (click)="selectCategory(option.value)"
         >
           <div class="flex w-full items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-pine/10 text-pine transition group-hover:bg-pine group-hover:text-white">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full transition"
+                [class.bg-pine]="selectedCategory() === option.value"
+                [class.text-white]="selectedCategory() === option.value"
+                [class.bg-pine/10]="selectedCategory() !== option.value"
+                [class.text-pine]="selectedCategory() !== option.value"
+              >
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="option.icon" />
                 </svg>
               </div>
               <h3 class="text-lg font-semibold text-charcoal">{{ option.label }}</h3>
             </div>
+            @if (selectedCategory() === option.value) {
+            <svg class="h-5 w-5 text-pine" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M20 6L9 17l-5-5 1.41-1.41L9 14.17 18.59 4.59 20 6z"/>
+            </svg>
+            } @else {
             <svg class="h-5 w-5 text-slate transition group-hover:translate-x-1 group-hover:text-pine" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
+            }
           </div>
           <p class="text-sm text-slate">{{ option.description }}</p>
         </button>
         }
+      </div>
+
+      <div class="mt-6">
+        <button
+          type="button"
+          class="w-full rounded-2xl bg-pine px-6 py-4 font-bold text-white shadow-raised transition hover:bg-pine/90"
+          (click)="continueWithSelected()"
+        >
+          Continue with {{ selectedCategoryLabel() }}
+        </button>
       </div>
     </section>
   </div>

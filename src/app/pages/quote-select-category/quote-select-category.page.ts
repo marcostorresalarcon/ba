@@ -31,6 +31,10 @@ export class QuoteSelectCategoryPage {
 
   protected readonly projectId = signal<string | null>(null);
   protected readonly quoteId = signal<string | null>(null);
+  protected readonly selectedCategory = signal<QuoteCategory>('kitchen');
+  protected readonly selectedCategoryLabel = computed(() =>
+    this.categoryOptions.find(o => o.value === this.selectedCategory())?.label ?? 'Kitchen'
+  );
 
   protected readonly selectedCompany = this.companyContext.selectedCompany;
 
@@ -94,26 +98,28 @@ export class QuoteSelectCategoryPage {
   }
 
   protected selectCategory(category: QuoteCategory): void {
+    this.selectedCategory.set(category);
+  }
+
+  protected continueWithSelected(): void {
     const projectId = this.projectId();
     const quoteId = this.quoteId();
+    const category = this.selectedCategory();
 
     if (!projectId) {
       return;
     }
 
-    // Si no hay quoteId, es un nuevo estimado - marcar para limpiar localStorage
     if (!quoteId) {
       sessionStorage.setItem('isNewQuote', 'true');
     }
 
-    // Para kitchen, primero seleccionar experiencia
     if (category === 'kitchen') {
       const url = quoteId
         ? `/projects/${projectId}/quotes/select-experience?quoteId=${quoteId}`
         : `/projects/${projectId}/quotes/select-experience`;
       void this.router.navigateByUrl(url);
     } else {
-      // Para otras categorías, ir directo al formulario
       const url = quoteId
         ? `/projects/${projectId}/quotes/${category}/create?quoteId=${quoteId}`
         : `/projects/${projectId}/quotes/${category}/create`;

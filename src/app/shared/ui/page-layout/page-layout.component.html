@@ -1,34 +1,45 @@
-<section class="min-h-screen px-4 py-8 sm:px-8 lg:px-16" [ngClass]="activeBackground()">
-  <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
+<section class="min-h-screen px-4 py-4 sm:px-6 sm:py-8 lg:px-16" [ngClass]="activeBackground()">
+  <div class="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-6">
     <header
-      class="flex flex-col gap-6 rounded-[3rem] bg-white/60 p-6 shadow-brand lg:flex-row lg:items-center lg:justify-between"
+      class="flex flex-col gap-3 rounded-[2rem] bg-white/60 p-4 shadow-brand sm:gap-6 sm:rounded-[3rem] sm:p-6 lg:flex-row lg:items-center lg:justify-between"
     >
-      <div class="flex flex-wrap items-center gap-6">
-        <img width="150" src="logo.png" alt="BA Kitchen & Bath Design" />
+      <div class="flex min-w-0 items-center gap-3 sm:gap-6">
+        <img width="120" class="sm:w-[150px] shrink-0" src="logo.png" alt="BA Kitchen & Bath Design" />
 
         @if (navItems().length) {
-        <nav class="flex items-center gap-2">
-          @for (item of navItems(); track item.label) {
-          <a
-            [routerLink]="item.route"
-            routerLinkActive="bg-pine text-white"
-            class="rounded-full px-4 py-2 text-sm font-medium text-slate transition-colors hover:bg-alabaster hover:text-charcoal"
-          >
-            {{ item.label }}
-          </a>
-          }
+        <nav class="overflow-x-auto">
+          <div class="flex min-w-max items-center gap-1 sm:gap-2">
+            @for (item of navItems(); track item.label) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="bg-pine text-white"
+              class="whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-slate transition-colors hover:bg-alabaster hover:text-charcoal sm:px-4 sm:py-2 sm:text-sm"
+            >
+              {{ item.label }}
+            </a>
+            }
+          </div>
         </nav>
         }
       </div>
 
-      <div class="relative z-50 flex items-center gap-2">
+      <div class="relative z-50 flex shrink-0 items-center gap-2">
+        <a
+          routerLink="/support"
+          title="Support & FAQ"
+          class="flex h-9 w-9 items-center justify-center rounded-full text-slate transition-colors hover:bg-alabaster hover:text-pine sm:h-10 sm:w-10"
+        >
+          <svg class="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </a>
         <app-notification-center />
         <button
           type="button"
           (click)="toggleUserMenu()"
-          class="flex cursor-pointer items-center gap-3 rounded-full bg-alabaster px-4 py-2 shadow-raised transition-transform hover:scale-105 active:scale-95"
+          class="flex cursor-pointer items-center gap-2 rounded-full bg-alabaster px-2 py-1.5 shadow-raised transition-transform hover:scale-105 active:scale-95 sm:gap-3 sm:px-4 sm:py-2"
         >
-          <div class="text-right">
+          <div class="hidden text-right sm:block">
             <p class="text-xs uppercase tracking-[0.35em] text-slate">Welcome</p>
             <p class="text-sm font-semibold text-charcoal">{{ user()?.name ?? 'User' }}</p>
             <p class="text-xs text-slate">
@@ -36,7 +47,7 @@
             </p>
           </div>
           <div
-            class="flex h-11 w-11 items-center justify-center rounded-full bg-pine text-lg font-semibold text-white"
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-pine text-base font-semibold text-white sm:h-11 sm:w-11 sm:text-lg"
           >
             {{ user()?.name?.charAt(0) ?? 'U' }}
           </div>
@@ -54,7 +65,6 @@
           >
             Support
           </a>
-          @if (user()?.role === 'customer') {
           <a
             routerLink="/profile"
             (click)="toggleUserMenu()"
@@ -62,7 +72,6 @@
           >
             Profile
           </a>
-          }
           <a
             routerLink="/settings"
             (click)="toggleUserMenu()"
